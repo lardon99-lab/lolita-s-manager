@@ -46,7 +46,7 @@ $alertas = $prodModel->obtenerAlertasStock();
             <div class="card border-0 shadow-sm p-3 rounded-4 bg-success text-white">
                 <div class="card-body">
                     <h6 class="text-uppercase small fw-bold opacity-75">Ventas Completadas</h6>
-                    <h2 class="display-5 fw-bold">$<?= number_format($metricas['ventas'], 2) ?></h2>
+                    <h2 class="display-5 fw-bold">L. <?= number_format($metricas['ventas'], 2) ?></h2>
                     <i class="fa-solid fa-money-bill-trend-up position-absolute end-0 bottom-0 m-3 opacity-25 fa-3x"></i>
                 </div>
             </div>
@@ -87,8 +87,8 @@ $alertas = $prodModel->obtenerAlertasStock();
                                     </td>
                                     <td class="text-muted"><?= $a['stock_minimo'] ?></td>
                                     <td>
-                                        <a href="index.php?view=inventario" class="btn btn-sm btn-outline-secondary rounded-pill">
-                                            Abastecer
+                                        <a href="index.php?view=inventario&sucursal_id=<?= $a['id_sucursal'] ?>" class="btn btn-sm btn-outline-danger rounded-pill">
+                                            Corregir Stock
                                         </a>
                                     </td>
                                 </tr>

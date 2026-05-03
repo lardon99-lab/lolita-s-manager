@@ -12,12 +12,19 @@
                     
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Cliente</label>
-                        <select name="id_cliente" class="form-select border-0 bg-light" required>
-                            <option value="">Seleccionar cliente...</option>
-                            <?php foreach($clientes as $c): ?>
-                                <option value="<?= $c['id_cliente'] ?>"><?= $c['nombre_completo'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input list="lista-clientes" name="id_cliente_search" id="cliente-input" class="form-control border-0 bg-light" placeholder="Escribe nombre del cliente..." required>
+                            <datalist id="lista-clientes">
+                                <?php foreach($clientes as $c): ?>
+                                    <option data-id="<?= $c['id_cliente'] ?>" value="<?= $c['nombre_completo'] ?>">
+                                <?php endforeach; ?>
+                            </datalist>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCliente">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="id_cliente" id="id_cliente_real">
                     </div>
 
                     <div class="mb-3">
@@ -26,9 +33,20 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Sucursal de Retiro</label>
-                        <input type="text" class="form-control border-0 bg-light" value="<?= $_SESSION['nombre_sucursal'] ?? 'Sucursal Actual' ?>" readonly>
-                        <input type="hidden" name="id_sucursal" value="<?= $_SESSION['id_sucursal'] ?>">
+                        <label class="form-label small fw-bold">Sucursal de Entrega</label>
+                        <select name="id_sucursal" class="form-select border-0 bg-light" required>
+                            <?php if ($_SESSION['role'] == 'Admin'): ?>
+                                <option value="">-- Seleccionar Sucursal --</option>
+                            <?php endif; ?>
+
+                            <?php foreach($sucursales as $s): ?>
+                                <option value="<?= $s['id_sucursal'] ?>" 
+                                    <?= ($_SESSION['id_sucursal'] == $s['id_sucursal']) ? 'selected' : '' ?>>
+                                    <?= $s['nombre_sucursal'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted" style="font-size: 0.75rem;">Indica dónde recogerá el cliente su pedido.</small>
                     </div>
 
                     <div class="mb-3">
@@ -49,7 +67,7 @@
                                 <option value="">Elegir producto...</option>
                                 <?php foreach($productos as $p): ?>
                                     <option value="<?= $p['id_producto'] ?>" data-precio="<?= $p['precio_base'] ?>">
-                                        <?= $p['nombre_producto'] ?> ($<?= $p['precio_base'] ?>)
+                                        <?= $p['nombre_producto'] ?> (L. <?= $p['precio_base'] ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -81,20 +99,38 @@
                         </table>
                     </div>
 
-                    <div class="text-end mt-3">
-                        <h4 class="fw-bold">Total: $<span id="total-pedido">0.00</span></h4>
-                        <input type="hidden" name="total_final" id="input-total" value="0">
-                        <button type="submit" class="btn btn-success btn-lg rounded-pill px-5 fw-bold mt-3 shadow-sm">
-                            Guardar Pedido
-                        </button>
+                    <div class="card border-0 bg-light p-3 rounded-4 mt-3">
+                        <h6 class="fw-bold mb-3">Gestión de Pago</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="small fw-bold">Tipo de Pago</label>
+                                <select name="tipo_pago" id="tipo_pago" class="form-select border-0" onchange="gestionarPago()">
+                                    <option value="Pendiente">Dejar Pendiente (Saldo total)</option>
+                                    <option value="Abonado">Hacer un Abono (Anticipo)</option>
+                                    <option value="Pagado">Pago Completo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="contenedor-abono" style="display: none;">
+                                <label class="small fw-bold">Monto del Abono</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0">L. </span>
+                                    <input type="number" name="monto_abono" id="monto_abono" class="form-control border-0" step="0.01" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-end">
+                            <h4 class="fw-bold mb-0">Total: L. <span id="total-pedido">0.00</span></h4>
+                            <input type="hidden" name="total_final" id="input-total" value="0">
+                            <button type="submit" class="btn btn-success btn-lg rounded-pill px-5 fw-bold mt-3 shadow-sm w-100">
+                                <i class="fa-solid fa-floppy-disk me-2"></i> Guardar Pedido
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>            
         </div>
     </form>
-    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill mt-2" data-bs-toggle="modal" data-bs-target="#modalCliente">
-            + Nuevo Cliente
-    </button>
 
         <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
@@ -129,38 +165,72 @@
 
 <script>
     function agregarFila() {
-        const select = document.getElementById('select-producto');
-        const productoNombre = select.options[select.selectedIndex].text;
-        const productoId = select.value;
-        const precio = parseFloat(select.options[select.selectedIndex].getAttribute('data-precio'));
-        const cantidad = parseInt(document.getElementById('cant-producto').value);
+    const select = document.getElementById('select-producto');
+    const productoNombre = select.options[select.selectedIndex].text;
+    const productoId = select.value;
+    const precio = parseFloat(select.options[select.selectedIndex].getAttribute('data-precio'));
+    const cantidad = parseInt(document.getElementById('cant-producto').value);
 
-        if (!productoId) return alert("Selecciona un producto");
+    if (!productoId) return alert("Selecciona un producto");
 
-        const subtotal = precio * cantidad;
-        const tabla = document.getElementById('tabla-detalles').getElementsByTagName('tbody')[0];
-        const nuevaFila = tabla.insertRow();
+    const subtotal = precio * cantidad;
+    const tabla = document.getElementById('tabla-detalles').getElementsByTagName('tbody')[0];
+    const nuevaFila = tabla.insertRow();
 
-        nuevaFila.innerHTML = `
-            <td>
-                <input type="hidden" name="productos[]" value="${productoId}">
-                <strong>${productoNombre}</strong>
-            </td>
-            <td>
-                <input type="text" name="personalizacion[]" class="form-control form-control-sm border-0 bg-light" placeholder="Ej: Feliz Cumple Juan">
-            </td>
-            <td>
-                <input type="hidden" name="cantidades[]" value="${cantidad}">
-                ${cantidad}
-            </td>
-            <td>$${subtotal.toFixed(2)}</td>
-            <td><button type="button" class="btn btn-sm text-danger" onclick="this.parentElement.parentElement.remove(); calcularTotal();"><i class="fa-solid fa-trash"></i></button></td>
-        `;
+    nuevaFila.innerHTML = `
+        <td><input type="hidden" name="productos[]" value="${productoId}"><strong>${productoNombre}</strong></td>
+        <td><input type="text" name="personalizacion[]" class="form-control form-control-sm border-0 bg-light" placeholder="Ej: Sabor chocolate..."></td>
+        <td><input type="hidden" name="cantidades[]" value="${cantidad}">${cantidad}</td>
+        <td class="subtotal-fila" data-valor="${subtotal}">L.${subtotal.toFixed(2)}</td>
+        <td><button type="button" class="btn btn-sm text-danger" onclick="this.parentElement.parentElement.remove(); calcularTotal();"><i class="fa-solid fa-trash"></i></button></td>
+    `;
 
-        calcularTotal();
+    calcularTotal(); // Llamamos a la suma
     }
 
     function calcularTotal() {
-        // Lógica simple para sumar subtotales y actualizar el span #total-pedido
+        let total = 0;
+        // Buscamos todas las celdas de subtotal que tengan la clase 'subtotal-fila'
+        document.querySelectorAll('.subtotal-fila').forEach(td => {
+            total += parseFloat(td.getAttribute('data-valor'));
+        });
+
+        // Actualizamos el texto visual y el input oculto que se envía a PHP
+        document.getElementById('total-pedido').innerText = total.toFixed(2);
+        document.getElementById('input-total').value = total.toFixed(2);
     }
+    function gestionarPago() {
+        const tipo = document.getElementById('tipo_pago').value;
+        const contenedorAbono = document.getElementById('contenedor-abono');
+        const inputAbono = document.getElementById('monto_abono');
+        const total = parseFloat(document.getElementById('input-total').value);
+        if (tipo === 'Abonado') {
+            contenedorAbono.style.display = 'block';
+            inputAbono.value = (total / 2).toFixed(2); // Sugerir el 50% por defecto
+        } else if (tipo === 'Pagado') {
+            contenedorAbono.style.display = 'none';
+            inputAbono.value = total;
+            } else {
+                contenedorAbono.style.display = 'none';
+                inputAbono.value = 0;
+            }
+    }
+
+    
+
+    document.getElementById('cliente-input').addEventListener('input', function(e) {
+    const input = e.target;
+    const list = document.getElementById('lista-clientes');
+    const options = list.options;
+    const hiddenInput = document.getElementById('id_cliente_real');
+    
+    hiddenInput.value = ""; // Reset por seguridad
+
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].value === input.value) {
+            hiddenInput.value = options[i].getAttribute('data-id');
+            break;
+        }
+    }
+    });
 </script>

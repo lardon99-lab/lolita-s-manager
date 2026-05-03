@@ -22,18 +22,14 @@ class AuthController {
             $userData = $this->user->login($username, $password);
 
             if ($userData) {
-                // Creamos las variables de sesión
-                $_SESSION['user_id']   = $userData['id_usuario'];
-                $_SESSION['username']  = $userData['nombre_usuario'];
-                $_SESSION['real_name'] = $userData['nombre_real'];
-                $_SESSION['role']      = $userData['nombre_rol'];
-                $_SESSION['id_sucursal'] = $userData['id_sucursal'];
+                $_SESSION['id_usuario']   = $userData['id_usuario']; 
+                $_SESSION['username']     = $userData['nombre_usuario'];
+                $_SESSION['role']         = $userData['rol']; 
+                $_SESSION['id_sucursal']  = $userData['id_sucursal'];
 
-                // Redirección según rol (Ejemplo)
                 header("Location: ../../public/index.php?view=dashboard");
                 exit();
-            } else {
-                // Si falla, enviamos error por URL (puedes mejorarlo con sesiones)
+            }else {
                 header("Location: ../../views/auth/login.php?error=1");
                 exit();
             }

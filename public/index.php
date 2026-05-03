@@ -3,7 +3,7 @@
 session_start();
 
 // Si no hay sesión activa, redirigir al login
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['id_usuario'])) {
     header("Location: ../views/auth/login.php");
     exit();
 }
@@ -33,18 +33,28 @@ $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
                         include '../views/inventario/listar.php';
                         break;
                     case 'pedidos-nuevo':
-                        // Antes de cargar la vista, necesitamos datos para los selectores
                         require_once '../app/controllers/PedidoController.php';
                         $pedidosCtrl = new PedidoController();
                         $data = $pedidosCtrl->prepararFormulario();
                         $clientes = $data['clientes'];
                         $productos = $data['productos'];
+                        $sucursales = $data['sucursales'];
                         include '../views/pedidos/nuevo.php';
                         break;
                     case 'dashboard':
                         include '../views/dashboard/index.php';
                         break;
-                    case 'pedidos-listar':
+                    case 'pedidos-lista':
+                        require_once '../app/controllers/PedidoController.php';
+                        $pedidosCtrl = new PedidoController();
+                        
+                        // Capturamos el estado, si no viene en la URL, por defecto es 'Todos'
+                        $filtro_estado = isset($_GET['estado']) ? $_GET['estado'] : 'Todos';
+                        
+                        // Ejecutamos la consulta
+                        $listado = $pedidosCtrl->listarTodos($filtro_estado);
+                        
+                        // Cargamos la vista
                         include '../views/pedidos/listar.php';
                         break;
                     case 'ventas-historial':
@@ -53,6 +63,28 @@ $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
                     default:
                         include '../views/dashboard/index.php';
                         break;
+                    case 'usuarios':
+                    if ($_SESSION['role'] !== 'Admin') {
+                        header("Location: index.php?view=dashboard");
+                        exit();
+                    }
+                    require_once '../app/controllers/UsuarioController.php'; // Ahora sí lo encontrará
+                    $userCtrl = new UsuarioController();
+                    $usuarios = $userCtrl->listar();
+                    $sucursales = $userCtrl->obtenerSucursales();
+                    include '../views/usuarios/listar.php';
+                    break;
+
+                    case 'ventas-nueva':
+                    require_once '../app/controllers/InventarioController.php';
+                    require_once '../app/controllers/VentaController.php';
+                    
+                    $invCtrl = new InventarioController();
+                    // Usamos el método de inventario para traer productos con existencias
+                    $productos = $invCtrl->listarProductosDisponibles(); 
+                    
+                    include '../views/ventas/nueva.php';
+                    break;
                 }
             ?>
         </div>

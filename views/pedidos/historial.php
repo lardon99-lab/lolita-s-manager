@@ -15,7 +15,7 @@ $totalIngresos = array_sum(array_column($ventas, 'total_pedido'));
         <h2 class="fw-bold">Historial de Ventas 💰</h2>
         <div class="text-end">
             <span class="text-muted small">Total del periodo:</span>
-            <h3 class="text-success fw-bold">$<?= number_format($totalIngresos, 2) ?></h3>
+            <h3 class="text-success fw-bold">L. <?= number_format($totalIngresos, 2) ?></h3>
         </div>
     </div>
 
@@ -61,7 +61,7 @@ $totalIngresos = array_sum(array_column($ventas, 'total_pedido'));
                                 <td><?= date('d/m/Y', strtotime($v['fecha_registro'])) ?></td>
                                 <td><?= $v['cliente'] ?></td>
                                 <td><span class="badge bg-light text-dark border"><?= $v['nombre_sucursal'] ?></span></td>
-                                <td class="text-end pe-4 fw-bold text-success">$<?= number_format($v['total_pedido'], 2) ?></td>
+                                <td class="text-end pe-4 fw-bold text-success">L. <?= number_format($v['total_pedido'], 2) ?></td>
                             </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
