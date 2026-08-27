@@ -37,6 +37,7 @@ $totalMermas = array_sum(array_column($mermas, 'monto'));
 $totalCajaReal = $totalIngresos - $totalMermas;
 ?>
 
+<<<<<<< HEAD
 <div class="container-fluid p-2 p-md-4">
     <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
         <div class="row align-items-center g-3">
@@ -58,6 +59,14 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     <?php endif; ?>
                 </div>
             </div>
+=======
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Historial de Ventas 💰</h2>
+        <div class="text-end">
+            <span class="text-muted small">Total del periodo:</span>
+            <h3 class="text-success fw-bold">L. <?= number_format($totalIngresos, 2) ?></h3>
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
         </div>
     </div>
 
@@ -193,6 +202,7 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                                 </span>
                             </td>
                         </tr>
+<<<<<<< HEAD
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
@@ -204,6 +214,28 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     <?php endif; ?>
                 </tbody>
             </table>
+=======
+                    </thead>
+                    <tbody>
+                        <?php if(count($ventas) > 0): ?>
+                            <?php foreach($ventas as $v): ?>
+                            <tr>
+                                <td class="ps-4">#<?= $v['id_pedido'] ?></td>
+                                <td><?= date('d/m/Y', strtotime($v['fecha_registro'])) ?></td>
+                                <td><?= $v['cliente'] ?></td>
+                                <td><span class="badge bg-light text-dark border"><?= $v['nombre_sucursal'] ?></span></td>
+                                <td class="text-end pe-4 fw-bold text-success">L. <?= number_format($v['total_pedido'], 2) ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">No hay ventas registradas en este periodo.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
         </div>
     </div>
 </div>

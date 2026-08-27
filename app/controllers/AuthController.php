@@ -18,6 +18,7 @@ class AuthController
         $this->userModel = new Usuario((new Database())->getConnection());
     }
 
+<<<<<<< HEAD
     public function login(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
@@ -26,6 +27,27 @@ class AuthController
         $password = (string) ($_POST['password'] ?? '');
         if ($username === '' || $password === '' || mb_strlen($username) > 100 || mb_strlen($password) > 4096) {
             Response::redirect('login.php?error=1');
+=======
+    public function login() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $username = $_POST['username'] ?? '';
+            $password = $_POST['password'] ?? '';
+
+            $userData = $this->user->login($username, $password);
+
+            if ($userData) {
+                $_SESSION['id_usuario']   = $userData['id_usuario']; 
+                $_SESSION['username']     = $userData['nombre_usuario'];
+                $_SESSION['role']         = $userData['rol']; 
+                $_SESSION['id_sucursal']  = $userData['id_sucursal'];
+
+                header("Location: ../../public/index.php?view=dashboard");
+                exit();
+            }else {
+                header("Location: ../../views/auth/login.php?error=1");
+                exit();
+            }
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
         }
         if (LoginRateLimiter::tooManyAttempts($username)) {
             Response::redirect('login.php?error=blocked');

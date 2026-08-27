@@ -30,6 +30,7 @@ class PedidoController {
     $clientes = $this->db->query("SELECT id_cliente, nombre_completo FROM clientes")->fetchAll(PDO::FETCH_ASSOC);
     $productos = $this->db->query("SELECT id_producto, nombre_producto, precio_base FROM productos")->fetchAll(PDO::FETCH_ASSOC);
     // Agregamos la consulta de sucursales
+<<<<<<< HEAD
     $allowedBranches = Auth::allowedBranches();
     if ($allowedBranches === null) {
         $sucursales = $this->db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales ORDER BY nombre_sucursal")->fetchAll(PDO::FETCH_ASSOC);
@@ -41,6 +42,9 @@ class PedidoController {
         $branchStmt->execute($allowedBranches);
         $sucursales = $branchStmt->fetchAll(PDO::FETCH_ASSOC);
     }
+=======
+    $sucursales = $this->db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales")->fetchAll(PDO::FETCH_ASSOC);
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
     
     return [
         'clientes' => $clientes, 
@@ -53,6 +57,7 @@ class PedidoController {
         (new PedidoService($this->db))->crear($_POST);
     }
 
+<<<<<<< HEAD
     public function obtenerDetalles($id_pedido) {
         $query = "SELECT d.*, p.nombre_producto 
                 FROM pedido_detalles d
@@ -74,6 +79,45 @@ class PedidoController {
 
             $condiciones = [];
             $params = [];
+=======
+                // 1. Insertar Cabecera del Pedido
+                $queryPedido = "INSERT INTO pedidos (id_cliente, id_sucursal, id_usuario, fecha_entrega, total_pedido, monto_abonado, saldo_pendiente, estado_pago, observaciones_generales) 
+                                VALUES (:id_c, :id_s, :id_u, :fecha, :total, :abono, :saldo, :est_pago, :obs)";
+                
+                $stmt = $this->db->prepare($queryPedido);
+                // Si el formulario no envió sucursal (por ser admin o error), usamos la de la sesión
+                $id_sucursal = $_POST['id_sucursal'] ?: $_SESSION['id_sucursal'];
+
+                $stmt->execute([
+                    ':id_c'      => $_POST['id_cliente'],
+                    ':id_s'      => $_POST['id_sucursal'],
+                    ':id_u'      => $_SESSION['user_id'],
+                    ':fecha'     => $_POST['fecha_entrega'],
+                    ':total'     => $total_final,
+                    ':abono'     => $monto_abonado,
+                    ':saldo'     => $saldo_pendiente,
+                    ':est_pago'  => $tipo_pago,
+                    ':obs'       => $_POST['observaciones']
+                ]);
+                $id_pedido = $this->db->lastInsertId();
+
+                $total_final = $_POST['total_final'];
+                $tipo_pago = $_POST['tipo_pago'];
+                $monto_abonado = 0;
+
+                if ($tipo_pago == 'Pagado') {
+                    $monto_abonado = $total_final;
+                } elseif ($tipo_pago == 'Abonado') {
+                    $monto_abonado = $_POST['monto_abono'];
+                }
+
+                $saldo_pendiente = $total_final - $monto_abonado;
+
+                // 2. Insertar Detalles (Recorremos los arrays enviados desde el JS)
+                $queryDetalle = "INSERT INTO pedido_detalles (id_pedido, id_producto, cantidad, precio_unitario, detalles_personalizacion, subtotal) 
+                                 VALUES (?, ?, ?, ?, ?, ?)";
+                $stmtDetalle = $this->db->prepare($queryDetalle);
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
 
             // 1. Filtro por Estado (Si no es 'Todos')
             if ($estado !== 'Todos' && !empty($estado)) {
@@ -119,6 +163,45 @@ class PedidoController {
             return [];
         }
     }
+<<<<<<< HEAD
+=======
+
+    public function obtenerDetalles($id_pedido) {
+        $query = "SELECT d.*, p.nombre_producto 
+                FROM pedido_detalles d
+                INNER JOIN productos p ON d.id_producto = p.id_producto
+                WHERE d.id_pedido = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':id' => $id_pedido]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function listarTodos($estado = 'Todos') {
+        try {
+            $query = "SELECT p.*, c.nombre_completo as nombre_cliente, c.telefono 
+                    FROM pedidos p
+                    INNER JOIN clientes c ON p.id_cliente = c.id_cliente";
+
+            if ($estado !== 'Todos' && !empty($estado)) {
+                $query .= " WHERE p.estado = :estado";
+            }
+
+            $query .= " ORDER BY p.fecha_entrega ASC";
+
+            $stmt = $this->db->prepare($query);
+
+            if ($estado !== 'Todos' && !empty($estado)) {
+                $stmt->bindValue(':estado', $estado);
+            }
+
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Esto te dirá si el error está en la base de datos
+            die("Error en la consulta: " . $e->getMessage());
+        }
+    }
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
 
     public function actualizarEstado() {
     if (isset($_GET['id']) && isset($_GET['nuevo_estado'])) {

@@ -3,6 +3,7 @@
 require_once '../app/core/SesionHelper.php';
 require_once '../app/core/Database.php';
 
+<<<<<<< HEAD
 use App\Security\Csrf;
 
 // El helper ya inicia sesión y valida si existe el id_usuario
@@ -10,6 +11,12 @@ SesionHelper::protegerVista();
 
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
+=======
+// Si no hay sesión activa, redirigir al login
+if (!isset($_SESSION['id_usuario'])) {
+    header("Location: ../views/auth/login.php");
+    exit();
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
 }
 
 $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
@@ -80,6 +87,7 @@ if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], 
                         $sucursales = $data['sucursales'];
                         include '../views/pedidos/nuevo.php';
                         break;
+<<<<<<< HEAD
 
                     case 'pedidos-lista':
                         require_once '../app/controllers/PedidoController.php';
@@ -87,6 +95,22 @@ if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], 
                         $allowedStates = ['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Entregado', 'Cancelado'];
                         $filtro_estado = in_array($_GET['estado'] ?? 'Todos', $allowedStates, true) ? ($_GET['estado'] ?? 'Todos') : 'Todos';
                         $listado = $pedidosCtrl->listarTodos($filtro_estado);
+=======
+                    case 'dashboard':
+                        include '../views/dashboard/index.php';
+                        break;
+                    case 'pedidos-lista':
+                        require_once '../app/controllers/PedidoController.php';
+                        $pedidosCtrl = new PedidoController();
+                        
+                        // Capturamos el estado, si no viene en la URL, por defecto es 'Todos'
+                        $filtro_estado = isset($_GET['estado']) ? $_GET['estado'] : 'Todos';
+                        
+                        // Ejecutamos la consulta
+                        $listado = $pedidosCtrl->listarTodos($filtro_estado);
+                        
+                        // Cargamos la vista
+>>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
                         include '../views/pedidos/listar.php';
                         break;
 
@@ -113,6 +137,28 @@ if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], 
                         http_response_code(404);
                         echo '<div class="container-fluid p-4"><div class="alert alert-warning">Vista no encontrada.</div></div>';
                         break;
+                    case 'usuarios':
+                    if ($_SESSION['role'] !== 'Admin') {
+                        header("Location: index.php?view=dashboard");
+                        exit();
+                    }
+                    require_once '../app/controllers/UsuarioController.php'; // Ahora sí lo encontrará
+                    $userCtrl = new UsuarioController();
+                    $usuarios = $userCtrl->listar();
+                    $sucursales = $userCtrl->obtenerSucursales();
+                    include '../views/usuarios/listar.php';
+                    break;
+
+                    case 'ventas-nueva':
+                    require_once '../app/controllers/InventarioController.php';
+                    require_once '../app/controllers/VentaController.php';
+                    
+                    $invCtrl = new InventarioController();
+                    // Usamos el método de inventario para traer productos con existencias
+                    $productos = $invCtrl->listarProductosDisponibles(); 
+                    
+                    include '../views/ventas/nueva.php';
+                    break;
                 }
             ?>
         </div>
