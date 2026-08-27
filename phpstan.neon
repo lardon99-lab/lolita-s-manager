@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    scanFiles:
+        - app/models/Producto.php
+    paths:
+        - app/Http
+        - app/Security
+        - app/Services
+        - app/Support
+    excludePaths:
+        - app/controllers/PedidoController.php
+    treatPhpDocTypesAsCertain: false

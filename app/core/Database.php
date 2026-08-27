@@ -1,29 +1,35 @@
 <?php
-class Database {
-    private $host = "localhost";
-    private $db_name = "lolitas_db"; // Nombre actualizado
-    private $username = "root";      // Cambia según tu config
-    private $password = "ard@1931$";          // Cambia según tu config
-    public $conn;
+declare(strict_types=1);
 
-    public function getConnection() {
-        $this->conn = null;
+use App\Support\Env;
 
-        try {
-            $this->conn = new PDO(
-                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
-                $this->username,
-                $this->password
-            );
-            // Configuramos para que lance excepciones en caso de error
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            // Definimos el juego de caracteres a UTF8
-            $this->conn->exec("set names utf8");
-        } catch(PDOException $exception) {
-            echo "Error de conexión: " . $exception->getMessage();
-        }
+require_once __DIR__ . '/../bootstrap.php';
 
+class Database
+{
+    private ?PDO $conn = null;
+
+    public function getConnection(): PDO
+    {
+        if ($this->conn instanceof PDO) return $this->conn;
+
+        $host = Env::get('DB_HOST', '127.0.0.1');
+        $port = Env::get('DB_PORT', '3306');
+        $database = Env::get('DB_DATABASE', 'lolitas_db');
+        $username = Env::get('DB_USERNAME', 'root');
+        $password = Env::get('DB_PASSWORD', '');
+
+        $this->conn = new PDO(
+            "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4",
+            $username,
+            $password,
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_STRINGIFY_FETCHES => false,
+            ]
+        );
         return $this->conn;
     }
 }
-?>

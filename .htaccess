@@ -1,0 +1,11 @@
+Options -Indexes
+RewriteEngine On
+
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(?:app|views|vendor|storage|tests|database)(?:/|$) - [F,L,NC]
+
+<FilesMatch "^(composer\.(json|lock)|phpunit\.xml|phpstan\.neon)$">
+    Require all denied
+</FilesMatch>
+
+RewriteRule ^$ public/ [R=302,L]

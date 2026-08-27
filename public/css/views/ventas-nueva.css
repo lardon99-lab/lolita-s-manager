@@ -1,0 +1,12 @@
+    /* Estética de la lista de selección */
+    .custom-select-list { border-radius: 12px !important; }
+    .custom-select-list option { padding: 12px 15px; border-bottom: 1px solid #f8f9fa; cursor: pointer; transition: 0.2s; }
+    .custom-select-list option:hover { background-color: #f1f4f9; }
+    .custom-select-list option:checked { background-color: #0d6efd !important; color: white !important; font-weight: bold; }
+    
+    /* Input cantidad personalizado */
+    #cantidad { border-radius: 10px; background-color: #f8f9fa; }
+    #cantidad:focus { background-color: #fff; border-color: #0d6efd; }
+    
+    /* Efecto de scroll suave */
+    .table-responsive { max-height: 400px; overflow-y: auto; }

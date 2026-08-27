@@ -1,0 +1,11 @@
+    .user-card-card {
+        border: 1px solid #f3e3e9 !important;
+    }
+    .user-actions .btn {
+        width: auto;
+    }
+    @media (max-width: 576px) {
+        .user-actions .btn {
+            width: 100%;
+        }
+    }

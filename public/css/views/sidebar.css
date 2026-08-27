@@ -1,0 +1,58 @@
+    /* Transiciones suaves */
+    /* Transiciones suaves */
+    .transition-all { transition: all 0.3s ease; }
+    .sidebar { transition: width 0.25s ease, padding 0.25s ease; overflow: hidden; }
+    .sidebar.sidebar-collapsed { width: 70px !important; padding-left: 0; padding-right: 0; }
+    .sidebar.sidebar-collapsed .offcanvas-body { padding: 0.5rem !important; }
+    .sidebar.sidebar-collapsed .sidebar-brand-title,
+    .sidebar.sidebar-collapsed .sidebar-label,
+    .sidebar.sidebar-collapsed .sidebar-user-meta,
+    .sidebar.sidebar-collapsed .sidebar-divider { display: none !important; }
+    .sidebar.sidebar-collapsed .nav-link { justify-content: center; padding: 0.75rem 0; min-height: 48px; align-items: center; width: 100%; }
+    .sidebar.sidebar-collapsed .nav-link i { margin-right: 0 !important; width: auto; }
+    .sidebar.sidebar-collapsed .sidebar-user-badge {
+        width: 48px;
+        height: 48px;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center;
+        overflow: hidden;
+        margin: 0 auto;
+    }
+    .sidebar.sidebar-collapsed .sidebar-user-badge i { margin-right: 0 !important; }
+    .sidebar.sidebar-collapsed .mb-4 { margin-bottom: 0.5rem !important; }
+    .sidebar.sidebar-collapsed .d-flex { flex-direction: column; align-items: center; }
+    .sidebar-toggle {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: 50% !important;
+        padding: 0;
+        line-height: 1;
+    }
+    
+    /* Efectos Hover */
+    .menu-hover:hover { background-color: #fff0f3; color: #ff85a2 !important; transform: translateX(5px); }
+    .menu-hover-danger:hover { background-color: #ffe6e6; transform: translateX(5px); }
+    
+    /* Tema principal */
+    .bg-primary { background-color: #ff85a2 !important; border: none; }
+    .text-primary { color: #ff85a2 !important; }
+
+    @media (max-width: 767.98px) {
+        .sidebar.sidebar-collapsed { width: 100% !important; max-width: 280px; }
+        .sidebar.sidebar-collapsed .sidebar-brand-title,
+        .sidebar.sidebar-collapsed .sidebar-label,
+        .sidebar.sidebar-collapsed .sidebar-user-meta,
+        .sidebar.sidebar-collapsed .sidebar-divider { display: inline-block !important; }
+        .sidebar.sidebar-collapsed .sidebar-user-badge {
+            width: auto;
+            height: auto;
+            padding: 0.5rem 0.75rem !important;
+            border-radius: 999px !important;
+        }
+        .sidebar.sidebar-collapsed .sidebar-toggle { display: none !important; }
+    }

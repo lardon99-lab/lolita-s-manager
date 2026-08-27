@@ -1,0 +1,33 @@
+    .chip-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: #fff;
+        color: #8d5b74;
+        border: 1px solid #f1dce3;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    /* Efectos hover sutiles */
+    .transition-hover { transition: all 0.2s ease-in-out; }
+    .transition-hover:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    
+    /* Utilidades tipográficas */
+    .fw-black { font-weight: 900; }
+    .tracking-wide { letter-spacing: 1px; }
+
+    /* Bordes para responsive */
+    @media (min-width: 768px) {
+        .border-start-md { border-left: 2px dashed #dee2e6 !important; padding-left: 1.5rem !important; }
+    }
+
+    /* Estilos para impresión (Opcional pero recomendado si usarás window.print) */
+    @media print {
+        body * { visibility: hidden; }
+        .modal-content, .modal-content * { visibility: visible; }
+        .modal-content { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+        .modal-footer, .btn-close { display: none !important; }
+    }

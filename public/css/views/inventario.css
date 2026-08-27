@@ -1,0 +1,11 @@
+    /* Efecto para que el select parezca clickeable */
+    .cursor-pointer { cursor: pointer; }
+    
+    /* Animación de botones */
+    .hover-lift { transition: transform 0.2s ease, background-color 0.2s ease; }
+    .hover-lift:hover { transform: translateY(-2px); }
+    
+    /* Adaptaciones móviles */
+    @media (max-width: 576px) {
+        .table td, .table th { font-size: 0.85rem; }
+    }
