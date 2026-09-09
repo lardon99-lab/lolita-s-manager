@@ -8,4 +8,9 @@
         .user-actions .btn {
             width: 100%;
         }
+        .user-card-card > .d-flex:first-child {
+            align-items: flex-start !important;
+            gap: 0.5rem;
+        }
+        .user-card-card .badge { white-space: normal; text-align: center; }
     }

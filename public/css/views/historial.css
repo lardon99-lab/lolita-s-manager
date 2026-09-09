@@ -1,2 +1,25 @@
     .font-monospace { font-family: 'Courier New', Courier, monospace !important; }
     .table td { border-bottom: 1px solid #f2f2f2; padding-top: 1rem; padding-bottom: 1rem; }
+    @media (max-width: 767px) {
+        .page-shell .bg-dark {
+            display: block !important;
+            width: 100%;
+        }
+        .page-shell .bg-dark > .d-flex {
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 0.75rem !important;
+        }
+        .page-shell .bg-dark .btn { width: 100%; }
+        .history-main-table .text-truncate {
+            max-width: 100% !important;
+            white-space: normal;
+        }
+        .history-main-table td[data-label="Productos"],
+        .history-main-table td[data-label="Cliente / Sucursal"] { grid-column: 1 / -1; }
+        .history-main-table td[data-label="Monto final"] { align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+        .history-main-table td[data-label="Productos"],
+        .history-main-table td[data-label="Cliente / Sucursal"] { grid-column: 1; }
+    }

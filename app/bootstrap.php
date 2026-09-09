@@ -5,7 +5,13 @@ use App\Support\Env;
 use App\Support\Logger;
 
 $root = dirname(__DIR__);
-require_once $root . '/vendor/autoload.php';
+$autoload = $root . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    error_log("Lolita's Manager: falta vendor/autoload.php. Ejecute composer install antes de desplegar.");
+    http_response_code(500);
+    exit('Instalacion incompleta: faltan las dependencias de Composer.');
+}
+require_once $autoload;
 Env::load($root . '/.env');
 date_default_timezone_set(Env::get('APP_TIMEZONE', 'America/Tegucigalpa'));
 
@@ -33,15 +39,17 @@ if (PHP_SAPI !== 'cli') {
 }
 
 set_exception_handler(static function (Throwable $error): void {
-    Logger::error($error);
+    $reference = Logger::error($error);
     http_response_code(500);
     if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
         header('Content-Type: application/json; charset=UTF-8');
-        echo json_encode(['status' => 'error', 'message' => 'Ocurrio un error interno.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['status' => 'error', 'message' => 'Ocurrio un error interno.', 'reference' => $reference], JSON_UNESCAPED_UNICODE);
         return;
     }
-    echo 'Ocurrio un error interno.';
+    echo 'Ocurrio un error interno. Referencia: ' . htmlspecialchars($reference, ENT_QUOTES, 'UTF-8');
 });
+
+Env::require(['DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD']);
 
 if (!function_exists('e')) {
     function e(mixed $value): string

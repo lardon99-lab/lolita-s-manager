@@ -10,3 +10,18 @@
     
     /* Efecto de scroll suave */
     .table-responsive { max-height: 400px; overflow-y: auto; }
+    .sales-cart-table { min-width: 620px; }
+
+    @media (max-width: 767px) {
+        .card-header { padding: 1rem !important; }
+        #formNuevaVenta .d-flex.gap-3 { flex-wrap: wrap; }
+        #formNuevaVenta .d-flex.gap-3 > label { min-width: 130px; }
+        .custom-select-list { min-height: 190px; }
+        .sales-cart-table { min-width: 560px !important; }
+        #total-venta { font-size: 2rem !important; overflow-wrap: anywhere; }
+    }
+
+    @media (max-width: 480px) {
+        #pago_efectivo + label,
+        #pago_tarjeta + label { font-size: 0.8rem; }
+    }

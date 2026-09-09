@@ -1,7 +1,17 @@
     /* Transiciones suaves */
     /* Transiciones suaves */
     .transition-all { transition: all 0.3s ease; }
-    .sidebar { transition: width 0.25s ease, padding 0.25s ease; overflow: hidden; }
+    .sidebar {
+        flex: 0 0 260px;
+        width: 260px;
+        min-height: 100vh;
+        overflow: hidden;
+        border-right: 1px solid #eee;
+        z-index: 1050;
+        transition: width 0.25s ease, padding 0.25s ease;
+    }
+    .sidebar-brand-title,
+    .offcanvas-title { color: #ff85a2; }
     .sidebar.sidebar-collapsed { width: 70px !important; padding-left: 0; padding-right: 0; }
     .sidebar.sidebar-collapsed .offcanvas-body { padding: 0.5rem !important; }
     .sidebar.sidebar-collapsed .sidebar-brand-title,
@@ -43,6 +53,18 @@
     .text-primary { color: #ff85a2 !important; }
 
     @media (max-width: 767.98px) {
+        .sidebar {
+            width: min(86vw, 320px);
+            max-width: 320px;
+            min-height: 100dvh;
+        }
+        .sidebar .offcanvas-body {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .sidebar .nav-link {
+            min-height: 48px;
+        }
         .sidebar.sidebar-collapsed { width: 100% !important; max-width: 280px; }
         .sidebar.sidebar-collapsed .sidebar-brand-title,
         .sidebar.sidebar-collapsed .sidebar-label,

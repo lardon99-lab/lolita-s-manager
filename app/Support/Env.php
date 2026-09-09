@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use RuntimeException;
+
 final class Env
 {
     private static bool $loaded = false;
@@ -17,9 +19,8 @@ final class Env
             $line = trim($line);
             if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
             [$name, $value] = array_map('trim', explode('=', $line, 2));
-            if ($name === '' || getenv($name) !== false) continue;
+            if ($name === '' || array_key_exists($name, $_ENV) || getenv($name) !== false) continue;
             $value = trim($value, "\"'");
-            putenv($name . '=' . $value);
             $_ENV[$name] = $value;
         }
         self::$loaded = true;
@@ -27,7 +28,24 @@ final class Env
 
     public static function get(string $name, ?string $default = null): ?string
     {
+        if (array_key_exists($name, $_ENV)) {
+            return (string) $_ENV[$name];
+        }
         $value = getenv($name);
-        return $value === false ? $default : $value;
+        return $value === false ? $default : (string) $value;
+    }
+
+    public static function require(array $names): void
+    {
+        $missing = [];
+        foreach ($names as $name) {
+            $value = self::get($name);
+            if ($value === null || trim($value) === '') {
+                $missing[] = $name;
+            }
+        }
+        if ($missing !== []) {
+            throw new RuntimeException('Faltan variables de entorno requeridas: ' . implode(', ', $missing));
+        }
     }
 }

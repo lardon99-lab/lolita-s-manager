@@ -24,6 +24,27 @@
         .border-start-md { border-left: 2px dashed #dee2e6 !important; padding-left: 1.5rem !important; }
     }
 
+    @media (max-width: 767px) {
+        .page-actions { display: grid !important; grid-template-columns: 1fr; width: 100%; }
+        .page-actions .btn { width: 100%; justify-content: center; }
+        .orders-main-table tbody td[data-label="Cliente"],
+        .orders-main-table tbody td[data-label="Entrega"] { grid-column: span 1; }
+        .orders-main-table tbody td[data-label="Acciones"] > div {
+            width: 100%;
+            justify-content: flex-start !important;
+        }
+        .orders-main-table tbody td[data-label="Acciones"] .btn {
+            width: 44px !important;
+            height: 44px !important;
+        }
+        .chip-pill { max-width: 100%; white-space: normal; }
+    }
+
+    @media (max-width: 480px) {
+        .orders-main-table tbody td[data-label="Cliente"],
+        .orders-main-table tbody td[data-label="Entrega"] { grid-column: 1; }
+    }
+
     /* Estilos para impresión (Opcional pero recomendado si usarás window.print) */
     @media print {
         body * { visibility: hidden; }

@@ -8,4 +8,15 @@
     /* Adaptaciones móviles */
     @media (max-width: 576px) {
         .table td, .table th { font-size: 0.85rem; }
+        .inventory-main-table tbody td[data-label="Producto"],
+        .inventory-main-table tbody td[data-label="Acciones"] { grid-column: 1 / -1; }
+        .inventory-main-table tbody td[data-label="Acciones"] > div {
+            width: 100%;
+            justify-content: flex-start !important;
+        }
+        .inventory-main-table tbody td[data-label="Acciones"] .btn {
+            width: 44px !important;
+            height: 44px !important;
+        }
+        #modalNuevoProducto .form-section-card { padding: 0.75rem; }
     }

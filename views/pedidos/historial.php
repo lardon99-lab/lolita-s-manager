@@ -37,7 +37,6 @@ $totalMermas = array_sum(array_column($mermas, 'monto'));
 $totalCajaReal = $totalIngresos - $totalMermas;
 ?>
 
-<<<<<<< HEAD
 <div class="container-fluid p-2 p-md-4">
     <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
         <div class="row align-items-center g-3">
@@ -59,14 +58,6 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     <?php endif; ?>
                 </div>
             </div>
-=======
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">Historial de Ventas 💰</h2>
-        <div class="text-end">
-            <span class="text-muted small">Total del periodo:</span>
-            <h3 class="text-success fw-bold">L. <?= number_format($totalIngresos, 2) ?></h3>
->>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
         </div>
     </div>
 
@@ -147,7 +138,7 @@ $totalCajaReal = $totalIngresos - $totalMermas;
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 mobile-card-table history-main-table">
                 <thead class="bg-dark text-white text-uppercase small">
                     <tr>
                         <th class="ps-4 py-3" style="width: 80px;">ID</th>
@@ -162,11 +153,11 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     <?php if(!empty($ventas)): ?>
                         <?php foreach($ventas as $v): ?>
                         <tr>
-                            <td class="ps-4">
+                            <td class="ps-4" data-label="ID">
                                 <span class="badge bg-dark px-2 py-2 rounded-2 shadow-sm">#<?= $v['id_pedido'] ?></span>
                             </td>
                             
-                            <td>
+                            <td data-label="Origen">
                                 <?php if($v['tipo'] == 'Pedido Especial'): ?>
                                     <small class="d-block text-primary fw-bold text-uppercase" style="font-size: 0.65rem;">Reserva</small>
                                     <span class="text-dark fw-medium"><i class="fa-solid fa-calendar-check text-primary me-1"></i> Pedido</span>
@@ -176,12 +167,12 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                                 <?php endif; ?>
                             </td>
                             
-                            <td>
+                            <td data-label="Fecha y hora">
                                 <div class="fw-bold text-dark"><?= date('d/m/Y', strtotime($v['fecha_registro'])) ?></div>
                                 <div class="text-muted small"><i class="fa-regular fa-clock me-1"></i><?= date('g:i a', strtotime($v['fecha_registro'])) ?></div>
                             </td>
                             
-                            <td>
+                            <td data-label="Cliente / Sucursal">
                                 <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">
                                     <?= !empty($v['cliente']) ? htmlspecialchars($v['cliente']) : 'Público General' ?>
                                 </div>
@@ -190,19 +181,18 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                                 </div>
                             </td>
 
-                            <td>
+                            <td data-label="Productos">
                                 <div class="small text-muted text-truncate" style="max-width: 250px;" title="<?= e($v['productos']) ?>">
                                     <?= e($v['productos']) ?>
                                 </div>
                             </td>
                             
-                            <td class="text-end pe-4">
+                            <td class="text-end pe-4" data-label="Monto final">
                                 <span class="fw-bold text-dark font-monospace fs-5">
                                     L. <?= number_format($v['total_pedido'], 2) ?>
                                 </span>
                             </td>
                         </tr>
-<<<<<<< HEAD
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
@@ -214,28 +204,6 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     <?php endif; ?>
                 </tbody>
             </table>
-=======
-                    </thead>
-                    <tbody>
-                        <?php if(count($ventas) > 0): ?>
-                            <?php foreach($ventas as $v): ?>
-                            <tr>
-                                <td class="ps-4">#<?= $v['id_pedido'] ?></td>
-                                <td><?= date('d/m/Y', strtotime($v['fecha_registro'])) ?></td>
-                                <td><?= $v['cliente'] ?></td>
-                                <td><span class="badge bg-light text-dark border"><?= $v['nombre_sucursal'] ?></span></td>
-                                <td class="text-end pe-4 fw-bold text-success">L. <?= number_format($v['total_pedido'], 2) ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">No hay ventas registradas en este periodo.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
->>>>>>> c6dbe5e6ebab9e6256ac5bf146680a5a83fa3874
         </div>
     </div>
 </div>
@@ -299,4 +267,4 @@ $totalCajaReal = $totalIngresos - $totalMermas;
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
 <script src="js/views/historial.js"></script>
 
-<link rel="stylesheet" href="css/views/historial.css">
+<link rel="stylesheet" href="css/views/historial.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/historial.css') ?>">

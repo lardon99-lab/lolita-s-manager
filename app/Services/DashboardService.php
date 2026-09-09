@@ -34,13 +34,24 @@ final class DashboardService
                      ORDER BY stock_actual ASC";
         $stockStmt = $this->db->prepare($stockSql);
         $stockStmt->execute($inventoryParams);
+        $criticalStock = $stockStmt->fetchAll();
+        $outOfStock = [];
+        $lowStock = [];
+        foreach ($criticalStock as $item) {
+            if ((int) $item['stock_actual'] <= 0) {
+                $outOfStock[] = $item;
+            } else {
+                $lowStock[] = $item;
+            }
+        }
 
         $expired = $this->expiry("i.fecha_caducidad <= :today", [':today' => $today], $inventoryScope, $inventoryParams);
         $expiring = $this->expiry("i.fecha_caducidad BETWEEN DATE_ADD(:today, INTERVAL 1 DAY) AND :limit", [':today' => $today, ':limit' => $limit], $inventoryScope, $inventoryParams);
 
         return [
             'metricas' => ['pendientes' => (int) $pending, 'para_hoy' => (int) $todayOrders, 'ventas' => (float) $delivered + (float) $direct],
-            'alertas' => $stockStmt->fetchAll(),
+            'inventario_agotado' => $outOfStock,
+            'inventario_stock_bajo' => $lowStock,
             'productos_caducados' => $expired,
             'productos_por_caducar' => $expiring,
         ];

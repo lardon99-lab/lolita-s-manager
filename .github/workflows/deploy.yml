@@ -1,0 +1,76 @@
+name: Pruebas y despliegue
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infinityfree-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Probar y publicar en InfinityFree
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Obtener el codigo
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Validar Composer
+        run: composer validate --strict
+
+      - name: Instalar dependencias de prueba
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Auditar dependencias de produccion
+        run: composer audit --locked --no-dev
+
+      - name: Ejecutar pruebas
+        run: composer test
+
+      - name: Preparar dependencias de produccion
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --classmap-authoritative
+
+      - name: Publicar por FTP
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          security: strict
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          local-dir: ./
+          timeout: 120000
+          log-level: minimal
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.env
+            **/.env.*
+            **/database/**
+            **/tests/**
+            **/storage/**
+            **/public/img/productos/**
+            **/.phpunit*
+            **/phpstan.neon
+            **/README.md

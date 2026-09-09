@@ -12,6 +12,9 @@ class Database
     public function getConnection(): PDO
     {
         if ($this->conn instanceof PDO) return $this->conn;
+        if (!extension_loaded('pdo_mysql')) {
+            throw new RuntimeException('La extension pdo_mysql no esta habilitada.');
+        }
 
         $host = Env::get('DB_HOST', '127.0.0.1');
         $port = Env::get('DB_PORT', '3306');

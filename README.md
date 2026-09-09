@@ -45,11 +45,62 @@ composer audit --locked
 
 1. Crear un respaldo consistente de MySQL.
 2. Instalar con `composer install --no-dev --classmap-authoritative`.
-3. Definir `.env` fuera del control de versiones y restringir sus permisos.
+3. Crear manualmente el archivo `.env` en la raiz del proyecto. La aplicacion no lee `.env.example` y `.env` no se sube mediante Git.
 4. Servir exclusivamente `public/` como `DocumentRoot`.
 5. Habilitar HTTPS y HSTS.
 6. Verificar permisos de escritura solo para `storage/` y `public/img/productos/`.
 7. Ejecutar pruebas de humo de login, pedidos, inventario, ventas, usuarios y PDF.
+
+Configuracion minima del archivo `.env` del servidor:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://dominio.example
+APP_TIMEZONE=America/Tegucigalpa
+SESSION_IDLE_TIMEOUT=5400
+DB_HOST=servidor-mysql-del-proveedor
+DB_PORT=3306
+DB_DATABASE=nombre_base
+DB_USERNAME=usuario_base
+DB_PASSWORD=contrasena_base
+```
+
+Antes de probar el acceso, confirmar lo siguiente:
+
+- El archivo se llama exactamente `.env`, sin extension `.txt`, y esta junto a `composer.json`.
+- La carpeta `vendor/` fue generada con Composer y esta presente en el servidor.
+- PHP es 8.0 o posterior y tiene habilitadas `pdo_mysql` y `fileinfo`.
+- `storage/logs` y `storage/rate-limits` permiten escritura al proceso PHP.
+- La base importada contiene todas las tablas de la aplicacion, no solamente `usuarios`.
+- El host de MySQL es el indicado por el proveedor; en hosting compartido normalmente no es `127.0.0.1`.
+
+Los errores de produccion muestran un codigo de referencia. Su detalle se busca primero en `storage/logs/app.log`; si esa carpeta no es escribible, se envia al registro de errores PHP del panel de hosting.
+
+### Despliegue automatico en InfinityFree
+
+El workflow `.github/workflows/deploy.yml` valida Composer, audita las dependencias, ejecuta las pruebas y publica mediante FTPS explicito cada `push` a `main`. Tambien puede iniciarse manualmente desde la pestana **Actions** de GitHub.
+
+Configurar estos secretos en **GitHub > repositorio > Settings > Secrets and variables > Actions > New repository secret**:
+
+| Secreto | Valor |
+| --- | --- |
+| `FTP_SERVER` | Host FTP mostrado en el panel de InfinityFree; normalmente `ftpupload.net`. No incluir `ftp://`. |
+| `FTP_USERNAME` | Usuario FTP completo del panel, no el usuario de MySQL. |
+| `FTP_PASSWORD` | Contrasena de la cuenta FTP. |
+| `FTP_SERVER_DIR` | Directorio remoto terminado en `/`; normalmente `/htdocs/`. |
+
+Antes de la primera ejecucion:
+
+1. Conservar en el servidor el `.env` de produccion y comprobar que no sea accesible por HTTP.
+2. Confirmar que `storage/` y `public/img/productos/` existen y mantienen permisos de escritura.
+3. Crear un respaldo de los archivos y de MySQL.
+4. Abrir **Actions > Pruebas y despliegue > Run workflow** y revisar que finalicen las pruebas y la publicacion.
+5. Verificar login, dashboard, inventario y una operacion de escritura en el sitio.
+
+El despliegue excluye credenciales, pruebas, archivos de base de datos, logs, sesiones y cargas de productos. No se usa limpieza total del servidor. Si cambia la estructura persistente de la aplicacion, esas exclusiones deben revisarse antes de desplegar.
+
+InfinityFree admite FTPS explicito en el puerto 21, que es la configuracion utilizada. No cambiar a SFTP: el hosting gratuito no ofrece SSH/SFTP.
 
 ## Responsive
 
