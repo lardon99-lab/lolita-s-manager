@@ -100,12 +100,14 @@
                                     <span class="text-muted">- Venció el: <span class="text-danger fw-bold"><?= $fecha_formateada ?></span></span>
                                 </div>
                                 
+                                <?php if (\App\Security\Auth::canAccessBranch((int) $cad['id_sucursal'], 'inventory.adjust')): ?>
                                 <button type="button" 
                                         class="btn btn-sm btn-danger rounded-pill fw-bold px-3 btn-mermar-caducado" 
                                         data-id="<?= $cad['id_inventario'] ?>" 
                                         data-nombre="<?= htmlspecialchars($cad['nombre_producto']) ?>">
                                     <i class="fa-solid fa-trash-can me-1"></i> Registrar Merma
                                 </button>
+                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>

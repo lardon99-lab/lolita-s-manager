@@ -23,28 +23,56 @@
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?php echo (!isset($_GET['view']) || $_GET['view'] == 'dashboard') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=dashboard">
                 <i class="fa-solid fa-chart-pie me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Dashboard</span>
             </a>
+            <?php if (\App\Security\Auth::hasPermission('inventory.view')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?php echo (isset($_GET['view']) && $_GET['view'] == 'inventario') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=inventario">
                 <i class="fa-solid fa-boxes-stacked me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Inventario</span>
             </a>
+            <?php endif; ?>
+
+            <?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
+            <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'catalogo') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=catalogo">
+                <i class="fa-solid fa-tags me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Catalogo</span>
+            </a>
+            <?php endif; ?>
+            <?php if (\App\Security\Auth::hasPermission('orders.create')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?php echo (isset($_GET['view']) && $_GET['view'] == 'pedidos-nuevo') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=pedidos-nuevo">
                 <i class="fa-solid fa-calendar-check me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Nuevo Pedido</span>
             </a>
+            <?php endif; ?>
+            <?php if (\App\Security\Auth::hasPermission('orders.view')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?php echo (isset($_GET['view']) && $_GET['view'] == 'pedidos-lista') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=pedidos-lista">
                 <i class="fa-solid fa-calendar-alt me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Listar Pedidos</span>
             </a>
+            <?php endif; ?>
+            <?php if (\App\Security\Auth::hasPermission('reports.view')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'ventas-historial') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=ventas-historial">
                 <i class="fa-solid fa-file-invoice-dollar me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Historial Ventas</span>
             </a>
+            <?php endif; ?>
             
-            <?php if (in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], true)): ?>
+            <?php if (\App\Security\Auth::hasPermission('users.manage')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?php echo (isset($_GET['view']) && $_GET['view'] == 'usuarios') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=usuarios">
                 <i class="fa-solid fa-user-shield me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Usuarios</span>
             </a>
             <?php endif; ?>
 
+            <?php if (\App\Security\Auth::hasPermission('clients.manage')): ?>
+            <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'clientes') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=clientes">
+                <i class="fa-solid fa-address-book me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Clientes</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (\App\Security\Auth::hasPermission('branches.manage')): ?>
+            <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'sucursales') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=sucursales">
+                <i class="fa-solid fa-store me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Sucursales</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (\App\Security\Auth::hasPermission('sales.create')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'ventas-nueva') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=ventas-nueva">
                 <i class="fa-solid fa-cash-register me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Registrar Venta</span>
             </a>
+            <?php endif; ?>
             
             <hr class="sidebar-divider text-black-50 my-3">
             

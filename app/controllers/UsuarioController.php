@@ -1,214 +1,233 @@
 <?php
+declare(strict_types=1);
+
+use App\Http\Response;
+use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
-use App\Http\Validator;
+use App\Security\UserPolicy;
+use App\Services\AuditService;
 
 require_once __DIR__ . '/../core/Database.php';
 
-class UsuarioController {
-    private $db;
+final class UsuarioController
+{
+    private PDO $db;
 
-    public function __construct() {
-        $database = new Database();
-        $this->db = $database->getConnection();
+    public function __construct(?PDO $db = null)
+    {
+        $this->db = $db ?? (new Database())->getConnection();
     }
 
-    public function listar() {
-        $query = "SELECT u.id_usuario, u.nombre_usuario, u.estado_usuario, u.id_rol,
+    public function listar(): array
+    {
+        Auth::requirePermission('users.manage');
+        $params = [];
+        $where = '';
+        if ((int) ($_SESSION['id_rol'] ?? 0) !== Auth::SUPERUSER) {
+            $allowed = Auth::allowedBranches('users.manage') ?? [];
+            if ($allowed === []) return [];
+            $holders = implode(',', array_fill(0, count($allowed), '?'));
+            $where = "WHERE u.id_rol = ? AND EXISTS (
+                          SELECT 1 FROM usuario_sucursales scope
+                          WHERE scope.id_usuario = u.id_usuario AND scope.id_sucursal IN ($holders)
+                      )";
+            $params = [Auth::EMPLOYEE, ...$allowed];
+        }
+
+        $query = "SELECT u.id_usuario, u.nombre_usuario, u.nombre_real, u.estado_usuario, u.id_rol,
                          r.nombre_rol, s.nombre_sucursal,
-                         (SELECT GROUP_CONCAT(s2.nombre_sucursal SEPARATOR ', ') 
-                          FROM usuario_sucursales us 
-                          JOIN sucursales s2 ON us.id_sucursal = s2.id_sucursal 
-                          WHERE us.id_usuario = u.id_usuario) as sucursales_admin
+                         (SELECT GROUP_CONCAT(s2.nombre_sucursal ORDER BY s2.nombre_sucursal SEPARATOR ', ')
+                          FROM usuario_sucursales us
+                          JOIN sucursales s2 ON us.id_sucursal = s2.id_sucursal
+                          WHERE us.id_usuario = u.id_usuario) AS sucursales_admin
                   FROM usuarios u
-                  INNER JOIN roles r ON u.id_rol = r.id_rol
+                  JOIN roles r ON u.id_rol = r.id_rol
                   LEFT JOIN sucursales s ON u.id_sucursal = s.id_sucursal
+                  $where
                   ORDER BY u.id_usuario DESC";
         $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
-    public function obtenerSucursales() {
-        $query = "SELECT id_sucursal, nombre_sucursal FROM sucursales";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function obtenerSucursales(): array
+    {
+        $allowed = Auth::allowedBranches('users.manage');
+        if ($allowed === null) {
+            return $this->db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' ORDER BY nombre_sucursal")->fetchAll();
+        }
+        if ($allowed === []) return [];
+        $holders = implode(',', array_fill(0, count($allowed), '?'));
+        $stmt = $this->db->prepare("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' AND id_sucursal IN ($holders) ORDER BY nombre_sucursal");
+        $stmt->execute($allowed);
+        return $stmt->fetchAll();
     }
 
-    public function registrarAjax() {
-        header('Content-Type: application/json');
+    public function obtenerRolesAsignables(): array
+    {
+        $roles = UserPolicy::assignableRoles();
+        $holders = implode(',', array_fill(0, count($roles), '?'));
+        $stmt = $this->db->prepare("SELECT id_rol, nombre_rol FROM roles WHERE id_rol IN ($holders) ORDER BY id_rol");
+        $stmt->execute($roles);
+        return $stmt->fetchAll();
+    }
+
+    public function registrarAjax(): void
+    {
         try {
-            $this->db->beginTransaction();
-
-            $nombre = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 80);
-            if (!preg_match('/^[A-Za-z0-9._-]{3,80}$/', $nombre)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
+            $name = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 50);
+            if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $name)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
+            $realName = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 100);
             $password = Validator::text($_POST['password'] ?? '', 'contrasena', 4096);
             if (mb_strlen($password) < 10) throw new InvalidArgumentException('La contrasena debe tener al menos 10 caracteres.');
-            $pass = password_hash($password, PASSWORD_DEFAULT);
-            $id_rol = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
-            if (!in_array($id_rol, [1, 2, 3], true)) throw new InvalidArgumentException('El rol no es valido.');
-            if ((int) $_SESSION['id_rol'] !== Auth::SUPERUSER && $id_rol === Auth::SUPERUSER) throw new InvalidArgumentException('No puedes asignar ese rol.');
-            $sucs = array_values(array_unique(array_map('intval', (array) ($_POST['id_sucursal'] ?? []))));
-            foreach ($sucs as $branchId) Auth::requireBranch($branchId);
-            $nombre_real = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 150);
+            $roleId = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
+            UserPolicy::requireAssignableRole($roleId);
+            $branches = UserPolicy::validateAssignments($roleId, (array) ($_POST['id_sucursal'] ?? []));
 
-            // Sucursal directa solo si es Empleado (Rol 2)
-            $suc_directa = ($id_rol == 2 && !empty($sucs)) ? (is_array($sucs) ? $sucs[0] : $sucs) : null;
-
-            $sql = "INSERT INTO usuarios (nombre_usuario, password_hash, id_rol, id_sucursal, nombre_real, estado_usuario) 
-                    VALUES (:nom, :pass, :rol, :suc, :nom_real, 'Activo')";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':nom'  => $nombre,
-                ':pass' => $pass,
-                ':nom_real' => $nombre_real,
-                ':rol'  => $id_rol,
-                ':suc'  => $suc_directa
-            ]);
-
-            $id_nuevo = $this->db->lastInsertId();
-
-            // Si es Admin (Rol 1), guardamos sus múltiples sucursales
-            if ($id_rol == 1 && is_array($sucs)) {
-                $sqlInt = "INSERT INTO usuario_sucursales (id_usuario, id_sucursal) VALUES (:u, :s)";
-                $stmtInt = $this->db->prepare($sqlInt);
-                foreach ($sucs as $s_id) {
-                    $stmtInt->execute([':u' => $id_nuevo, ':s' => $s_id]);
-                }
-            }
-
-            $this->db->commit();
-            echo json_encode(['status' => 'success', 'message' => 'Usuario registrado con éxito']);
-        } catch (Exception $e) {
-            if ($this->db->inTransaction()) $this->db->rollBack();
-            \App\Support\Logger::error($e);
-            echo json_encode(['status' => 'error', 'message' => $e instanceof InvalidArgumentException ? $e->getMessage() : 'No fue posible registrar el usuario.']);
-        }
-        exit;
-    }
-
-    public function obtenerAjax() {
-        header('Content-Type: application/json');
-        $id = Validator::positiveInt($_GET['id'] ?? null, 'usuario');
-        try {
-            // Datos generales
-            $stmt = $this->db->prepare("SELECT id_usuario, nombre_usuario, nombre_real, id_rol, id_sucursal, estado_usuario FROM usuarios WHERE id_usuario = ?");
-            $stmt->execute([$id]);
-            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$usuario) \App\Http\Response::json(['status' => 'error', 'message' => 'Usuario no encontrado.'], 404);
-
-            // Obtener array de sucursales (ya sea la principal o las múltiples de admin)
-            $sucursales = [];
-            if ($usuario['id_rol'] == 1) {
-                $stmtSuc = $this->db->prepare("SELECT id_sucursal FROM usuario_sucursales WHERE id_usuario = ?");
-                $stmtSuc->execute([$id]);
-                $sucursales = $stmtSuc->fetchAll(PDO::FETCH_COLUMN);
-            } else if ($usuario['id_sucursal']) {
-                $sucursales[] = $usuario['id_sucursal'];
-            }
-
-            echo json_encode(['status' => 'success', 'usuario' => $usuario, 'sucursales' => $sucursales]);
-        } catch (Exception $e) {
-            \App\Support\Logger::error($e);
-            echo json_encode(['status' => 'error', 'message' => 'No fue posible consultar el usuario.']);
-        }
-        exit;
-    }
-
-    public function editarAjax() {
-        header('Content-Type: application/json');
-        try {
             $this->db->beginTransaction();
-
-            $id = Validator::positiveInt($_POST['id_usuario'] ?? null, 'usuario');
-            $nombre = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 80);
-            if (!preg_match('/^[A-Za-z0-9._-]{3,80}$/', $nombre)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
-            $nombre_real = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 150);
-            $estado = Validator::enum($_POST['estado_usuario'] ?? '', ['Activo', 'Inactivo'], 'estado');
-            $id_rol = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
-            if (!in_array($id_rol, [1, 2, 3], true)) throw new InvalidArgumentException('El rol no es valido.');
-            if ((int) $_SESSION['id_rol'] !== Auth::SUPERUSER && $id_rol === Auth::SUPERUSER) throw new InvalidArgumentException('No puedes asignar ese rol.');
-            $sucs = array_values(array_unique(array_map('intval', (array) ($_POST['id_sucursal'] ?? []))));
-            foreach ($sucs as $branchId) Auth::requireBranch($branchId);
-
-            $suc_directa = ($id_rol == 2 && !empty($sucs)) ? (is_array($sucs) ? $sucs[0] : $sucs) : null;
-
-            $sql = "UPDATE usuarios SET nombre_usuario = :nom, nombre_real = :nom_real, id_rol = :rol, id_sucursal = :suc, estado_usuario = :est WHERE id_usuario = :id";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':nom' => $nombre,
-                ':nom_real' => $nombre_real,
-                ':rol' => $id_rol,
-                ':suc' => $suc_directa,
-                ':est' => $estado,
-                ':id' => $id
-            ]);
-
-            // Limpiar sucursales múltiples anteriores
-            $stmtDel = $this->db->prepare("DELETE FROM usuario_sucursales WHERE id_usuario = ?");
-            $stmtDel->execute([$id]);
-
-            // Re-insertar si es Admin
-            if ($id_rol == 1 && is_array($sucs)) {
-                $sqlInt = "INSERT INTO usuario_sucursales (id_usuario, id_sucursal) VALUES (:u, :s)";
-                $stmtInt = $this->db->prepare($sqlInt);
-                foreach ($sucs as $s_id) {
-                    $stmtInt->execute([':u' => $id, ':s' => $s_id]);
-                }
+            $stmt = $this->db->prepare(
+                "INSERT INTO usuarios (nombre_usuario, password_hash, id_rol, id_sucursal, nombre_real, estado_usuario)
+                 VALUES (?, ?, ?, ?, ?, 'Activo')"
+            );
+            $directBranch = $roleId === Auth::EMPLOYEE ? $branches[0] : null;
+            $stmt->execute([$name, password_hash($password, PASSWORD_DEFAULT), $roleId, $directBranch, $realName]);
+            $userId = (int) $this->db->lastInsertId();
+            $this->syncBranches($userId, $branches);
+            if ((int) ($_SESSION['id_rol'] ?? 0) === Auth::SUPERUSER) {
+                $this->syncGlobalInventoryPermission($userId, !empty($_POST['inventory_view_all']));
             }
-
             $this->db->commit();
-            echo json_encode(['status' => 'success']);
-        } catch (Exception $e) {
+
+            (new AuditService($this->db))->record('create', 'usuario', $userId, $directBranch, ['role_id' => $roleId, 'branches' => $branches]);
+            Response::json(['status' => 'success', 'message' => 'Usuario registrado correctamente.'], 201);
+        } catch (Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();
-            \App\Support\Logger::error($e);
-            echo json_encode(['status' => 'error', 'message' => $e instanceof InvalidArgumentException ? $e->getMessage() : 'No fue posible editar el usuario.']);
+            App\Support\Logger::error($error);
+            $message = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No fue posible registrar el usuario.';
+            Response::json(['status' => 'error', 'message' => $message], 422);
         }
-        exit;
     }
 
-    public function cambiarPasswordAjax() {
-        header('Content-Type: application/json');
+    public function obtenerAjax(): void
+    {
+        $id = Validator::positiveInt($_GET['id'] ?? null, 'usuario');
+        UserPolicy::requireManageTarget($this->db, $id);
+        $stmt = $this->db->prepare('SELECT id_usuario, nombre_usuario, nombre_real, id_rol, id_sucursal, estado_usuario FROM usuarios WHERE id_usuario = ?');
+        $stmt->execute([$id]);
+        $user = $stmt->fetch();
+
+        $branchStmt = $this->db->prepare('SELECT id_sucursal FROM usuario_sucursales WHERE id_usuario = ? ORDER BY id_sucursal');
+        $branchStmt->execute([$id]);
+        $branches = array_map('intval', $branchStmt->fetchAll(PDO::FETCH_COLUMN));
+        if ($branches === [] && !empty($user['id_sucursal'])) $branches[] = (int) $user['id_sucursal'];
+
+        $permissionStmt = $this->db->prepare("SELECT COUNT(*) FROM usuario_permisos up JOIN permisos p ON p.id_permiso = up.id_permiso WHERE up.id_usuario = ? AND p.codigo = 'inventory.view_all'");
+        $permissionStmt->execute([$id]);
+        Response::json([
+            'status' => 'success',
+            'usuario' => $user,
+            'sucursales' => $branches,
+            'inventory_view_all' => (bool) $permissionStmt->fetchColumn(),
+        ]);
+    }
+
+    public function editarAjax(): void
+    {
         try {
             $id = Validator::positiveInt($_POST['id_usuario'] ?? null, 'usuario');
+            $target = UserPolicy::requireManageTarget($this->db, $id);
+            $name = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 50);
+            if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $name)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
+            $realName = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 100);
+            $status = Validator::enum($_POST['estado_usuario'] ?? '', ['Activo', 'Inactivo'], 'estado');
+            $roleId = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
+            UserPolicy::requireAssignableRole($roleId);
+            $branches = UserPolicy::validateAssignments($roleId, (array) ($_POST['id_sucursal'] ?? []));
+            if ($id === (int) ($_SESSION['id_usuario'] ?? 0) && $status !== 'Activo') {
+                throw new InvalidArgumentException('No puedes desactivar tu propia cuenta.');
+            }
+            $this->protectLastSuperuser($target, $roleId, $status);
+
+            $this->db->beginTransaction();
+            $directBranch = $roleId === Auth::EMPLOYEE ? $branches[0] : null;
+            $stmt = $this->db->prepare('UPDATE usuarios SET nombre_usuario = ?, nombre_real = ?, id_rol = ?, id_sucursal = ?, estado_usuario = ? WHERE id_usuario = ?');
+            $stmt->execute([$name, $realName, $roleId, $directBranch, $status, $id]);
+            $this->syncBranches($id, $branches);
+            if ((int) ($_SESSION['id_rol'] ?? 0) === Auth::SUPERUSER) {
+                $this->syncGlobalInventoryPermission($id, !empty($_POST['inventory_view_all']));
+            }
+            $this->db->commit();
+
+            (new AuditService($this->db))->record('update', 'usuario', $id, $directBranch, ['role_id' => $roleId, 'branches' => $branches, 'status' => $status]);
+            Response::json(['status' => 'success', 'message' => 'Usuario actualizado correctamente.']);
+        } catch (Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            App\Support\Logger::error($error);
+            $message = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No fue posible editar el usuario.';
+            Response::json(['status' => 'error', 'message' => $message], 422);
+        }
+    }
+
+    public function cambiarPasswordAjax(): void
+    {
+        try {
+            $id = Validator::positiveInt($_POST['id_usuario'] ?? null, 'usuario');
+            UserPolicy::requireManageTarget($this->db, $id);
             $password = Validator::text($_POST['nueva_password'] ?? '', 'contrasena', 4096);
             if (mb_strlen($password) < 10) throw new InvalidArgumentException('La contrasena debe tener al menos 10 caracteres.');
-            $nueva_pass = password_hash($password, PASSWORD_DEFAULT);
-
-            $stmt = $this->db->prepare("UPDATE usuarios SET password_hash = ? WHERE id_usuario = ?");
-            $stmt->execute([$nueva_pass, $id]);
-
-            echo json_encode(['status' => 'success']);
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al cambiar contraseña']);
+            $stmt = $this->db->prepare('UPDATE usuarios SET password_hash = ? WHERE id_usuario = ?');
+            $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
+            (new AuditService($this->db))->record('password_reset', 'usuario', $id);
+            Response::json(['status' => 'success', 'message' => 'Contrasena actualizada.']);
+        } catch (Throwable $error) {
+            App\Support\Logger::error($error);
+            $message = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No fue posible cambiar la contrasena.';
+            Response::json(['status' => 'error', 'message' => $message], 422);
         }
-        exit;
     }
 
+    private function syncBranches(int $userId, array $branches): void
+    {
+        $this->db->prepare('DELETE FROM usuario_sucursales WHERE id_usuario = ?')->execute([$userId]);
+        $stmt = $this->db->prepare('INSERT INTO usuario_sucursales (id_usuario, id_sucursal) VALUES (?, ?)');
+        foreach ($branches as $branchId) $stmt->execute([$userId, $branchId]);
+    }
 
+    private function syncGlobalInventoryPermission(int $userId, bool $enabled): void
+    {
+        $permissionId = $this->db->query("SELECT id_permiso FROM permisos WHERE codigo = 'inventory.view_all'")->fetchColumn();
+        if ($permissionId === false) throw new RuntimeException('No se encontro el permiso de inventario global.');
+        $this->db->prepare('DELETE FROM usuario_permisos WHERE id_usuario = ? AND id_permiso = ?')->execute([$userId, $permissionId]);
+        if ($enabled) $this->db->prepare('INSERT INTO usuario_permisos (id_usuario, id_permiso) VALUES (?, ?)')->execute([$userId, $permissionId]);
+    }
+
+    private function protectLastSuperuser(array $target, int $newRoleId, string $newStatus): void
+    {
+        if ((int) $target['id_rol'] !== Auth::SUPERUSER || ($newRoleId === Auth::SUPERUSER && $newStatus === 'Activo')) return;
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM usuarios WHERE id_rol = ? AND estado_usuario = 'Activo' AND id_usuario <> ?");
+        $stmt->execute([Auth::SUPERUSER, $target['id_usuario']]);
+        if ((int) $stmt->fetchColumn() === 0) throw new InvalidArgumentException('No puedes desactivar o degradar al ultimo superusuario activo.');
+    }
 }
 
-if (isset($_GET['action'])) {
-    Auth::requireRoles([Auth::ADMIN, Auth::SUPERUSER]);
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$action = $_GET['action'] ?? null;
+if ($action !== null) {
+    Auth::requirePermission('users.manage');
+    $postActions = ['registrarAjax', 'editarAjax', 'cambiarPasswordAjax'];
+    if (in_array($action, $postActions, true)) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
         Csrf::validateRequest();
-    } elseif ($_GET['action'] !== 'obtenerAjax') {
-        \App\Http\Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
+    } elseif ($action !== 'obtenerAjax' || $_SERVER['REQUEST_METHOD'] !== 'GET') {
+        Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
     }
-    $ctrl = new UsuarioController();
-    switch ($_GET['action']) {
-        case 'registrarAjax':
-            $ctrl->registrarAjax();
-            break;
-        case 'obtenerAjax':
-            $ctrl->obtenerAjax();
-            break;
-        case 'editarAjax':
-            $ctrl->editarAjax();
-            break;
-        case 'cambiarPasswordAjax':
-            $ctrl->cambiarPasswordAjax();
-            break;
-    }
+
+    $controller = new UsuarioController();
+    match ($action) {
+        'registrarAjax' => $controller->registrarAjax(),
+        'obtenerAjax' => $controller->obtenerAjax(),
+        'editarAjax' => $controller->editarAjax(),
+        'cambiarPasswordAjax' => $controller->cambiarPasswordAjax(),
+        default => Response::json(['status' => 'error', 'message' => 'Accion no encontrada.'], 404),
+    };
 }

@@ -79,34 +79,70 @@
         const nuevaFila = tabla.insertRow();
         nuevaFila.classList.add('bg-white'); 
 
-        let badgeExtra = costoExtraTotal > 0 ? `<span class="badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill mt-1 px-2"><i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i>+ L. ${costoExtraTotal.toFixed(2)} extras</span>` : '';
+        const productCell = nuevaFila.insertCell();
+        productCell.className = 'ps-3 py-3';
+        const productInput = document.createElement('input');
+        productInput.type = 'hidden';
+        productInput.name = 'productos[]';
+        productInput.value = productoId;
+        const extrasInput = document.createElement('input');
+        extrasInput.type = 'hidden';
+        extrasInput.name = 'costos_extras[]';
+        extrasInput.value = costoExtraTotal.toFixed(2);
+        const productName = document.createElement('div');
+        productName.className = 'fw-bold text-dark fs-6';
+        productName.textContent = productoNombre;
+        const basePrice = document.createElement('div');
+        basePrice.className = 'small text-muted mt-1';
+        basePrice.textContent = `Base: L. ${precioBase.toFixed(2)}`;
+        productCell.append(productInput, extrasInput, productName, basePrice);
+        if (costoExtraTotal > 0) {
+            const extrasBadge = document.createElement('span');
+            extrasBadge.className = 'badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill mt-1 px-2';
+            extrasBadge.textContent = `+ L. ${costoExtraTotal.toFixed(2)} extras`;
+            productCell.appendChild(extrasBadge);
+        }
 
-        nuevaFila.innerHTML = `
-            <td class="ps-3 py-3">
-                <input type="hidden" name="productos[]" value="${productoId}">
-                <input type="hidden" name="costos_extras[]" value="${costoExtraTotal}">
-                <div class="fw-bold text-dark fs-6">${productoNombre}</div>
-                <div class="small text-muted mt-1">Base: L. ${precioBase.toFixed(2)}</div>
-                ${badgeExtra}
-            </td>
-            <td class="py-3">
-                <textarea name="personalizacion[]" class="form-control form-control-sm border-0 bg-light shadow-sm" rows="2" placeholder="Colores, dedicatoria, detalles especiales...">${textoPersonalizacion}</textarea>
-            </td>
-            <td class="text-center align-middle py-3">
-                <input type="hidden" name="cantidades[]" value="${cantidad}">
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.9rem;">
-                    ${cantidad}
-                </span>
-            </td>
-            <td class="subtotal-fila text-end fw-black align-middle text-success fs-6 py-3" data-valor="${subtotal}">
-                L. ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}
-            </td>
-            <td class="text-end pe-3 align-middle py-3">
-                <button type="button" class="btn btn-sm btn-light text-danger rounded-circle shadow-sm border" style="width: 32px; height: 32px;" onclick="this.closest('tr').remove(); calcularTotal();" title="Eliminar fila">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            </td>
-        `;
+        const detailsCell = nuevaFila.insertCell();
+        detailsCell.className = 'py-3';
+        const details = document.createElement('textarea');
+        details.name = 'personalizacion[]';
+        details.className = 'form-control form-control-sm border-0 bg-light shadow-sm';
+        details.rows = 2;
+        details.placeholder = 'Colores, dedicatoria, detalles especiales...';
+        details.value = textoPersonalizacion;
+        detailsCell.appendChild(details);
+
+        const quantityCell = nuevaFila.insertCell();
+        quantityCell.className = 'text-center align-middle py-3';
+        const quantityInput = document.createElement('input');
+        quantityInput.type = 'hidden';
+        quantityInput.name = 'cantidades[]';
+        quantityInput.value = String(cantidad);
+        const quantityBadge = document.createElement('span');
+        quantityBadge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center';
+        quantityBadge.style.cssText = 'width: 32px; height: 32px; font-size: 0.9rem;';
+        quantityBadge.textContent = String(cantidad);
+        quantityCell.append(quantityInput, quantityBadge);
+
+        const subtotalCell = nuevaFila.insertCell();
+        subtotalCell.className = 'subtotal-fila text-end fw-black align-middle text-success fs-6 py-3';
+        subtotalCell.dataset.valor = String(subtotal);
+        subtotalCell.textContent = `L. ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+        const actionCell = nuevaFila.insertCell();
+        actionCell.className = 'text-end pe-3 align-middle py-3';
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-sm btn-light text-danger rounded-circle shadow-sm border';
+        removeButton.style.cssText = 'width: 32px; height: 32px;';
+        removeButton.title = 'Eliminar fila';
+        removeButton.innerHTML = '<i class="fa-solid fa-trash-can" aria-hidden="true"></i>';
+        removeButton.addEventListener('click', () => {
+            nuevaFila.remove();
+            calcularTotal();
+        });
+        actionCell.appendChild(removeButton);
 
         // Limpiar selección para el siguiente producto
         select.value = "";
@@ -136,19 +172,23 @@
     function gestionarPago() {
         const tipo = document.getElementById('tipo_pago').value;
         const contenedorAbono = document.getElementById('contenedor-abono');
+        const contenedorMetodoPago = document.getElementById('contenedor-metodo-pago');
         const inputAbono = document.getElementById('monto_abono');
         const total = parseFloat(document.getElementById('input-total').value) || 0;
 
         if (tipo === 'Abonado') {
             contenedorAbono.style.display = 'block';
+            contenedorMetodoPago.style.display = 'block';
             if(parseFloat(inputAbono.value) === 0 || parseFloat(inputAbono.value) > total) {
                 inputAbono.value = (total * 0.5).toFixed(2); 
             }
         } else if (tipo === 'Pagado') {
             contenedorAbono.style.display = 'none';
+            contenedorMetodoPago.style.display = 'block';
             inputAbono.value = total.toFixed(2);
         } else {
             contenedorAbono.style.display = 'none';
+            contenedorMetodoPago.style.display = 'none';
             inputAbono.value = 0;
         }
     }

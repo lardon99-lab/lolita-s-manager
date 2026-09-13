@@ -5,6 +5,7 @@ use App\Security\Auth;
 trait PendientesReporteTrait
 {
     public function generarReportePendientes() {
+        Auth::requirePermission('reports.view');
 
         date_default_timezone_set('America/Tegucigalpa');
         $hoy = date('Y-m-d');
@@ -21,7 +22,7 @@ trait PendientesReporteTrait
                     AND DATE(p.fecha_entrega) = :hoy";
 
             $params = [':hoy' => $hoy];
-            $allowed = Auth::allowedBranches();
+            $allowed = Auth::allowedBranches('reports.view');
             if ($allowed !== null) {
                 if ($allowed === []) {
                     http_response_code(403);

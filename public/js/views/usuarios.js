@@ -5,7 +5,7 @@ function toggleSucursales(idRol, idDiv, idSelect) {
     if (idRol == "3") dSuc.style.display = 'none';
     else {
         dSuc.style.display = 'block';
-        sSuc.multiple = (idRol == "1");
+        sSuc.multiple = (idRol == "1" || idRol == "4");
     }
 }
 
@@ -41,6 +41,8 @@ function editarUsuario(id) {
                 document.getElementById('edit_nombre_usuario').value = u.nombre_usuario;
                 document.getElementById('edit_estado').value = u.estado_usuario;
                 document.getElementById('edit_select_rol').value = u.id_rol;
+                const globalInventory = document.getElementById('edit_inventory_view_all');
+                if (globalInventory) globalInventory.checked = Boolean(data.inventory_view_all);
                 
                 toggleSucursales(u.id_rol, 'edit_div_suc', 'edit_select_suc');
 

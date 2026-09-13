@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../app/core/SesionHelper.php';
 require_once __DIR__ . '/../app/core/Database.php';
 
+use App\Security\Auth;
 use App\Security\Csrf;
 
 // El helper ya inicia sesión y valida si existe el id_usuario
@@ -13,13 +14,24 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
-$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'ventas-nueva', 'usuarios'];
+$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'ventas-nueva', 'usuarios', 'clientes', 'sucursales', 'catalogo'];
 if (!in_array($view, $allowedViews, true)) {
     http_response_code(404);
     echo 'Vista no encontrada.';
     exit;
 }
-if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], true)) {
+$viewPermissions = [
+    'inventario' => 'inventory.view',
+    'pedidos-nuevo' => 'orders.create',
+    'pedidos-lista' => 'orders.view',
+    'ventas-historial' => 'reports.view',
+    'ventas-nueva' => 'sales.create',
+    'usuarios' => 'users.manage',
+    'clientes' => 'clients.manage',
+    'sucursales' => 'branches.manage',
+    'catalogo' => 'products.manage',
+];
+if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$view])) {
     http_response_code(403);
     echo 'No tienes permiso para acceder a esta vista.';
     exit;
@@ -39,7 +51,7 @@ if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
 </head>
-<body data-is-admin="<?= in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], true) ? '1' : '0' ?>">
+<body data-is-admin="<?= Auth::hasPermission('products.manage') ? '1' : '0' ?>">
 
     <div class="app-layout d-flex flex-column flex-md-row">
         <?php include __DIR__ . '/../views/layout/sidebar.php'; ?>
@@ -106,7 +118,26 @@ if ($view === 'usuarios' && !in_array((int) ($_SESSION['id_rol'] ?? 0), [1, 3], 
                         $userCtrl = new UsuarioController();
                         $usuarios = $userCtrl->listar();
                         $sucursales = $userCtrl->obtenerSucursales();
+                        $roles = $userCtrl->obtenerRolesAsignables();
                         include __DIR__ . '/../views/usuarios/listar.php';
+                        break;
+
+                    case 'clientes':
+                        require_once __DIR__ . '/../app/controllers/ClienteController.php';
+                        $clientes = (new ClienteController())->listarTodos();
+                        include __DIR__ . '/../views/clientes/listar.php';
+                        break;
+
+                    case 'sucursales':
+                        require_once __DIR__ . '/../app/controllers/SucursalController.php';
+                        $sucursales = (new SucursalController())->listar();
+                        include __DIR__ . '/../views/sucursales/listar.php';
+                        break;
+
+                    case 'catalogo':
+                        require_once __DIR__ . '/../app/controllers/CatalogoController.php';
+                        extract((new CatalogoController())->listar(), EXTR_SKIP);
+                        include __DIR__ . '/../views/catalogo/listar.php';
                         break;
 
                     default:

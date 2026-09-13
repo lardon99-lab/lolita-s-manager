@@ -106,27 +106,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
         carrito.forEach((item, index) => {
             total += item.subtotal;
-            cuerpoCarrito.innerHTML += `
-                <tr>
-                    <td class="ps-3 py-3 align-middle fw-bold text-dark">${item.nombre}</td>
-                    <td class="text-center align-middle"><span class="badge bg-light text-dark border px-3">${item.cantidad}</span></td>
-                    <td class="text-end align-middle text-muted">L. ${item.precio.toFixed(2)}</td>
-                    <td class="text-end fw-bold align-middle text-primary">L. ${item.subtotal.toFixed(2)}</td>
-                    <td class="text-center align-middle">
-                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="eliminarItem(${index})"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
+            const row = document.createElement('tr');
+            const productCell = document.createElement('td');
+            productCell.className = 'ps-3 py-3 align-middle fw-bold text-dark';
+            productCell.textContent = item.nombre;
+
+            const quantityCell = document.createElement('td');
+            quantityCell.className = 'text-center align-middle';
+            const quantityBadge = document.createElement('span');
+            quantityBadge.className = 'badge bg-light text-dark border px-3';
+            quantityBadge.textContent = String(item.cantidad);
+            quantityCell.appendChild(quantityBadge);
+
+            const priceCell = document.createElement('td');
+            priceCell.className = 'text-end align-middle text-muted';
+            priceCell.textContent = `L. ${item.precio.toFixed(2)}`;
+            const subtotalCell = document.createElement('td');
+            subtotalCell.className = 'text-end fw-bold align-middle text-primary';
+            subtotalCell.textContent = `L. ${item.subtotal.toFixed(2)}`;
+
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center align-middle';
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-sm btn-outline-danger border-0';
+            removeButton.title = 'Eliminar producto';
+            removeButton.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
+            removeButton.addEventListener('click', () => {
+                carrito.splice(index, 1);
+                actualizarTablaCarrito();
+            });
+            actionCell.appendChild(removeButton);
+            row.append(productCell, quantityCell, priceCell, subtotalCell, actionCell);
+            cuerpoCarrito.appendChild(row);
         });
 
         labelTotal.innerText = `L. ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
         btnCobrar.disabled = false;
     }
-
-    window.eliminarItem = function(index) {
-        carrito.splice(index, 1);
-        actualizarTablaCarrito();
-    };
 
     btnCobrar.addEventListener('click', function() {
         // Capturar el método de pago seleccionado

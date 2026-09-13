@@ -9,7 +9,7 @@
                 <p class="page-subtitle mb-0">Consulta, abastece y registra productos de forma rápida y ordenada.</p>
             </div>
             <div class="col-12 col-md-5 d-flex justify-content-md-end gap-2 flex-wrap">
-                <?php if ((int)$_SESSION['id_rol'] === 1 || (int)$_SESSION['id_rol'] === 3): ?>
+                <?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
                     <button class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
                         <i class="fa-solid fa-box-open me-2"></i>Registrar Producto
                     </button>
@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <?php if ($id_rol === 1 || $id_rol === 3): ?>
+    <?php if ($id_rol !== \App\Security\Auth::EMPLOYEE): ?>
     <div class="row mb-4">
         <div class="col-12 col-md-5 col-lg-4">
             <div class="input-group input-group-sm shadow-sm rounded-pill overflow-hidden bg-white p-1">
@@ -47,7 +47,7 @@
     </div>
     <?php endif; ?>
 
-    <?php if (!$id_sucursal_filtro && ($id_rol === 1 || $id_rol === 3)): ?>
+    <?php if (!$id_sucursal_filtro && $id_rol !== \App\Security\Auth::EMPLOYEE): ?>
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-warning border-0 rounded-4 shadow-sm mb-0">
@@ -133,7 +133,7 @@
                         </td>
                         <td class="text-end pe-4 py-3" data-label="Acciones">
                             <div class="d-flex justify-content-end gap-2">
-                                <?php if ((int)$_SESSION['id_rol'] === 1 || (int)$_SESSION['id_rol'] === 3): ?>
+                                <?php if (\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust')): ?>
                                     <button class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalAbastecer<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" title="Abastecer">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>

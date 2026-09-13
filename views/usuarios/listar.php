@@ -2,6 +2,7 @@
 $totalUsuarios = isset($usuarios) ? count($usuarios) : 0;
 $usuariosActivos = 0;
 $usuariosInactivos = 0;
+$isSuperuser = (int) ($_SESSION['id_rol'] ?? 0) === \App\Security\Auth::SUPERUSER;
 
 if (!empty($usuarios)) {
     foreach ($usuarios as $u) {
@@ -24,7 +25,7 @@ if (!empty($usuarios)) {
                 <p class="page-subtitle mb-0">Administra usuarios, roles y accesos de forma ordenada.</p>
             </div>
             <button class="btn btn-primary px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
-                <i class="fa-solid fa-user-plus me-2"></i>Nuevo Empleado
+                <i class="fa-solid fa-user-plus me-2"></i>Nuevo usuario
             </button>
         </div>
     </div>
@@ -111,7 +112,7 @@ if (!empty($usuarios)) {
                                     <i class="fa-solid fa-store fa-xs me-1"></i>
                                     <?php 
                                         if($u['id_rol'] == 3) echo "<strong>Acceso Total</strong>";
-                                        else echo $u['id_rol'] == 1 ? $u['sucursales_admin'] : $u['nombre_sucursal'];
+                                        else echo $u['id_rol'] == \App\Security\Auth::EMPLOYEE ? e($u['nombre_sucursal']) : e($u['sucursales_admin']);
                                     ?>
                                 </div>
                             </td>
@@ -165,7 +166,7 @@ if (!empty($usuarios)) {
                         <i class="fa-solid fa-store fa-xs me-1"></i>
                         <?php 
                             if($u['id_rol'] == 3) echo "<strong>Acceso Total</strong>";
-                            else echo $u['id_rol'] == 1 ? $u['sucursales_admin'] : $u['nombre_sucursal'];
+                            else echo $u['id_rol'] == \App\Security\Auth::EMPLOYEE ? e($u['nombre_sucursal']) : e($u['sucursales_admin']);
                         ?>
                     </div>
                     <div class="d-flex gap-2 user-actions">
@@ -207,9 +208,9 @@ if (!empty($usuarios)) {
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Rol</label>
                         <select name="id_rol" id="select_rol" class="form-select bg-light border-0 py-2">
-                            <option value="2">Empleado</option>
-                            <option value="1">Admin</option>
-                            <option value="3">SuperUser</option>
+                            <?php foreach ($roles as $role): ?>
+                                <option value="<?= (int) $role['id_rol'] ?>"><?= e($role['nombre_rol']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div id="div_suc">
@@ -220,6 +221,12 @@ if (!empty($usuarios)) {
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php if ($isSuperuser): ?>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="inventory_view_all" value="1" id="inventory_view_all">
+                        <label class="form-check-label" for="inventory_view_all">Ver inventario de todas las sucursales</label>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm">Guardar Usuario</button>
@@ -257,9 +264,9 @@ if (!empty($usuarios)) {
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Rol</label>
                         <select name="id_rol" id="edit_select_rol" class="form-select bg-light border-0 py-2">
-                            <option value="2">Empleado</option>
-                            <option value="1">Admin</option>
-                            <option value="3">SuperUser</option>
+                            <?php foreach ($roles as $role): ?>
+                                <option value="<?= (int) $role['id_rol'] ?>"><?= e($role['nombre_rol']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div id="edit_div_suc">
@@ -270,6 +277,12 @@ if (!empty($usuarios)) {
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php if ($isSuperuser): ?>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="inventory_view_all" value="1" id="edit_inventory_view_all">
+                        <label class="form-check-label" for="edit_inventory_view_all">Ver inventario de todas las sucursales</label>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm">Actualizar Datos</button>
@@ -288,7 +301,7 @@ if (!empty($usuarios)) {
                 </div>
                 <div class="modal-body p-4 text-center">
                     <p class="small text-muted mb-2">Usuario: <strong id="pass_nombre_usuario"></strong></p>
-                    <input type="password" name="nueva_password" class="form-control text-center shadow-sm border-0 bg-light py-2" placeholder="Escriba la nueva clave" required minlength="6">
+                    <input type="password" name="nueva_password" class="form-control text-center shadow-sm border-0 bg-light py-2" placeholder="Escriba la nueva clave" required minlength="10">
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="submit" class="btn btn-warning w-100 rounded-pill fw-bold shadow-sm">Guardar</button>

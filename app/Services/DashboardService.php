@@ -12,9 +12,8 @@ final class DashboardService
 
     public function data(): array
     {
-        [$scopeSql, $scopeParams] = $this->scope('id_sucursal');
-        [$pedidoScope, $pedidoParams] = $this->scope('p.id_sucursal');
-        [$ventaScope, $ventaParams] = $this->scope('v.id_sucursal');
+        [$pedidoScope, $pedidoParams] = $this->scope('p.id_sucursal', 'orders.view');
+        [$ventaScope, $ventaParams] = $this->scope('v.id_sucursal', 'sales.view');
         $today = date('Y-m-d');
         $limit = date('Y-m-d', strtotime('+7 days'));
 
@@ -23,7 +22,7 @@ final class DashboardService
         $delivered = $this->scalar("SELECT COALESCE(SUM(p.total_pedido), 0) FROM pedidos p WHERE p.estado = 'Entregado' AND DATE(p.fecha_registro) = :today{$pedidoScope}", [':today' => $today] + $pedidoParams);
         $direct = $this->scalar("SELECT COALESCE(SUM(v.total), 0) FROM ventas_directas v WHERE DATE(v.fecha_venta) = :today{$ventaScope}", [':today' => $today] + $ventaParams);
 
-        [$inventoryScope, $inventoryParams] = $this->scope('i.id_sucursal');
+        [$inventoryScope, $inventoryParams] = $this->scope('i.id_sucursal', 'inventory.view');
         $stockSql = "SELECT p.id_producto, i.id_sucursal, MIN(i.id_inventario) AS id_inventario, p.nombre_producto,
                             SUM(i.stock_actual) AS stock_actual, MAX(i.stock_minimo) AS stock_minimo, s.nombre_sucursal
                      FROM inventario i JOIN productos p ON i.id_producto = p.id_producto
@@ -76,9 +75,9 @@ final class DashboardService
         return $stmt->fetchAll();
     }
 
-    private function scope(string $column): array
+    private function scope(string $column, string $permission): array
     {
-        $allowed = Auth::allowedBranches();
+        $allowed = Auth::allowedBranches($permission);
         if ($allowed === null) return ['', []];
         if ($allowed === []) return [' AND 1 = 0', []];
         $holders = [];

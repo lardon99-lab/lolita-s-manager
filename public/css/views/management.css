@@ -1,0 +1,61 @@
+.management-page {
+    max-width: 1440px;
+}
+
+.management-table th,
+.management-table td {
+    padding: .9rem 1rem;
+    vertical-align: middle;
+}
+
+.management-table thead th {
+    background: #f8f9fa;
+    color: #6c757d;
+    font-size: .75rem;
+    text-transform: uppercase;
+}
+
+@media (max-width: 767.98px) {
+    .management-page header .btn {
+        width: 100%;
+    }
+
+    .management-table,
+    .management-table tbody,
+    .management-table tr,
+    .management-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .management-table thead {
+        display: none;
+    }
+
+    .management-table tr {
+        padding: .5rem 0;
+        border-bottom: 1px solid #ece7e9;
+    }
+
+    .management-table tr:last-child {
+        border-bottom: 0;
+    }
+
+    .management-table td {
+        display: grid;
+        grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+        gap: .75rem;
+        border: 0;
+        padding: .45rem .85rem;
+        text-align: left !important;
+        overflow-wrap: anywhere;
+    }
+
+    .management-table td::before {
+        color: #8b7c82;
+        content: attr(data-label);
+        font-size: .72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+}

@@ -31,4 +31,15 @@ final class ValidatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         Validator::text('abcd', 'nombre', 3);
     }
+
+    public function testDateTimeLocalAcceptsBrowserFormat(): void
+    {
+        self::assertSame('2026-09-12 14:30:00', Validator::dateTimeLocal('2026-09-12T14:30', 'fecha'));
+    }
+
+    public function testDateTimeLocalRejectsInvalidCalendarDate(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Validator::dateTimeLocal('2026-02-30T10:00', 'fecha');
+    }
 }

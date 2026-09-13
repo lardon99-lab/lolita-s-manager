@@ -33,4 +33,31 @@ final class AuthTest extends TestCase
         self::assertTrue(Auth::canAccessBranch(999));
         self::assertNull(Auth::allowedBranches());
     }
+
+    public function testOwnerOnlyReadsAssignedBranches(): void
+    {
+        $_SESSION = [
+            'id_rol' => Auth::OWNER,
+            'sucursales' => [3],
+            'permissions' => ['inventory.view', 'orders.view', 'sales.view'],
+        ];
+
+        self::assertTrue(Auth::canAccessBranch(3, 'inventory.view'));
+        self::assertFalse(Auth::canAccessBranch(1, 'inventory.view'));
+        self::assertFalse(Auth::canAccessBranch(3, 'inventory.adjust'));
+        self::assertSame([3], Auth::allowedBranches('orders.view'));
+    }
+
+    public function testInventoryViewAllDoesNotGrantMutationAccess(): void
+    {
+        $_SESSION = [
+            'id_rol' => Auth::OWNER,
+            'sucursales' => [3],
+            'permissions' => ['inventory.view', 'inventory.view_all'],
+        ];
+
+        self::assertNull(Auth::allowedBranches('inventory.view'));
+        self::assertTrue(Auth::canAccessBranch(1, 'inventory.view'));
+        self::assertFalse(Auth::canAccessBranch(1, 'inventory.adjust'));
+    }
 }

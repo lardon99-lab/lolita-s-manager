@@ -1,111 +1,106 @@
-function gestionarPedido(id, estadoActual, saldo, rol) {
-    const saldoNum = parseFloat(saldo) || 0;
-    let estadosDisponibles = [];
-    let iconos = {
-        'En Preparación': 'fa-fire-burner',
-        'Listo': 'fa-check',
-        'Entregado': 'fa-box-archive',
-        'Cancelado': 'fa-xmark'
-    };
-    let colores = {
-        'En Preparación': 'btn-info',
-        'Listo': 'btn-success',
-        'Entregado': 'btn-secondary',
-        'Cancelado': 'btn-danger'
-    };
+const orderTransitions = {
+    'Pendiente': ['En PreparaciÃ³n', 'Cancelado'],
+    'En PreparaciÃ³n': ['Listo', 'Cancelado'],
+    'Listo': ['Entregado', 'Cancelado'],
+};
 
-    // CONFIGURACIÓN DE OPCIONES POR ROL
-    if (rol === 1 || rol === 3) {
-        estadosDisponibles = ['En Preparación', 'Listo', 'Entregado', 'Cancelado'];
-    } else {
-        estadosDisponibles = ['Entregado'];
-    }
+const orderStateStyles = {
+    'En PreparaciÃ³n': ['fa-fire-burner', 'btn-info'],
+    'Listo': ['fa-check', 'btn-success'],
+    'Entregado': ['fa-box-archive', 'btn-secondary'],
+    'Cancelado': ['fa-xmark', 'btn-danger'],
+};
 
-    // Filtrar estados diferentes al actual
-    estadosDisponibles = estadosDisponibles.filter(est => est !== estadoActual);
+function gestionarPedido(id, estadoActual, saldo) {
+    const balance = Number.parseFloat(saldo) || 0;
+    const actions = document.createElement('div');
+    actions.className = 'dialog-action-list';
 
-    let html = '<div class="dialog-summary">';
-    html += '<div><span class="dialog-summary__label">Estado actual</span>';
-    html += '<span class="dialog-summary__value">' + estadoActual + '</span></div>';
-    html += '<div><span class="dialog-summary__label">Saldo pendiente</span>';
-    html += '<span class="dialog-summary__value">L. ' + saldoNum.toFixed(2) + '</span></div>';
-    html += '</div><div class="dialog-action-list">';
-
-    estadosDisponibles.forEach(estado => {
-        html += '<button type="button" class="btn ' + colores[estado] + ' text-white" ';
-        html += 'onclick="confirmarCambioEstado(' + id + ', \'' + estado + '\', ' + saldoNum + ', ' + rol + ')">';
-        html += '<i class="fa-solid ' + iconos[estado] + ' me-2"></i> ' + estado;
-        html += '</button>';
+    (orderTransitions[estadoActual] || []).forEach((state) => {
+        const [icon, buttonClass] = orderStateStyles[state];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `btn ${buttonClass} text-white`;
+        const iconElement = document.createElement('i');
+        iconElement.className = `fa-solid ${icon} me-2`;
+        button.append(iconElement, document.createTextNode(state));
+        button.addEventListener('click', () => confirmarCambioEstado(id, state, balance));
+        actions.appendChild(button);
     });
 
-    html += '</div>';
+    const summary = document.createElement('div');
+    summary.className = 'dialog-summary';
+    summary.textContent = `Estado actual: ${estadoActual} | Saldo pendiente: L. ${balance.toFixed(2)}`;
+    const content = document.createElement('div');
+    content.append(summary, actions);
 
     Swal.fire({
-        title: 'Cambiar Estado del Pedido',
-        html: html,
+        title: 'Cambiar estado del pedido',
+        html: content,
         showConfirmButton: false,
         showCancelButton: true,
-        cancelButtonColor: '#6c757d',
         cancelButtonText: 'Cerrar',
-        customClass: { cancelButton: 'btn app-dialog__button app-dialog__button--ghost' }
+        customClass: { cancelButton: 'btn app-dialog__button app-dialog__button--ghost' },
     });
 }
 
-function confirmarCambioEstado(id, nuevoEstado, saldo, rol) {
-    if ((nuevoEstado === 'Entregado' || (nuevoEstado === 'Listo' && rol !== 2)) && saldo > 0) {
-        confirmarPagoPendiente(id, saldo, nuevoEstado);
+async function confirmarCambioEstado(id, nuevoEstado, saldo) {
+    let liquidar = false;
+    let metodoPago = 'Efectivo';
+
+    if (nuevoEstado === 'Entregado' && saldo > 0) {
+        const payment = await Swal.fire({
+            title: 'Liquidar saldo pendiente',
+            text: `Confirma la recepciÃ³n de L. ${saldo.toFixed(2)} y selecciona el mÃ©todo de pago.`,
+            icon: 'warning',
+            input: 'select',
+            inputOptions: {
+                Efectivo: 'Efectivo',
+                Transferencia: 'Transferencia',
+                Tarjeta: 'Tarjeta',
+                Otro: 'Otro',
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Registrar pago y entregar',
+            cancelButtonText: 'Cancelar',
+        });
+        if (!payment.isConfirmed) return;
+        liquidar = true;
+        metodoPago = payment.value;
     } else {
-        procesarCambioEstado(id, nuevoEstado);
+        const confirmation = await Swal.fire({
+            title: 'Confirmar cambio',
+            text: `El pedido pasarÃ¡ a ${nuevoEstado}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+        });
+        if (!confirmation.isConfirmed) return;
     }
+
+    procesarCambioEstado(id, nuevoEstado, liquidar, metodoPago);
 }
 
-function confirmarPagoPendiente(id, saldo, nuevoEstado) {
-    Swal.fire({
-        title: '¡Cobro Pendiente!',
-        html: `Para poder entregar el pedido, el cliente debe liquidar el saldo restante de:<br><br><h2 class="text-danger fw-black mb-0">L. ${saldo.toFixed(2)}</h2><br>¿Confirmas que has recibido el pago completo?`,
-        icon: 'warning',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonColor: '#198754',
-        denyButtonColor: '#0dcaf0',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fa-solid fa-check me-1"></i> Sí, ya pagó',
-        denyButtonText: 'Cambiar sin cobrar',
-        cancelButtonText: 'Cancelar',
-        customClass: { confirmButton: 'rounded-pill', denyButton: 'rounded-pill text-white', cancelButton: 'rounded-pill' }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            procesarCambioEstado(id, nuevoEstado, true);
-        } else if (result.isDenied) {
-            procesarCambioEstado(id, nuevoEstado, false);
-        }
-    });
-}
-
-function procesarCambioEstado(id, estado, liquidarSaldo = false) {
-    const url = `api.php?resource=pedidos&action=actualizar_estado_ajax&id=${id}&nuevo_estado=${encodeURIComponent(estado)}&liquidar=${liquidarSaldo}`;
-    
-    // Mostramos un loader mientras procesa
-    Swal.fire({
-        title: 'Actualizando...',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
+function procesarCambioEstado(id, estado, liquidarSaldo = false, metodoPago = 'Efectivo') {
+    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const body = new URLSearchParams({
+        id: String(id),
+        nuevo_estado: estado,
+        liquidar: String(liquidarSaldo),
+        metodo_pago: metodoPago,
     });
 
-    fetch(url, { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: data.message,
-                    confirmButtonColor: '#198754',
-                    customClass: { confirmButton: 'rounded-pill px-4' }
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.message, 'error');
-            }
+    fetch('api.php?resource=pedidos&action=actualizar_estado_ajax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+        body,
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.status !== 'success') throw new Error(data.message || 'No fue posible actualizar el pedido.');
+            return Swal.fire({ icon: 'success', title: 'Estado actualizado', text: data.message });
         })
-        .catch(() => Swal.fire('Error', 'Fallo en la comunicación con el servidor', 'error'));
+        .then(() => location.reload())
+        .catch((error) => Swal.fire('Error', error.message || 'Fallo en la comunicaciÃ³n con el servidor.', 'error'));
 }

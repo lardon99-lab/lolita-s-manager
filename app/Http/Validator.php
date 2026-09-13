@@ -43,4 +43,16 @@ final class Validator
         if (!$date || $date->format('Y-m-d') !== $value) throw new InvalidArgumentException("El campo {$field} no es valido.");
         return $value;
     }
+
+    public static function dateTimeLocal(mixed $value, string $field): string
+    {
+        $value = (string) $value;
+        foreach (['!Y-m-d\\TH:i', '!Y-m-d\\TH:i:s'] as $format) {
+            $date = \DateTimeImmutable::createFromFormat($format, $value);
+            if ($date && $date->format(str_replace('!', '', $format)) === $value) {
+                return $date->format('Y-m-d H:i:s');
+            }
+        }
+        throw new InvalidArgumentException("El campo {$field} no es valido.");
+    }
 }

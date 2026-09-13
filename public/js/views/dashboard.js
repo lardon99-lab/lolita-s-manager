@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             Swal.fire({
                 title: 'Abastecer Producto',
-                html: `Ingresa la cantidad que deseas añadir al stock de:<br><strong>${nombreProducto}</strong> (${nombreSucursal})`,
+                text: `Ingresa la cantidad que deseas anadir al stock de ${nombreProducto} (${nombreSucursal}).`,
                 icon: 'info',
                 input: 'number',
                 inputAttributes: {

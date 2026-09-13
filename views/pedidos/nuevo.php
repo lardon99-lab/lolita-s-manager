@@ -154,7 +154,7 @@
                         <div class="row align-items-center">
                             <div class="col-md-7">
                                 <div class="row g-3">
-                                    <div class="col-12 col-sm-6">
+                                    <div class="col-12 col-sm-4">
                                         <label class="small fw-bold text-muted mb-1"><i class="fa-solid fa-wallet me-1"></i> Estado de Pago</label>
                                         <select name="tipo_pago" id="tipo_pago" class="form-select border-0 shadow-sm py-2 fw-medium" onchange="gestionarPago()">
                                             <option value="Pendiente">Dejar Pendiente</option>
@@ -162,12 +162,21 @@
                                             <option value="Pagado">Liquidado (Total)</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 col-sm-6" id="contenedor-abono" style="display: none;">
+                                    <div class="col-12 col-sm-4" id="contenedor-abono" style="display: none;">
                                         <label class="small fw-bold text-muted mb-1">Monto del Abono</label>
                                         <div class="input-group shadow-sm rounded-3 overflow-hidden">
                                             <span class="input-group-text bg-white border-0 text-muted fw-bold">L.</span>
                                             <input type="number" name="monto_abono" id="monto_abono" class="form-control border-0 py-2 text-success fw-bold" step="0.01" value="0">
                                         </div>
+                                    </div>
+                                    <div class="col-12 col-sm-4" id="contenedor-metodo-pago" style="display: none;">
+                                        <label class="small fw-bold text-muted mb-1">Metodo de Pago</label>
+                                        <select name="metodo_pago" id="metodo_pago" class="form-select border-0 shadow-sm py-2 fw-medium">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Transferencia">Transferencia</option>
+                                            <option value="Tarjeta">Tarjeta</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

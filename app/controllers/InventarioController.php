@@ -2,6 +2,8 @@
 // app/controllers/InventarioController.php
 use App\Security\Auth;
 use App\Security\Csrf;
+use App\Services\AuditService;
+use App\Services\ProductImageStorage;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -23,6 +25,7 @@ class InventarioController {
     }
 
     public function listar() {
+        Auth::requirePermission('inventory.view');
         // Normalizamos los valores de sesión
         $rol = isset($_SESSION['id_rol']) ? (int)$_SESSION['id_rol'] : 0;
         $sucursal_user = isset($_SESSION['id_sucursal']) ? (int)$_SESSION['id_sucursal'] : null;
@@ -36,17 +39,18 @@ class InventarioController {
         // 2. Si es Admin (1) o SuperUser (3) y usa el filtro de la URL
         if (isset($_GET['sucursal_id']) && $_GET['sucursal_id'] !== "") {
             $branchId = (int) $_GET['sucursal_id'];
-            if (!Auth::canAccessBranch($branchId)) return [];
+            if (!Auth::canAccessBranch($branchId, 'inventory.view')) return [];
             return $this->producto->obtenerPorSucursal($branchId);
         }
 
         // 3. Admin o SuperUser sin filtros: Ven todo el inventario global
-        $allowed = Auth::allowedBranches();
+        $allowed = Auth::allowedBranches('inventory.view');
         return $allowed === null ? $this->producto->obtenerTodoElInventario() : $this->producto->obtenerPorSucursales($allowed);
     }
 
     public function listarPorSucursal($id_sucursal) {
         if (!$id_sucursal) return [];
+        if (!Auth::canAccessBranch((int) $id_sucursal, 'inventory.view')) return [];
         return $this->producto->obtenerPorSucursal($id_sucursal);
     }
 
@@ -91,10 +95,11 @@ class InventarioController {
                 }
 
                 // Verificamos si YA EXISTE un lote exacto
-                $queryCheck = "SELECT id_inventario FROM inventario 
+                $queryCheck = "SELECT id_inventario, stock_actual FROM inventario
                                WHERE id_producto = :id_producto 
                                AND id_sucursal = :id_sucursal 
-                               AND (fecha_caducidad = :fecha1 OR (fecha_caducidad IS NULL AND :fecha2 IS NULL))";
+                               AND (fecha_caducidad = :fecha1 OR (fecha_caducidad IS NULL AND :fecha2 IS NULL))
+                               FOR UPDATE";
                 
                 $stmtCheck = $this->db->prepare($queryCheck);
                 $stmtCheck->execute([
@@ -116,6 +121,8 @@ class InventarioController {
                         ':cantidad' => $cantidad_nueva,
                         ':id_lote'  => $loteExistente['id_inventario']
                     ]);
+                    $movementInventoryId = (int) $loteExistente['id_inventario'];
+                    $stockBefore = (int) $loteExistente['stock_actual'];
                 } else {
                     // NO EXISTE: Insertamos un NUEVO LOTE
                     $queryInsert = "INSERT INTO inventario (id_sucursal, id_producto, stock_actual, stock_minimo, fecha_caducidad) 
@@ -128,7 +135,13 @@ class InventarioController {
                         ':minimo'      => $info['stock_minimo'],
                         ':fecha'       => $nueva_fecha
                     ]);
+                    $movementInventoryId = (int) $this->db->lastInsertId();
+                    $stockBefore = 0;
                 }
+
+                $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior) VALUES (?, ?, 'Abastecimiento', ?, ?, ?)");
+                $movement->execute([$movementInventoryId, (int) $_SESSION['id_usuario'], $cantidad_nueva, $stockBefore, $stockBefore + $cantidad_nueva]);
+                (new AuditService($this->db))->record('inventory.restocked', 'inventario', $movementInventoryId, $id_sucursal, ['cantidad' => $cantidad_nueva]);
 
                 // 2. Respondemos con éxito en formato JSON en lugar del header()
                 $this->db->commit();
@@ -146,20 +159,21 @@ class InventarioController {
     }
 
     public function listarProductosDisponibles($id_sucursal_forzado = null) {
+        Auth::requirePermission('sales.create');
         // 1. Detectar el contexto del usuario
         $id_sucursal_session = $_SESSION['id_sucursal'] ?? null;
         $id_rol = (int)($_SESSION['id_rol'] ?? 0);
 
         // 2. Determinar qué sucursal filtrar:
         $id_s_final = $id_sucursal_forzado ?? $id_sucursal_session;
-        if ($id_s_final && !Auth::canAccessBranch((int) $id_s_final)) return [];
+        if ($id_s_final && !Auth::canAccessBranch((int) $id_s_final, 'sales.create')) return [];
 
         // La consulta base
         $query = "SELECT p.id_producto, p.nombre_producto, p.precio_base, i.stock_actual as stock, i.id_inventario, s.nombre_sucursal
                 FROM inventario i
                 INNER JOIN productos p ON i.id_producto = p.id_producto
                 INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                WHERE i.stock_actual > 0";
+                WHERE i.stock_actual > 0 AND p.estado = 'Activo'";
         
         // 3. Aplicar el filtro siempre que tengamos un ID de sucursal
         if ($id_s_final) {
@@ -189,6 +203,8 @@ class InventarioController {
             if (ob_get_length()) ob_clean();
             header('Content-Type: application/json');
 
+            $imageStorage = new ProductImageStorage(dirname(__DIR__, 2) . '/public/img/productos');
+            $imagen_url = 'default_product.png';
             try {
                 $this->db->beginTransaction();
 
@@ -230,21 +246,7 @@ class InventarioController {
 
                 if (empty($sucursales)) throw new Exception("Debe seleccionar al menos una sucursal.");
 
-                $imagen_url = 'default_product.png';
-                if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] !== UPLOAD_ERR_NO_FILE) {
-                    $file = $_FILES['imagen'];
-                    if ($file['error'] !== UPLOAD_ERR_OK || $file['size'] > 5 * 1024 * 1024 || !is_uploaded_file($file['tmp_name'])) {
-                        throw new InvalidArgumentException('La imagen no es valida o supera 5 MB.');
-                    }
-                    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-                    $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-                    if (!isset($extensions[$mime])) throw new InvalidArgumentException('Solo se permiten imagenes JPG, PNG o WebP.');
-                    $dir = dirname(__DIR__, 2) . '/public/img/productos';
-                    if (!is_dir($dir) && !mkdir($dir, 0770, true) && !is_dir($dir)) throw new RuntimeException('No se pudo preparar el directorio de imagenes.');
-                    $nombre_archivo = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
-                    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $nombre_archivo)) throw new RuntimeException('No se pudo guardar la imagen.');
-                    $imagen_url = $nombre_archivo;
-                }
+                $imagen_url = $imageStorage->store(isset($_FILES['imagen']) && is_array($_FILES['imagen']) ? $_FILES['imagen'] : null);
 
                 $stmtProd = $this->db->prepare("INSERT INTO productos (id_categoria, nombre_producto, descripcion, precio_base, imagen_url, dias_vida_util) VALUES (:id_cat, :nom, :desc, :pre, :img, :dias)");
                 $stmtProd->execute([
@@ -264,13 +266,19 @@ class InventarioController {
                         ':id_p' => $id_nuevo_p,
                         ':stock' => $stock_inicial
                     ]);
+                    $inventoryId = (int) $this->db->lastInsertId();
+                    $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior, referencia_tipo, referencia_id) VALUES (?, ?, 'Inventario inicial', ?, 0, ?, 'productos', ?)");
+                    $movement->execute([$inventoryId, (int) $_SESSION['id_usuario'], $stock_inicial, $stock_inicial, (int) $id_nuevo_p]);
                 }
+
+                (new AuditService($this->db))->record('product.created', 'productos', (int) $id_nuevo_p, null, ['sucursales' => $sucursales]);
 
                 $this->db->commit();
                 echo json_encode(['status' => 'success', 'message' => 'Producto registrado con éxito.']);
 
             } catch (Exception $e) {
                 if ($this->db->inTransaction()) $this->db->rollBack();
+                $imageStorage->remove($imagen_url);
                 \App\Support\Logger::error($e);
                 echo json_encode(['status' => 'error', 'message' => $e instanceof InvalidArgumentException ? $e->getMessage() : 'No fue posible registrar el producto.']);
             }
@@ -306,13 +314,15 @@ class InventarioController {
                 $motivo = \App\Http\Validator::text($_POST['motivo_merma'] ?? '', 'motivo', 250);
                 $id_usuario = (int)$_SESSION['id_usuario'];
 
-                $stmtCheck = $this->db->prepare("SELECT stock_actual FROM inventario WHERE id_inventario = ? FOR UPDATE");
+                $stmtCheck = $this->db->prepare("SELECT stock_actual, id_sucursal FROM inventario WHERE id_inventario = ? FOR UPDATE");
                 $stmtCheck->execute([$id_inventario]);
-                $stock = $stmtCheck->fetchColumn();
+                $inventory = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-                if ($stock === false) {
+                if (!$inventory) {
                     throw new Exception("El producto no existe en el inventario.");
                 }
+                $stock = (int) $inventory['stock_actual'];
+                Auth::requirePermission('inventory.adjust', (int) $inventory['id_sucursal']);
 
                 if ($stock < $cantidad) {
                     throw new Exception("No puedes mermar más del stock actual ($stock).");
@@ -323,6 +333,9 @@ class InventarioController {
 
                 $stmtMerma = $this->db->prepare("INSERT INTO mermas (id_inventario, id_usuario, cantidad, motivo) VALUES (?, ?, ?, ?)");
                 $stmtMerma->execute([$id_inventario, $id_usuario, $cantidad, $motivo]);
+                $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior, motivo) VALUES (?, ?, 'Merma', ?, ?, ?, ?)");
+                $movement->execute([$id_inventario, $id_usuario, -$cantidad, $stock, $stock - $cantidad, $motivo]);
+                (new AuditService($this->db))->record('inventory.waste_recorded', 'inventario', $id_inventario, (int) $inventory['id_sucursal'], ['cantidad' => $cantidad, 'motivo' => $motivo]);
 
                 $this->db->commit();
                 echo json_encode(['status' => 'success', 'message' => 'Merma registrada y stock actualizado.']);
@@ -348,13 +361,15 @@ class InventarioController {
 
                 $this->db->beginTransaction();
 
-                $stmtCheck = $this->db->prepare("SELECT stock_actual FROM inventario WHERE id_inventario = ? FOR UPDATE");
+                $stmtCheck = $this->db->prepare("SELECT stock_actual, id_sucursal FROM inventario WHERE id_inventario = ? FOR UPDATE");
                 $stmtCheck->execute([$id_inventario]);
-                $stock_perdido = $stmtCheck->fetchColumn();
+                $inventory = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-                if ($stock_perdido === false) {
+                if (!$inventory) {
                     throw new Exception("El registro de inventario no existe.");
                 }
+                $stock_perdido = (int) $inventory['stock_actual'];
+                Auth::requirePermission('inventory.adjust', (int) $inventory['id_sucursal']);
 
                 if ($stock_perdido > 0) {
                     $stmtUpdate = $this->db->prepare("UPDATE inventario SET stock_actual = 0 WHERE id_inventario = ?");
@@ -362,6 +377,9 @@ class InventarioController {
 
                     $stmtMerma = $this->db->prepare("INSERT INTO mermas (id_inventario, id_usuario, cantidad, motivo) VALUES (?, ?, ?, 'Producto Caducado')");
                     $stmtMerma->execute([$id_inventario, $id_usuario, $stock_perdido]);
+                    $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior, motivo) VALUES (?, ?, 'Merma', ?, ?, 0, 'Producto Caducado')");
+                    $movement->execute([$id_inventario, $id_usuario, -$stock_perdido, $stock_perdido]);
+                    (new AuditService($this->db))->record('inventory.expired_discarded', 'inventario', $id_inventario, (int) $inventory['id_sucursal'], ['cantidad' => $stock_perdido]);
                 }
 
                 $this->db->commit();
@@ -396,18 +414,18 @@ if ($action !== null) {
     }
     Csrf::validateRequest();
     if ($action === 'registrar') {
-        Auth::requireRoles([Auth::ADMIN, Auth::SUPERUSER]);
-        foreach ((array) ($_POST['id_sucursal'] ?? []) as $branchId) Auth::requireBranch((int) $branchId);
+        Auth::requirePermission('products.manage');
+        foreach ((array) ($_POST['id_sucursal'] ?? []) as $branchId) Auth::requirePermission('products.manage', (int) $branchId);
     } elseif (in_array($action, ['abastecer', 'abastecer_producto'], true)) {
-        Auth::requireBranch((int) ($_POST['id_sucursal'] ?? 0));
+        Auth::requirePermission('inventory.adjust', (int) ($_POST['id_sucursal'] ?? 0));
     } elseif ($action === 'registrarMerma' && !empty($_POST['id_sucursal_merma'])) {
-        Auth::requireBranch((int) $_POST['id_sucursal_merma']);
+        Auth::requirePermission('inventory.adjust', (int) $_POST['id_sucursal_merma']);
     } elseif ($action === 'registrar_merma') {
         $inventoryId = (int) ($_POST['id_inventario'] ?? 0);
         $accessDb = (new Database())->getConnection();
         $accessStmt = $accessDb->prepare('SELECT id_sucursal FROM inventario WHERE id_inventario = ?');
         $accessStmt->execute([$inventoryId]);
-        Auth::requireBranch((int) $accessStmt->fetchColumn());
+        Auth::requirePermission('inventory.adjust', (int) $accessStmt->fetchColumn());
     }
     // Si hay una acción, limpiamos el buffer para asegurar un JSON impecable
     if (ob_get_length()) ob_clean();

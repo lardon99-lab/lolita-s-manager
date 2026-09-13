@@ -1,0 +1,142 @@
+.catalog-page,
+.catalog-page * {
+    min-width: 0;
+}
+
+.catalog-header__action {
+    flex: 0 0 auto;
+}
+
+.catalog-mobile-list {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #eadfe3;
+    border-radius: 8px;
+}
+
+.catalog-mobile-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eadfe3;
+}
+
+.catalog-mobile-item:last-child {
+    border-bottom: 0;
+}
+
+.catalog-mobile-item__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .9rem;
+}
+
+.catalog-mobile-item__header h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #2e2529;
+    font-size: .98rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.catalog-mobile-item__header .badge {
+    flex: 0 0 auto;
+    max-width: 45%;
+    white-space: normal;
+}
+
+.catalog-mobile-item__details {
+    display: grid;
+    gap: .55rem;
+    margin: 0 0 1rem;
+}
+
+.catalog-mobile-item__details > div {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 34%) minmax(0, 1fr);
+    gap: .75rem;
+    align-items: start;
+}
+
+.catalog-mobile-item__details dt {
+    color: #8b7c82;
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.catalog-mobile-item__details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #352c30;
+    font-size: .84rem;
+    line-height: 1.45;
+}
+
+.catalog-mobile-item__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .6rem;
+}
+
+.catalog-mobile-item__actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: .5rem;
+    overflow: hidden;
+    font-size: .78rem;
+    white-space: normal;
+}
+
+.catalog-mobile-item--compact .catalog-mobile-item__header {
+    margin-bottom: 1rem;
+}
+
+.catalog-empty {
+    margin: 0;
+    padding: 2rem 1rem;
+    color: #766b70;
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    .catalog-page {
+        padding-right: .75rem !important;
+        padding-left: .75rem !important;
+    }
+
+    .catalog-header {
+        margin-bottom: 1rem !important;
+    }
+
+    .catalog-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .catalog-header p {
+        font-size: .82rem;
+    }
+
+    .catalog-header__action,
+    .catalog-category-add {
+        width: 100%;
+    }
+
+    .catalog-tabs {
+        flex-wrap: nowrap;
+    }
+
+    .catalog-tabs .nav-item {
+        flex: 1 1 0;
+        text-align: center;
+    }
+
+    .catalog-tabs .nav-link {
+        width: 100%;
+        padding-right: .5rem;
+        padding-left: .5rem;
+    }
+}

@@ -15,11 +15,13 @@ final class InventarioPageService
         require_once dirname(__DIR__) . '/models/Producto.php';
         $role = (int) ($_SESSION['id_rol'] ?? 0);
         $userBranch = (int) ($_SESSION['id_sucursal'] ?? 0);
-        $allowed = Auth::allowedBranches();
+        Auth::requirePermission('inventory.view');
+        $allowed = Auth::allowedBranches('inventory.view');
         $branches = $this->branches($allowed);
 
         $branchId = $role === Auth::EMPLOYEE ? $userBranch : $requestedBranch;
-        if ($branchId && !Auth::canAccessBranch($branchId)) $branchId = null;
+        if ($branchId && !Auth::canAccessBranch($branchId, 'inventory.view')) $branchId = null;
+        if (!$branchId && count($branches) === 1) $branchId = (int) $branches[0]['id_sucursal'];
         $products = $branchId ? (new \Producto($this->db))->obtenerPorSucursal($branchId) : [];
 
         $categories = $this->db->query('SELECT id_categoria, nombre_categoria FROM categorias ORDER BY nombre_categoria')->fetchAll();

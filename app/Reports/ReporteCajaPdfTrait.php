@@ -5,6 +5,8 @@ use App\Security\Auth;
 trait ReporteCajaPdfTrait
 {
     public function descargarReportePDF($filtros = []) {
+        Auth::requirePermission('reports.view');
+        $reportBranches = Auth::allowedBranches('reports.view');
         // 1. Obtener datos de ventas y mermas generales
         $ventas = $this->obtenerHistorialVentas($filtros);
         $totalIngresos = array_sum(array_column($ventas, 'total_pedido'));
@@ -50,6 +52,15 @@ trait ReporteCajaPdfTrait
             if (!empty($filtros['sucursal'])) {
                 $queryInv .= " WHERE i.id_sucursal = :sucursal";
                 $paramsInv[':sucursal'] = $filtros['sucursal'];
+            } elseif ($reportBranches !== null) {
+                if ($reportBranches === []) return;
+                $holders = [];
+                foreach ($reportBranches as $index => $branchId) {
+                    $key = ':pdf_inventory_branch_' . $index;
+                    $holders[] = $key;
+                    $paramsInv[$key] = $branchId;
+                }
+                $queryInv .= ' WHERE i.id_sucursal IN (' . implode(',', $holders) . ')';
             }
 
             $queryInv .= " GROUP BY p.id_producto, p.nombre_producto HAVING SUM(i.stock_actual) > 0 ORDER BY p.nombre_producto ASC";
@@ -74,6 +85,20 @@ trait ReporteCajaPdfTrait
             $cond_p .= " AND p.id_sucursal = :s1";
             $cond_v .= " AND v.id_sucursal = :s2";
             $params_agrup[':s1'] = $params_agrup[':s2'] = $filtros['sucursal'];
+        } elseif ($reportBranches !== null) {
+            if ($reportBranches === []) return;
+            $pedidoHolders = [];
+            $ventaHolders = [];
+            foreach ($reportBranches as $index => $branchId) {
+                $pedidoKey = ':pdf_order_branch_' . $index;
+                $ventaKey = ':pdf_sale_branch_' . $index;
+                $pedidoHolders[] = $pedidoKey;
+                $ventaHolders[] = $ventaKey;
+                $params_agrup[$pedidoKey] = $branchId;
+                $params_agrup[$ventaKey] = $branchId;
+            }
+            $cond_p .= ' AND p.id_sucursal IN (' . implode(',', $pedidoHolders) . ')';
+            $cond_v .= ' AND v.id_sucursal IN (' . implode(',', $ventaHolders) . ')';
         }
 
         if (!empty($filtros['desde']) && !empty($filtros['hasta'])) {
@@ -85,13 +110,13 @@ trait ReporteCajaPdfTrait
 
         $sqlVentasAgrupadas = "
             SELECT nombre_producto as nombre, SUM(total_producto) as valor FROM (
-                SELECT pr.nombre_producto, (det.cantidad * pr.precio_base) as total_producto
+                SELECT pr.nombre_producto, det.subtotal as total_producto
                 FROM pedidos p
                 INNER JOIN pedido_detalles det ON p.id_pedido = det.id_pedido
                 INNER JOIN productos pr ON det.id_producto = pr.id_producto
                 WHERE $cond_p
                 UNION ALL
-                SELECT pr.nombre_producto, (vi.cantidad * pr.precio_base) as total_producto
+                SELECT pr.nombre_producto, vi.subtotal as total_producto
                 FROM ventas_directas v
                 INNER JOIN venta_items vi ON v.id_venta = vi.id_venta
                 INNER JOIN productos pr ON vi.id_producto = pr.id_producto

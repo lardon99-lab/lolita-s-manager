@@ -2,11 +2,19 @@ parameters:
     level: 5
     scanFiles:
         - app/models/Producto.php
+        - app/models/Usuario.php
+        - app/core/Database.php
     paths:
         - app/Http
         - app/Security
         - app/Services
         - app/Support
+        - app/controllers/AuthController.php
+        - app/controllers/CatalogoController.php
+        - app/controllers/ClienteController.php
+        - app/controllers/SucursalController.php
+        - app/controllers/UsuarioController.php
+        - app/controllers/VentaController.php
     excludePaths:
         - app/controllers/PedidoController.php
     treatPhpDocTypesAsCertain: false

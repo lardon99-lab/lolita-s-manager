@@ -5,6 +5,7 @@ use App\Security\Auth;
 trait CajaReporteTrait
 {
     public function obtenerHistorialVentas($filtros = []) {
+        Auth::requirePermission('reports.view');
         $params = [];
         
         // 0. Identificar quién está mirando (Seguridad por Rol)
@@ -16,19 +17,24 @@ trait CajaReporteTrait
         $condicionVentas = " WHERE 1=1";
 
         // --- LÓGICA DE FILTRADO POR ROL ---
-        if ($id_rol === 2) { 
+        if (!empty($filtros['sucursal'])) {
+            if (!Auth::canAccessBranch((int) $filtros['sucursal'], 'reports.view')) return [];
+            $condicionPedidos .= " AND p.id_sucursal = :emp_s1";
+            $condicionVentas .= " AND v.id_sucursal = :emp_s2";
+            $params[':emp_s1'] = $params[':emp_s2'] = (int) $filtros['sucursal'];
+        } elseif ($id_rol === 2) {
             // Si es EMPLEADO: Filtro obligatorio por su sucursal asignada
             $condicionPedidos .= " AND p.id_sucursal = :emp_s1";
             $condicionVentas .= " AND v.id_sucursal = :emp_s2";
             $params[':emp_s1'] = $params[':emp_s2'] = $sucursal_usuario;
         } else {
             if (!empty($filtros['sucursal'])) {
-                if (!Auth::canAccessBranch((int) $filtros['sucursal'])) return [];
+                if (!Auth::canAccessBranch((int) $filtros['sucursal'], 'reports.view')) return [];
                 $condicionPedidos .= " AND p.id_sucursal = :s1";
                 $condicionVentas .= " AND v.id_sucursal = :s2";
                 $params[':s1'] = $params[':s2'] = $filtros['sucursal'];
-            } elseif ($id_rol === Auth::ADMIN) {
-                $allowed = Auth::allowedBranches() ?? [];
+            } elseif ($id_rol !== Auth::SUPERUSER) {
+                $allowed = Auth::allowedBranches('reports.view') ?? [];
                 if ($allowed === []) return [];
                 $pedidoHolders = [];
                 $ventaHolders = [];
@@ -90,10 +96,18 @@ trait CajaReporteTrait
         // 4. Unión y Filtro Final
         $sqlFinal = "($sqlPedidos) UNION ALL ($sqlVentas)";
         
+        $outerConditions = [];
         if (!empty($filtros['tipo'])) {
-            $sqlFinal = "SELECT * FROM ($sqlFinal) as historial WHERE tipo = :tipo_filtro";
+            $outerConditions[] = 'tipo = :tipo_filtro';
             $params[':tipo_filtro'] = ($filtros['tipo'] == 'Pedido') ? 'Pedido Especial' : 'Venta Directa';
         }
+        if (!empty($filtros['busqueda'])) {
+            $search = \App\Http\Validator::text($filtros['busqueda'], 'busqueda', 100);
+            $outerConditions[] = '(cliente LIKE :search_client OR CAST(id_pedido AS CHAR) LIKE :search_id)';
+            $params[':search_client'] = '%' . $search . '%';
+            $params[':search_id'] = '%' . $search . '%';
+        }
+        if ($outerConditions !== []) $sqlFinal = "SELECT * FROM ($sqlFinal) as historial WHERE " . implode(' AND ', $outerConditions);
 
         $sqlFinal .= " ORDER BY fecha_registro DESC";
 
@@ -108,6 +122,7 @@ trait CajaReporteTrait
     }
 
     public function guardarMerma() {
+        Auth::requirePermission('cash.adjust');
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             try {
                 $monto = \App\Http\Validator::money($_POST['monto_merma'] ?? null, 'monto', 1000000);
@@ -117,7 +132,7 @@ trait CajaReporteTrait
                 
                 // MANEJO SEGURO: Busca en POST primero (Admin), si no, en SESSION (Empleado)
                 $id_sucursal = \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
-                Auth::requireBranch($id_sucursal);
+                Auth::requirePermission('cash.adjust', $id_sucursal);
                 
                 $id_usuario = $_SESSION['id_usuario'] ?? 0;
 
@@ -141,6 +156,7 @@ trait CajaReporteTrait
     }
 
     public function obtenerMermas($filtros = []) {
+        Auth::requirePermission('reports.view');
         $id_rol = (int)($_SESSION['id_rol'] ?? 0);
         $sucursal_usuario = (int)($_SESSION['id_sucursal'] ?? 0);
         
@@ -153,11 +169,11 @@ trait CajaReporteTrait
             $params[':s1'] = $sucursal_usuario;
         } else {
             if (!empty($filtros['sucursal'])) {
-                if (!Auth::canAccessBranch((int) $filtros['sucursal'])) return [];
+                if (!Auth::canAccessBranch((int) $filtros['sucursal'], 'reports.view')) return [];
                 $condiciones .= " AND id_sucursal = :s1";
                 $params[':s1'] = $filtros['sucursal'];
-            } elseif ($id_rol === Auth::ADMIN) {
-                $allowed = Auth::allowedBranches() ?? [];
+            } elseif ($id_rol !== Auth::SUPERUSER) {
+                $allowed = Auth::allowedBranches('reports.view') ?? [];
                 if ($allowed === []) return [];
                 $holders = [];
                 foreach ($allowed as $index => $branchId) {
@@ -188,6 +204,7 @@ trait CajaReporteTrait
     }
 
     public function obtenerMermasInventario($filtros = []) {
+        Auth::requirePermission('reports.view');
         $id_rol = (int)($_SESSION['id_rol'] ?? 0);
         $sucursal_usuario = (int)($_SESSION['id_sucursal'] ?? 0);
 
@@ -199,11 +216,11 @@ trait CajaReporteTrait
             $params[':s1'] = $sucursal_usuario;
         } else {
             if (!empty($filtros['sucursal'])) {
-                if (!Auth::canAccessBranch((int) $filtros['sucursal'])) return [];
+                if (!Auth::canAccessBranch((int) $filtros['sucursal'], 'reports.view')) return [];
                 $condiciones .= " AND i.id_sucursal = :s1";
                 $params[':s1'] = $filtros['sucursal'];
-            } elseif ($id_rol === Auth::ADMIN) {
-                $allowed = Auth::allowedBranches() ?? [];
+            } elseif ($id_rol !== Auth::SUPERUSER) {
+                $allowed = Auth::allowedBranches('reports.view') ?? [];
                 if ($allowed === []) return [];
                 $holders = [];
                 foreach ($allowed as $index => $branchId) {

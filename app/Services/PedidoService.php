@@ -20,8 +20,11 @@ final class PedidoService
         try {
             $clientId = Validator::positiveInt($input['id_cliente'] ?? null, 'cliente');
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
-            Auth::requireBranch($branchId);
-            $deliveryDate = Validator::date($input['fecha_entrega'] ?? null, 'fecha de entrega');
+            Auth::requirePermission('orders.create', $branchId);
+            $deliveryDate = Validator::dateTimeLocal($input['fecha_entrega'] ?? null, 'fecha de entrega');
+            if (new \DateTimeImmutable($deliveryDate) < new \DateTimeImmutable('-5 minutes')) {
+                throw new InvalidArgumentException('La fecha de entrega no puede estar en el pasado.');
+            }
             $notes = Validator::text($input['observaciones'] ?? '', 'observaciones', 1000, false);
             $paymentType = Validator::enum($input['tipo_pago'] ?? '', ['Pendiente', 'Abonado', 'Pagado'], 'tipo de pago');
             $products = is_array($input['productos'] ?? null) ? $input['productos'] : [];
@@ -30,7 +33,11 @@ final class PedidoService
             $extras = is_array($input['costos_extras'] ?? null) ? $input['costos_extras'] : [];
             if ($products === [] || count($products) > 100 || count($products) !== count($quantities)) throw new InvalidArgumentException('El pedido no contiene productos validos.');
 
-            $priceQuery = $this->db->prepare('SELECT precio_base FROM productos WHERE id_producto = ?');
+            $clientQuery = $this->db->prepare("SELECT COUNT(*) FROM clientes WHERE id_cliente = ? AND estado = 'Activo'");
+            $clientQuery->execute([$clientId]);
+            if (!(bool) $clientQuery->fetchColumn()) throw new InvalidArgumentException('El cliente no existe o esta inactivo.');
+
+            $priceQuery = $this->db->prepare("SELECT precio_base FROM productos WHERE id_producto = ? AND estado = 'Activo'");
             $items = [];
             $total = 0.0;
             foreach ($products as $index => $productValue) {
@@ -59,7 +66,13 @@ final class PedidoService
             $orderId = (int) $this->db->lastInsertId();
             $detail = $this->db->prepare('INSERT INTO pedido_detalles (id_pedido, id_producto, cantidad, precio_unitario, detalles_personalizacion, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
             foreach ($items as $item) $detail->execute([$orderId, ...$item]);
+            if ($paid > 0) {
+                $paymentMethod = Validator::enum($input['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
+                $payment = $this->db->prepare('INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago) VALUES (?, ?, ?, ?)');
+                $payment->execute([$orderId, (int) $_SESSION['id_usuario'], $paid, $paymentMethod]);
+            }
             $this->db->commit();
+            (new AuditService($this->db))->record('create', 'pedido', $orderId, $branchId, ['total' => $total, 'paid' => $paid]);
             Response::redirect('index.php?view=pedidos-lista&msg=pedido_ok');
         } catch (Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();

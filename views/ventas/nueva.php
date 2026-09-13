@@ -3,17 +3,23 @@ require_once '../app/controllers/InventarioController.php';
 
 $invCtrl = new InventarioController();
 
-$id_sucursal_user = $_SESSION['id_sucursal'] ?? null;
-$rol_user = (int)($_SESSION['id_rol'] ?? 0);
-
-if (($rol_user === 1 || $rol_user === 3) && isset($_GET['sucursal_id']) && !empty($_GET['sucursal_id'])) {
-    $requestedBranch = (int) $_GET['sucursal_id'];
-    $id_sucursal_user = \App\Security\Auth::canAccessBranch($requestedBranch) ? $requestedBranch : null;
+$id_sucursal_user = (int) ($_SESSION['id_sucursal'] ?? 0) ?: null;
+$requestedBranch = !empty($_GET['sucursal_id']) ? (int) $_GET['sucursal_id'] : null;
+if ($requestedBranch && \App\Security\Auth::canAccessBranch($requestedBranch, 'sales.create')) $id_sucursal_user = $requestedBranch;
+$allowedBranches = \App\Security\Auth::allowedBranches('sales.create');
+$db = (new Database())->getConnection();
+if ($allowedBranches === null) {
+    $sucursales = $db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' ORDER BY nombre_sucursal")->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($allowedBranches === []) {
+    $sucursales = [];
+} else {
+    $holders = implode(',', array_fill(0, count($allowedBranches), '?'));
+    $stmtBranches = $db->prepare("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' AND id_sucursal IN ($holders) ORDER BY nombre_sucursal");
+    $stmtBranches->execute($allowedBranches);
+    $sucursales = $stmtBranches->fetchAll(PDO::FETCH_ASSOC);
 }
-
-$productos = ($id_sucursal_user) ? $invCtrl->listarProductosDisponibles($id_sucursal_user) : [];
-$inventoryPage = (new \App\Services\InventarioPageService((new Database())->getConnection()))->data(null);
-$sucursales = ($rol_user === 1 || $rol_user === 3) ? $inventoryPage['sucursales'] : [];
+if ($id_sucursal_user === null && count($sucursales) === 1) $id_sucursal_user = (int) $sucursales[0]['id_sucursal'];
+$productos = $id_sucursal_user ? $invCtrl->listarProductosDisponibles($id_sucursal_user) : [];
 ?>
 
 <div class="container-fluid p-2 p-md-4">
@@ -34,7 +40,7 @@ $sucursales = ($rol_user === 1 || $rol_user === 3) ? $inventoryPage['sucursales'
 
                 <div class="card-body p-3 p-md-4 bg-white">
                     
-                    <?php if ($rol_user === 1 || $rol_user === 3): ?>
+                    <?php if (count($sucursales) > 1 || empty($_SESSION['id_sucursal'])): ?>
                         <div class="p-3 bg-light rounded-3 mb-4 border-start border-primary border-4 shadow-sm">
                             <label class="form-label small fw-bold text-primary text-uppercase mb-2" style="letter-spacing: 1px;">Sucursal de Despacho</label>
                             <select class="form-select border-0 shadow-sm fw-bold text-dark py-2" onchange="location.href='index.php?view=ventas-nueva&sucursal_id=' + this.value">

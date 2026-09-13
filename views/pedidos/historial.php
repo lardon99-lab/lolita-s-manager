@@ -1,30 +1,36 @@
 <?php
-ob_start();
 require_once '../app/controllers/PedidoController.php';
 $pedidosCtrl = new PedidoController();
 
 // 1. Establecer la fecha de HOY por defecto para el control de caja diario
 date_default_timezone_set('America/Tegucigalpa');
 $hoy = date('Y-m-d');
+$desde = !empty($_GET['desde']) ? \App\Http\Validator::date($_GET['desde'], 'fecha desde') : $hoy;
+$hasta = !empty($_GET['hasta']) ? \App\Http\Validator::date($_GET['hasta'], 'fecha hasta') : $hoy;
+$tipo = !empty($_GET['tipo']) ? \App\Http\Validator::enum($_GET['tipo'], ['Pedido', 'Venta'], 'tipo') : null;
 
-// 2. Verificamos si es Admin(1) o Superadmin(3) y obtenemos la sucursal del empleado
-$esAdmin = isset($_SESSION['id_rol']) && in_array($_SESSION['id_rol'], [1, 3]);
-$id_sucursal_user = $_SESSION['id_sucursal'] ?? null;
-
-$listaSucursales = [];
-if ($esAdmin) {
-    $database = new Database();
-    $db = $database->getConnection();
-    $listaSucursales = $db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales")->fetchAll(PDO::FETCH_ASSOC);
+$database = new Database();
+$db = $database->getConnection();
+$allowedBranches = \App\Security\Auth::allowedBranches('reports.view');
+if ($allowedBranches === null) {
+    $listaSucursales = $db->query("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' ORDER BY nombre_sucursal")->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($allowedBranches === []) {
+    $listaSucursales = [];
+} else {
+    $holders = implode(',', array_fill(0, count($allowedBranches), '?'));
+    $branchStmt = $db->prepare("SELECT id_sucursal, nombre_sucursal FROM sucursales WHERE estado = 'Activa' AND id_sucursal IN ($holders) ORDER BY nombre_sucursal");
+    $branchStmt->execute($allowedBranches);
+    $listaSucursales = $branchStmt->fetchAll(PDO::FETCH_ASSOC);
 }
+$esAdmin = count($listaSucursales) > 1;
 
 // 3. Configuramos los filtros asegurando la sucursal asignada para los empleados
 $filtros = [
-    'desde'    => !empty($_GET['desde']) ? $_GET['desde'] : $hoy,
-    'hasta'    => !empty($_GET['hasta']) ? $_GET['hasta'] : $hoy,
-    'busqueda' => !empty($_GET['busqueda']) ? $_GET['busqueda'] : null,
-    'sucursal' => $esAdmin ? (!empty($_GET['sucursal']) ? $_GET['sucursal'] : null) : $id_sucursal_user,
-    'tipo'     => !empty($_GET['tipo']) ? $_GET['tipo'] : null
+    'desde'    => $desde,
+    'hasta'    => $hasta,
+    'busqueda' => !empty($_GET['busqueda']) ? \App\Http\Validator::text($_GET['busqueda'], 'busqueda', 100) : null,
+    'sucursal' => !empty($_GET['sucursal']) ? (int) $_GET['sucursal'] : null,
+    'tipo'     => $tipo
 ];
 
 // Obtención de datos filtrados para la vista general
@@ -48,9 +54,9 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                 <div class="d-inline-block bg-dark text-white p-3 rounded-4 shadow-sm border-start border-primary border-4 text-start">
                 <div class="d-flex justify-content-between align-items-center mb-1 gap-4">
                     <span class="text-white-50 small fw-bold text-uppercase">Total en Caja Real</span>
-                    <button type="button" class="btn btn-warning btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalMerma">
+                    <?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?><button type="button" class="btn btn-warning btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalMerma">
                         <i class="fa-solid fa-minus-circle me-1"></i> Registrar Gasto
-                    </button>
+                    </button><?php endif; ?>
                 </div>
                     <h2 class="text-success fw-bold mb-0 font-monospace">L. <?= number_format($totalCajaReal, 2) ?></h2>
                     <?php if($totalMermas > 0): ?>
@@ -208,6 +214,7 @@ $totalCajaReal = $totalIngresos - $totalMermas;
     </div>
 </div>
 
+<?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?>
 <div class="modal fade" id="modalMerma" tabindex="-1" aria-labelledby="modalMermaLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
         <div class="modal-content border-0 shadow rounded-4">
@@ -263,6 +270,8 @@ $totalCajaReal = $totalIngresos - $totalMermas;
         </div>
     </div>
 </div>
+
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
 <script src="js/views/historial.js"></script>

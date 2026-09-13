@@ -1,10 +1,6 @@
 <?php
-require_once '../app/controllers/PedidoController.php';
-$pedidosCtrl = new PedidoController();
-
 $id_rol = (int)($_SESSION['id_rol'] ?? 0);
-$filtro_estado = isset($_GET['estado']) && $_GET['estado'] !== '' ? $_GET['estado'] : 'Pendiente';
-$listado = $pedidosCtrl->listarTodos($filtro_estado);
+$canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
 ?>
 
 <div class="container-fluid p-3 p-md-4">
@@ -16,14 +12,18 @@ $listado = $pedidosCtrl->listarTodos($filtro_estado);
             <p class="text-muted small mb-0">Monitorea entregas, cobros y estados de producción.</p>
         </div>
         
-        <?php if (in_array($id_rol, [1, 3])): ?>
+        <?php if (\App\Security\Auth::hasPermission('reports.view') || \App\Security\Auth::hasPermission('orders.create')): ?>
         <div class="page-actions d-flex gap-2 flex-wrap">
+            <?php if (\App\Security\Auth::hasPermission('reports.view')): ?>
             <a href="api.php?resource=pedidos&amp;action=reporte_pendientes" target="_blank" rel="noopener" class="btn btn-outline-danger rounded-pill shadow-sm px-3 transition-hover fw-bold d-flex align-items-center">
                 <i class="fa-solid fa-file-pdf me-2"></i>PDF Pendientes
             </a>
+            <?php endif; ?>
+            <?php if (\App\Security\Auth::hasPermission('orders.create')): ?>
             <a href="index.php?view=pedidos-nuevo" class="btn btn-primary rounded-pill shadow-sm px-4 transition-hover fw-bold d-flex align-items-center">
                 <i class="fa-solid fa-plus me-2"></i>Nuevo Pedido
             </a>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -141,8 +141,7 @@ $listado = $pedidosCtrl->listarTodos($filtro_estado);
                                 
                                 <?php 
                                 $puedoGestionar = false;
-                                if (in_array($id_rol, [1, 3]) && !in_array($ped['estado'], ['Entregado', 'Cancelado'])) $puedoGestionar = true;
-                                if ($id_rol === 2 && $ped['estado'] === 'Listo') $puedoGestionar = true;
+                                if ($canUpdateOrders && !in_array($ped['estado'], ['Entregado', 'Cancelado'], true)) $puedoGestionar = true;
                                 ?>
 
                                 <?php if ($puedoGestionar): ?>

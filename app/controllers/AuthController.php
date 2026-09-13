@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use App\Http\Response;
+use App\Security\Auth;
 use App\Security\Csrf;
 use App\Security\LoginRateLimiter;
 
@@ -43,12 +44,13 @@ class AuthController
             'username' => (string) $userData['nombre_usuario'],
             'id_rol' => (int) $userData['id_rol'],
             'ultimo_acceso' => time(),
+            'sucursales' => array_values(array_unique(array_map('intval', $userData['sucursales_asignadas'] ?? []))),
+            'permissions' => array_values(array_unique(array_map('strval', $userData['permisos'] ?? []))),
         ];
         if ((int) $userData['id_rol'] === 3) {
             $_SESSION['scope'] = 'all';
-        } elseif ((int) $userData['id_rol'] === 1) {
+        } elseif (in_array((int) $userData['id_rol'], [Auth::ADMIN, Auth::OWNER], true)) {
             $_SESSION['scope'] = 'restricted';
-            $_SESSION['sucursales'] = array_map('intval', $userData['sucursales_asignadas'] ?? []);
         } else {
             $_SESSION['scope'] = 'single';
             $_SESSION['id_sucursal'] = (int) $userData['id_sucursal'];
