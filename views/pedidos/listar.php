@@ -3,17 +3,18 @@ $id_rol = (int)($_SESSION['id_rol'] ?? 0);
 $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
 ?>
 
-<div class="container-fluid p-3 p-md-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-        <div>
-            <h2 class="fw-black text-dark mb-1">
-                <i class="fa-solid fa-box-open me-2 text-primary"></i>Gestión de Pedidos
-            </h2>
-            <p class="text-muted small mb-0">Monitorea entregas, cobros y estados de producción.</p>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-box-open"></i></span>
+            <div class="app-page-header__copy">
+            <h2 class="app-page-header__title">Gestión de pedidos</h2>
+            <p class="app-page-header__subtitle">Monitorea entregas, cobros y estados de producción.</p>
+            </div>
         </div>
         
         <?php if (\App\Security\Auth::hasPermission('reports.view') || \App\Security\Auth::hasPermission('orders.create')): ?>
-        <div class="page-actions d-flex gap-2 flex-wrap">
+        <div class="app-page-header__actions page-actions">
             <?php if (\App\Security\Auth::hasPermission('reports.view')): ?>
             <a href="api.php?resource=pedidos&amp;action=reporte_pendientes" target="_blank" rel="noopener" class="btn btn-outline-danger rounded-pill shadow-sm px-3 transition-hover fw-bold d-flex align-items-center">
                 <i class="fa-solid fa-file-pdf me-2"></i>PDF Pendientes
@@ -26,13 +27,12 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
             <?php endif; ?>
         </div>
         <?php endif; ?>
-    </div>
+    </header>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-3 bg-light rounded-4">
+    <div class="app-toolbar">
             <div class="row g-3 align-items-center">
                 <div class="col-12 col-md-3">
-                    <label class="small text-muted fw-bold text-uppercase tracking-wide mb-2 d-block">Estado</label>
+                    <label class="small text-muted fw-bold text-uppercase tracking-wide mb-2 d-block" for="filtroEstadoPedido">Estado</label>
                     <select id="filtroEstadoPedido" class="form-select border-0 shadow-sm" onchange="window.location.href='index.php?view=pedidos-lista&estado=' + encodeURIComponent(this.value)">
                         <option value="Pendiente" <?= $filtro_estado === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
                         <option value="En Preparación" <?= $filtro_estado === 'En Preparación' ? 'selected' : '' ?>>En Preparación</option>
@@ -48,10 +48,9 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card app-panel overflow-hidden mb-4">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 mobile-card-table orders-main-table">
                 <thead class="bg-light">
@@ -223,12 +222,15 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                             <tr>
                                 <td class="ps-4 py-3">
                                     <div class="fw-bold text-dark"><?= htmlspecialchars($det['nombre_producto']) ?></div>
+                                    <?php if(!empty($det['opciones_personalizacion'])): ?>
+                                        <div class="small text-primary mt-1"><i class="fa-solid fa-sliders me-1"></i><?= e($det['opciones_personalizacion']) ?></div>
+                                    <?php endif; ?>
                                     <?php if(!empty($det['detalles_personalizacion'])): ?>
                                         <div class="small text-muted mt-1 bg-light p-2 rounded-3 border">
                                             <i class="fa-solid fa-quote-left text-primary opacity-50 me-1"></i>
                                             <?= htmlspecialchars($det['detalles_personalizacion']) ?>
                                         </div>
-                                    <?php else: ?>
+                                    <?php elseif(empty($det['opciones_personalizacion'])): ?>
                                         <div class="small text-muted fst-italic mt-1">Sin especificaciones extra.</div>
                                     <?php endif; ?>
                                 </td>

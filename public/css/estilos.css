@@ -418,9 +418,10 @@ canvas {
 }
 
 .swal2-popup.app-dialog .swal2-icon {
-    width: 4rem;
-    height: 4rem;
+    width: 5em;
+    height: 5em;
     margin: 0.25rem auto 1rem;
+    font-size: 0.8rem;
 }
 
 .swal2-popup.app-dialog .app-dialog__title {

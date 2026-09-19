@@ -8,8 +8,7 @@ $root = dirname(__DIR__);
 $autoload = $root . '/vendor/autoload.php';
 if (!is_file($autoload)) {
     error_log("Lolita's Manager: falta vendor/autoload.php. Ejecute composer install antes de desplegar.");
-    $isValidationError = $error instanceof InvalidArgumentException;
-    http_response_code($isValidationError ? 422 : 500);
+    http_response_code(500);
     exit('Instalacion incompleta: faltan las dependencias de Composer.');
 }
 require_once $autoload;
@@ -41,7 +40,8 @@ if (PHP_SAPI !== 'cli') {
 
 set_exception_handler(static function (Throwable $error): void {
     $reference = Logger::error($error);
-    http_response_code(500);
+    $isValidationError = $error instanceof InvalidArgumentException || $error instanceof JsonException;
+    http_response_code($isValidationError ? 422 : 500);
     if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
         header('Content-Type: application/json; charset=UTF-8');
         $message = $isValidationError ? $error->getMessage() : 'Ocurrio un error interno.';

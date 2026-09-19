@@ -50,6 +50,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
+    <link rel="stylesheet" href="css/components.css?v=<?= filemtime(__DIR__ . '/css/components.css') ?>">
 </head>
 <body data-is-admin="<?= Auth::hasPermission('products.manage') ? '1' : '0' ?>">
 
@@ -89,6 +90,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         $data = $pedidosCtrl->prepararFormulario();
                         $clientes = $data['clientes'];
                         $productos = $data['productos'];
+                        $configuraciones = $data['configuraciones'];
                         $sucursales = $data['sucursales'];
                         include __DIR__ . '/../views/pedidos/nuevo.php';
                         break;
@@ -97,7 +99,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         require_once __DIR__ . '/../app/controllers/PedidoController.php';
                         $pedidosCtrl = new PedidoController();
                         $allowedStates = ['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Entregado', 'Cancelado'];
-                        $filtro_estado = in_array($_GET['estado'] ?? 'Todos', $allowedStates, true) ? ($_GET['estado'] ?? 'Todos') : 'Todos';
+                        $filtro_estado = in_array($_GET['estado'] ?? 'Pendiente', $allowedStates, true) ? ($_GET['estado'] ?? 'Pendiente') : 'Pendiente';
                         $listado = $pedidosCtrl->listarTodos($filtro_estado);
                         include __DIR__ . '/../views/pedidos/listar.php';
                         break;
@@ -150,6 +152,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     </div>
 
     <script src="js/app.js"></script>
+    <script src="js/components/custom-select.js?v=<?= filemtime(__DIR__ . '/js/components/custom-select.js') ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>
 </html>

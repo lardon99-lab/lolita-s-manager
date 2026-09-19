@@ -2,11 +2,17 @@ const pastelRadio = document.getElementById('tipoPastel');
 const panaderiaRadio = document.getElementById('tipoPanaderia');
 const camposPastel = document.getElementById('camposPastel');
 const camposPanaderia = document.getElementById('camposPanaderia');
+const newProductCustomizationContainer = document.getElementById('newProductCustomizationGroups');
+const newProductCustomizationEditor = newProductCustomizationContainer
+    ? ProductCustomizationEditor.create(newProductCustomizationContainer)
+    : null;
 
 function actualizarVistaTipoProducto() {
     const isPastel = pastelRadio && pastelRadio.checked;
     if (camposPastel) camposPastel.style.display = isPastel ? 'block' : 'none';
     if (camposPanaderia) camposPanaderia.style.display = isPastel ? 'none' : 'block';
+    camposPastel?.querySelectorAll('input, button').forEach((control) => { control.disabled = !isPastel; });
+    camposPanaderia?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = isPastel; });
 }
 
 if (pastelRadio && panaderiaRadio) {
@@ -16,10 +22,15 @@ if (pastelRadio && panaderiaRadio) {
 
 actualizarVistaTipoProducto();
 
+document.getElementById('addNewProductCustomizationGroup')?.addEventListener('click', () => {
+    newProductCustomizationEditor?.addGroup();
+});
+
 // 1. MANEJO DEL FORMULARIO DE NUEVO PRODUCTO
 document.getElementById('formNuevoProducto').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
+    formData.set('configuracion', JSON.stringify(pastelRadio?.checked ? newProductCustomizationEditor?.getGroups() || [] : []));
 
     Swal.fire({
         title: 'Procesando...',

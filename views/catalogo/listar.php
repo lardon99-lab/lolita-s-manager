@@ -1,12 +1,15 @@
 <?php $canManageCategories = \App\Security\Auth::hasPermission('categories.manage'); ?>
 
-<div class="container-fluid p-2 p-md-4 management-page catalog-page">
-    <header class="catalog-header d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
-        <div class="min-w-0">
-            <h2 class="fw-bold mb-1"><i class="fa-solid fa-tags text-primary me-2"></i>Catalogo</h2>
-            <p class="text-muted mb-0">Productos y categorias disponibles en el sistema.</p>
+<div class="container-fluid app-page p-2 p-md-4 management-page catalog-page">
+    <header class="app-page-header catalog-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-tags"></i></span>
+            <div class="app-page-header__copy min-w-0">
+            <h2 class="app-page-header__title">Catálogo</h2>
+            <p class="app-page-header__subtitle">Productos y categorías disponibles en el sistema.</p>
+            </div>
         </div>
-        <a class="btn btn-primary catalog-header__action" href="index.php?view=inventario"><i class="fa-solid fa-plus me-2"></i>Nuevo producto</a>
+        <div class="app-page-header__actions"><a class="btn btn-primary catalog-header__action" href="index.php?view=inventario"><i class="fa-solid fa-plus me-2"></i>Nuevo producto</a></div>
     </header>
 
     <ul class="nav nav-tabs catalog-tabs mb-3" role="tablist">
@@ -18,20 +21,21 @@
 
     <div class="tab-content">
         <section class="tab-pane fade show active" id="productsTab" role="tabpanel">
-            <div class="table-responsive bg-white border rounded-3 d-none d-md-block">
+            <div class="table-responsive app-panel d-none d-md-block">
                 <table class="table table-hover align-middle mb-0 management-table">
                     <thead><tr><th>Producto</th><th>Categoria</th><th>Precio</th><th>Sucursales</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
                     <tbody>
                     <?php foreach ($productos as $producto): ?>
                         <?php $productJson = e(json_encode($producto, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP)); ?>
                         <tr>
-                            <td class="fw-semibold"><?= e($producto['nombre_producto']) ?></td>
+                            <td><div class="fw-semibold"><?= e($producto['nombre_producto']) ?></div><?php if ((int) $producto['grupos_personalizacion'] > 0): ?><div class="small text-success mt-1"><i class="fa-solid fa-sliders me-1"></i><?= (int) $producto['grupos_personalizacion'] ?> grupos</div><?php endif; ?></td>
                             <td><?= e($producto['nombre_categoria']) ?></td>
                             <td class="text-nowrap">L. <?= number_format((float) $producto['precio_base'], 2) ?></td>
                             <td><?= e($producto['sucursales'] ?: 'Sin inventario') ?></td>
                             <td><span class="badge <?= $producto['estado'] === 'Activo' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($producto['estado']) ?></span></td>
                             <td class="text-end text-nowrap">
                                 <button class="btn btn-sm btn-outline-primary js-edit-product" type="button" title="Editar" data-product='<?= $productJson ?>'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-sm btn-outline-success js-customize-product" type="button" title="Personalizaciones" data-id="<?= (int) $producto['id_producto'] ?>" data-name="<?= e($producto['nombre_producto']) ?>"><i class="fa-solid fa-sliders"></i><span class="visually-hidden">Configurar personalizaciones</span></button>
                                 <button class="btn btn-sm btn-outline-secondary js-state-product" type="button" title="Cambiar estado" data-id="<?= (int) $producto['id_producto'] ?>" data-state="<?= $producto['estado'] === 'Activo' ? 'Inactivo' : 'Activo' ?>"><i class="fa-solid fa-power-off"></i></button>
                             </td>
                         </tr>
@@ -53,9 +57,11 @@
                             <div><dt>Categoria</dt><dd><?= e($producto['nombre_categoria']) ?></dd></div>
                             <div><dt>Precio</dt><dd>L. <?= number_format((float) $producto['precio_base'], 2) ?></dd></div>
                             <div><dt>Sucursales</dt><dd><?= e($producto['sucursales'] ?: 'Sin inventario') ?></dd></div>
+                            <div><dt>Opciones</dt><dd><?= (int) $producto['grupos_personalizacion'] ?> grupos configurados</dd></div>
                         </dl>
                         <div class="catalog-mobile-item__actions">
                             <button class="btn btn-outline-primary js-edit-product" type="button" data-product='<?= $productJson ?>'><i class="fa-solid fa-pen me-2"></i>Editar</button>
+                            <button class="btn btn-outline-success js-customize-product" type="button" data-id="<?= (int) $producto['id_producto'] ?>" data-name="<?= e($producto['nombre_producto']) ?>"><i class="fa-solid fa-sliders me-2"></i>Opciones</button>
                             <button class="btn btn-outline-secondary js-state-product" type="button" data-id="<?= (int) $producto['id_producto'] ?>" data-state="<?= $producto['estado'] === 'Activo' ? 'Inactivo' : 'Activo' ?>"><i class="fa-solid fa-power-off me-2"></i><?= $producto['estado'] === 'Activo' ? 'Desactivar' : 'Activar' ?></button>
                         </div>
                     </article>
@@ -66,7 +72,7 @@
         <?php if ($canManageCategories): ?>
         <section class="tab-pane fade" id="categoriesTab" role="tabpanel">
             <div class="d-flex justify-content-end mb-3"><button class="btn btn-primary catalog-category-add" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="fa-solid fa-plus me-2"></i>Nueva categoria</button></div>
-            <div class="table-responsive bg-white border rounded-3 d-none d-md-block">
+            <div class="table-responsive app-panel d-none d-md-block">
                 <table class="table table-hover align-middle mb-0 management-table">
                     <thead><tr><th>Categoria</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
                     <tbody><?php foreach ($categorias as $categoria): ?><tr>
@@ -90,6 +96,31 @@
             </div>
         </section>
         <?php endif; ?>
+    </div>
+</div>
+
+<div class="modal fade" id="customizationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <form id="customizationForm">
+                <div class="modal-header">
+                    <div class="min-w-0">
+                        <h5 class="modal-title">Personalizaciones</h5>
+                        <div class="small text-muted text-truncate" id="customizationProductName"></div>
+                    </div>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id_producto" id="customizationProductId">
+                    <div id="customizationGroups" class="customization-groups"></div>
+                    <button class="btn btn-outline-primary w-100 mt-3" id="addCustomizationGroup" type="button"><i class="fa-solid fa-plus me-2"></i>Agregar grupo</button>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -118,4 +149,5 @@
 <link rel="stylesheet" href="css/views/management.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/management.css') ?>">
 <link rel="stylesheet" href="css/views/catalogo.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/catalogo.css') ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<script src="js/views/catalogo.js"></script>
+<script src="js/components/product-customization-editor.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/product-customization-editor.js') ?>"></script>
+<script src="js/views/catalogo.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/catalogo.js') ?>"></script>

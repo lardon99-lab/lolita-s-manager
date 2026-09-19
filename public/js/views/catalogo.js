@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const product = JSON.parse(button.dataset.product);
         document.getElementById('productId').value = product.id_producto;
         document.getElementById('productName').value = product.nombre_producto;
-        document.getElementById('productCategory').value = product.id_categoria;
+        const category = document.getElementById('productCategory');
+        category.value = product.id_categoria;
+        window.AppSelect?.sync(category);
         document.getElementById('productPrice').value = product.precio_base;
         document.getElementById('productLife').value = product.dias_vida_util;
         document.getElementById('productDescription').value = product.descripcion || '';
@@ -21,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
         body.set('estado', button.dataset.state);
         submitCatalog('estado_producto', body);
     }));
+
+    initializeCustomizationEditor();
 
     const categoryForm = document.getElementById('categoryForm');
     if (categoryForm) {
@@ -44,6 +48,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 });
+
+function initializeCustomizationEditor() {
+    const modalElement = document.getElementById('customizationModal');
+    const form = document.getElementById('customizationForm');
+    const groupsContainer = document.getElementById('customizationGroups');
+    if (!modalElement || !form || !groupsContainer) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const editor = ProductCustomizationEditor.create(groupsContainer);
+
+    document.querySelectorAll('.js-customize-product').forEach((button) => button.addEventListener('click', async () => {
+        document.getElementById('customizationProductId').value = button.dataset.id;
+        document.getElementById('customizationProductName').textContent = button.dataset.name || '';
+        editor.setLoading();
+        modal.show();
+        try {
+            const response = await fetch(`api.php?resource=catalogo&action=configuracion_producto&id_producto=${encodeURIComponent(button.dataset.id)}`, { headers: { Accept: 'application/json' } });
+            const data = await response.json();
+            if (!response.ok || data.status !== 'success') throw new Error(data.message || 'No fue posible cargar las opciones.');
+            editor.setGroups(data.configuracion || []);
+        } catch (error) {
+            editor.setGroups();
+            Swal.fire('Error', error.message || 'No fue posible cargar las opciones.', 'error');
+            modal.hide();
+        }
+    }));
+
+    document.getElementById('addCustomizationGroup').addEventListener('click', () => editor.addGroup());
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const body = new FormData();
+        body.set('id_producto', document.getElementById('customizationProductId').value);
+        body.set('configuracion', JSON.stringify(editor.getGroups()));
+        submitCatalog('guardar_personalizacion', body);
+    });
+}
 
 async function submitCatalog(action, body) {
     try {

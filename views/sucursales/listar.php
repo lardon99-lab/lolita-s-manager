@@ -1,9 +1,12 @@
-<div class="container-fluid p-2 p-md-4 management-page">
-    <header class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
-        <div><h2 class="fw-bold mb-1"><i class="fa-solid fa-store text-primary me-2"></i>Sucursales</h2><p class="text-muted mb-0">Configuracion de los puntos de operacion.</p></div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#branchModal"><i class="fa-solid fa-plus me-2"></i>Nueva sucursal</button>
+<div class="container-fluid app-page p-2 p-md-4 management-page">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-store"></i></span>
+            <div class="app-page-header__copy"><h2 class="app-page-header__title">Sucursales</h2><p class="app-page-header__subtitle">Configuración de los puntos de operación.</p></div>
+        </div>
+        <div class="app-page-header__actions"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#branchModal"><i class="fa-solid fa-plus me-2"></i>Nueva sucursal</button></div>
     </header>
-    <div class="table-responsive bg-white border rounded-3">
+    <div class="table-responsive app-panel">
         <table class="table table-hover align-middle mb-0 management-table">
             <thead><tr><th>Sucursal</th><th>Direccion</th><th>Telefono</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
             <tbody>

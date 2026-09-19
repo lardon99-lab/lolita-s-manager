@@ -33,6 +33,12 @@ class Database
                 PDO::ATTR_STRINGIFY_FETCHES => false,
             ]
         );
+
+        // Align CURRENT_TIMESTAMP and TIMESTAMP retrieval with APP_TIMEZONE.
+        $timezone = new DateTimeZone(date_default_timezone_get());
+        $offset = (new DateTimeImmutable('now', $timezone))->format('P');
+        $this->conn->exec('SET time_zone = ' . $this->conn->quote($offset));
+
         return $this->conn;
     }
 }

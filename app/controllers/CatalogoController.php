@@ -8,6 +8,7 @@ use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\CatalogService;
+use App\Services\ProductCustomizationService;
 
 final class CatalogoController
 {
@@ -33,17 +34,32 @@ final class CatalogoController
             'estado_producto' => $this->service->setProductState($_POST),
             'guardar_categoria' => $this->service->saveCategory($_POST),
             'estado_categoria' => $this->service->setCategoryState($_POST),
+            'guardar_personalizacion' => (new ProductCustomizationService($this->db))->save($_POST),
             default => null,
         };
         if ($id === null) Response::json(['status' => 'error', 'message' => 'Accion no encontrada.'], 404);
-        $audit->record('catalog.' . $action, str_contains($action, 'producto') ? 'productos' : 'categorias', $id);
+        $entity = $action === 'guardar_personalizacion' || str_contains($action, 'producto') ? 'productos' : 'categorias';
+        $audit->record('catalog.' . $action, $entity, $id);
         Response::json(['status' => 'success', 'message' => 'Catalogo actualizado.']);
+    }
+
+    public function customization(): void
+    {
+        $id = \App\Http\Validator::positiveInt($_GET['id_producto'] ?? null, 'producto');
+        $configuration = (new ProductCustomizationService($this->db))->configuration($id);
+        Response::json(['status' => 'success', 'configuracion' => $configuration]);
     }
 }
 
 if (isset($_GET['action'])) {
     Auth::requireLogin();
+    $action = (string) $_GET['action'];
+    $controller = new CatalogoController();
+    if ($action === 'configuracion_producto') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
+        $controller->customization();
+    }
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
     Csrf::validateRequest();
-    (new CatalogoController())->ejecutar((string) $_GET['action']);
+    $controller->ejecutar($action);
 }

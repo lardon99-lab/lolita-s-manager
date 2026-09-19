@@ -7,13 +7,16 @@ trait PendientesReporteTrait
     public function generarReportePendientes() {
         Auth::requirePermission('reports.view');
 
-        date_default_timezone_set('America/Tegucigalpa');
         $hoy = date('Y-m-d');
 
         try {
             $query = "SELECT p.id_pedido, p.fecha_entrega, p.total_pedido, p.saldo_pendiente,
                             c.nombre_completo as cliente, s.nombre_sucursal as sucursal,
-                            det.cantidad, det.precio_unitario, det.detalles_personalizacion, det.subtotal
+                            det.cantidad, det.precio_unitario, det.detalles_personalizacion, det.subtotal,
+                            (SELECT GROUP_CONCAT(CONCAT(pdo.grupo_nombre, ': ', pdo.opcion_nombre)
+                                ORDER BY pdo.id_detalle_opcion SEPARATOR ' | ')
+                             FROM pedido_detalle_opciones pdo
+                             WHERE pdo.id_detalle = det.id_detalle) AS opciones_personalizacion
                     FROM pedidos p 
                     JOIN clientes c ON p.id_cliente = c.id_cliente
                     JOIN sucursales s ON p.id_sucursal = s.id_sucursal
@@ -88,7 +91,7 @@ trait PendientesReporteTrait
                 <?php if (empty($pedidos)): ?>
                     <div style="text-align: center; margin-top: 50px; color: #666;">
                         <h3>No hay pedidos pendientes programados para hoy.</h3>
-                        <p>Fecha consultada: <?= date_default_timezone_set('America/Tegucigalpa'); date('d/m/Y') ?></p>
+                        <p>Fecha consultada: <?= date('d/m/Y') ?></p>
                     </div>
                 <?php else: ?> 
                     <table class="table">
@@ -107,7 +110,10 @@ trait PendientesReporteTrait
                             <tr>
                                 <td><strong><?= (int)$p['cantidad'] ?></strong></td>
                                 <td class="text-end">L. <?= number_format((float)$p['precio_unitario'], 2) ?></td>
-                                <td style="font-size: 8.5px;"><?= htmlspecialchars(!empty($p['detalles_personalizacion']) ? $p['detalles_personalizacion'] : 'Sin especificaciones') ?></td>
+                                <td style="font-size: 8.5px;"><?php
+                                    $specifications = array_filter([$p['opciones_personalizacion'] ?? '', $p['detalles_personalizacion'] ?? '']);
+                                    echo htmlspecialchars($specifications !== [] ? implode(' | ', $specifications) : 'Sin especificaciones');
+                                ?></td>
                                 <td><strong><?= date('d/m/Y', strtotime($p['fecha_entrega'])) ?></strong></td>
                                 <td><?= htmlspecialchars($p['cliente']) ?></td>
                                 <td><?= htmlspecialchars($p['sucursal']) ?></td>

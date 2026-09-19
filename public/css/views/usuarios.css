@@ -1,5 +1,7 @@
     .user-card-card {
         border: 1px solid #f3e3e9 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 8px 24px rgba(67, 54, 61, 0.05) !important;
     }
     .user-actions .btn {
         width: auto;

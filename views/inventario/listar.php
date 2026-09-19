@@ -1,40 +1,41 @@
 <?php
 ?>
 
-<div class="container-fluid p-3 p-md-4">
-    <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-12 col-md-7">
-                <h2 class="page-title fw-bold mb-1">Inventario <i class="fa-solid fa-boxes-stacked text-primary ms-2"></i></h2>
-                <p class="page-subtitle mb-0">Consulta, abastece y registra productos de forma rápida y ordenada.</p>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></span>
+            <div class="app-page-header__copy">
+                <h2 class="app-page-header__title">Inventario</h2>
+                <p class="app-page-header__subtitle">Consulta, abastece y registra productos de forma rápida y ordenada.</p>
             </div>
-            <div class="col-12 col-md-5 d-flex justify-content-md-end gap-2 flex-wrap">
+        </div>
+            <div class="app-page-header__actions">
                 <?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
                     <button class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
                         <i class="fa-solid fa-box-open me-2"></i>Registrar Producto
                     </button>
                 <?php endif; ?>
             </div>
-        </div>
-    </div>
+    </header>
 
     <?php if ($id_rol !== \App\Security\Auth::EMPLOYEE): ?>
-    <div class="row mb-4">
-        <div class="col-12 col-md-5 col-lg-4">
-            <div class="input-group input-group-sm shadow-sm rounded-pill overflow-hidden bg-white p-1">
-                <span class="input-group-text bg-transparent border-0 text-muted fw-bold ps-3">
-                    <i class="fa-solid fa-store me-2"></i> Sucursal:
-                </span>
-                <select class="form-select border-0 bg-transparent fw-medium cursor-pointer" onchange="location.href='index.php?view=inventario&sucursal_id=' + this.value">
-                    <option value="">-- Selecciona una sucursal --</option>
-                    <?php foreach($sucursales as $s): ?>
-                        <option value="<?= $s['id_sucursal'] ?>" <?= ($id_sucursal_filtro == $s['id_sucursal']) ? 'selected' : '' ?>>
-                            <?= e($s['nombre_sucursal']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+    <div class="inventory-branch-filter mb-4">
+        <label class="inventory-branch-filter__label" for="inventoryBranch">
+            <i class="fa-solid fa-store" aria-hidden="true"></i>
+            Sucursal
+        </label>
+        <div class="inventory-branch-filter__control">
+            <select id="inventoryBranch" class="form-select" aria-describedby="inventoryBranchHelp" onchange="location.href='index.php?view=inventario&sucursal_id=' + encodeURIComponent(this.value)">
+                <option value="">-- Selecciona una sucursal --</option>
+                <?php foreach($sucursales as $s): ?>
+                    <option value="<?= $s['id_sucursal'] ?>" <?= ($id_sucursal_filtro == $s['id_sucursal']) ? 'selected' : '' ?>>
+                        <?= e($s['nombre_sucursal']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
+        <span id="inventoryBranchHelp" class="visually-hidden">Filtra los productos por sucursal.</span>
     </div>
     <?php else: ?>
     <div class="row mb-4">
@@ -59,7 +60,7 @@
     <?php endif; ?>
 
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card app-panel overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
                 <div>
@@ -313,15 +314,12 @@
                                 <label class="small text-muted fw-bold mb-1 ms-1">Cantidad de tortas</label>
                                 <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1">
                             </div>
-                            <div class="col-12 col-sm-6">
-                                <label class="small text-muted fw-bold mb-1 ms-1">Rellenos</label>
-                                <input type="text" name="rellenos" class="form-control border-0 bg-light rounded-3" placeholder="Ej. fresa, chocolate">
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <label class="small text-muted fw-bold mb-1 ms-1">Coberturas</label>
-                                <input type="text" name="coberturas" class="form-control border-0 bg-light rounded-3" placeholder="Ej. chantilly, fondant">
-                            </div>
                         </div>
+                        <div class="d-flex align-items-center justify-content-between gap-2 mt-4 mb-3">
+                            <h6 class="fw-bold mb-0"><i class="fa-solid fa-sliders text-primary me-2"></i>Opciones y recargos</h6>
+                            <button class="btn btn-sm btn-outline-primary" id="addNewProductCustomizationGroup" type="button"><i class="fa-solid fa-plus me-1"></i>Grupo</button>
+                        </div>
+                        <div id="newProductCustomizationGroups" class="customization-groups"></div>
                     </div>
 
                     <div class="form-section-card mb-3" id="camposPanaderia" style="display:none;">
@@ -359,4 +357,5 @@
 <link rel="stylesheet" href="css/views/inventario.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/inventario.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<script src="js/views/inventario.js"></script>
+<script src="js/components/product-customization-editor.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/product-customization-editor.js') ?>"></script>
+<script src="js/views/inventario.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/inventario.js') ?>"></script>

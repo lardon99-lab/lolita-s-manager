@@ -15,64 +15,65 @@ if (!empty($usuarios)) {
 }
 ?>
 
-<div class="container-fluid p-2 p-md-4">
-    <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
-        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-            <div>
-                <h2 class="page-title fw-bold mb-1">
-                    <i class="fa-solid fa-users-gear me-2 text-primary"></i>Gestión de Personal
-                </h2>
-                <p class="page-subtitle mb-0">Administra usuarios, roles y accesos de forma ordenada.</p>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>
+            <div class="app-page-header__copy">
+                <h2 class="app-page-header__title">Gestión de personal</h2>
+                <p class="app-page-header__subtitle">Administra usuarios, roles y accesos de forma ordenada.</p>
             </div>
+        </div>
+            <div class="app-page-header__actions">
             <button class="btn btn-primary px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
                 <i class="fa-solid fa-user-plus me-2"></i>Nuevo usuario
             </button>
-        </div>
-    </div>
+            </div>
+    </header>
 
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="app-stat-card">
                 <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="app-stat-card__body">
                         <div>
-                            <p class="small text-muted mb-1">Total usuarios</p>
-                            <h3 class="fw-bold mb-0 text-dark"><?= $totalUsuarios ?></h3>
+                            <p class="app-stat-card__label">Total usuarios</p>
+                            <p class="app-stat-card__value"><?= $totalUsuarios ?></p>
                         </div>
-                        <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2"><i class="fa-solid fa-users"></i></div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-users"></i></span>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="app-stat-card app-stat-card--success">
                 <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="app-stat-card__body">
                         <div>
-                            <p class="small text-muted mb-1">Activos</p>
-                            <h3 class="fw-bold mb-0 text-success"><?= $usuariosActivos ?></h3>
+                            <p class="app-stat-card__label">Activos</p>
+                            <p class="app-stat-card__value"><?= $usuariosActivos ?></p>
                         </div>
-                        <div class="bg-success bg-opacity-10 text-success rounded-3 p-2"><i class="fa-solid fa-circle-check"></i></div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-circle-check"></i></span>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="app-stat-card app-stat-card--muted">
                 <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="app-stat-card__body">
                         <div>
-                            <p class="small text-muted mb-1">Inactivos</p>
-                            <h3 class="fw-bold mb-0 text-warning"><?= $usuariosInactivos ?></h3>
+                            <p class="app-stat-card__label">Inactivos</p>
+                            <p class="app-stat-card__value"><?= $usuariosInactivos ?></p>
                         </div>
-                        <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-2"><i class="fa-solid fa-circle-xmark"></i></div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-circle-xmark"></i></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card app-panel overflow-hidden">
         <div class="card-body p-3 p-md-4 bg-light">
             <div class="d-none d-md-block table-responsive">
                 <table class="table table-hover align-middle mb-0" style="min-width: 720px;">

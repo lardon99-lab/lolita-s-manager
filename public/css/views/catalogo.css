@@ -76,7 +76,7 @@
 
 .catalog-mobile-item__actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .6rem;
 }
 
@@ -93,6 +93,10 @@
 
 .catalog-mobile-item--compact .catalog-mobile-item__header {
     margin-bottom: 1rem;
+}
+
+.catalog-mobile-item--compact .catalog-mobile-item__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .catalog-empty {
@@ -139,4 +143,13 @@
         padding-right: .5rem;
         padding-left: .5rem;
     }
+
+    .catalog-mobile-item__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .catalog-mobile-item__actions .js-state-product {
+        grid-column: 1 / -1;
+    }
+
 }

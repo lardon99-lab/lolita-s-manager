@@ -4,9 +4,44 @@
     /* Animación de botones */
     .hover-lift { transition: transform 0.2s ease, background-color 0.2s ease; }
     .hover-lift:hover { transform: translateY(-2px); }
+
+    .inventory-branch-filter {
+        width: min(100%, 420px);
+    }
+
+    .inventory-branch-filter__label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin: 0 0 0.45rem 0.2rem;
+        color: var(--text-color);
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .inventory-branch-filter__label i {
+        color: var(--primary-color);
+    }
+
+    .inventory-branch-filter__control {
+        min-width: 0;
+    }
+
+    .inventory-branch-filter__control .app-select__trigger {
+        min-height: 48px;
+        padding-inline: 1rem;
+        border-color: #eadce1;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 5px 16px rgba(64, 53, 61, 0.06);
+    }
     
     /* Adaptaciones móviles */
     @media (max-width: 576px) {
+        .inventory-branch-filter {
+            width: 100%;
+        }
+
         .table td, .table th { font-size: 0.85rem; }
         .inventory-main-table tbody td[data-label="Producto"],
         .inventory-main-table tbody td[data-label="Acciones"] { grid-column: 1 / -1; }

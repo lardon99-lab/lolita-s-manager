@@ -1,16 +1,19 @@
-<div class="container-fluid p-3 p-md-4">
-    <div class="mb-4">
-        <h2 class="fw-bold text-dark mb-1">
-            <i class="fa-solid fa-cake-candles me-2 text-primary"></i>Nuevo Pedido Especial
-        </h2>
-        <p class="text-muted small mb-0">Registra los detalles, fecha de entrega y personalización del cliente.</p>
-    </div>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-cake-candles"></i></span>
+            <div class="app-page-header__copy">
+                <h2 class="app-page-header__title">Nuevo pedido especial</h2>
+                <p class="app-page-header__subtitle">Registra los detalles, fecha de entrega y personalización del cliente.</p>
+            </div>
+        </div>
+    </header>
 
     <form action="api.php?resource=pedidos&action=crear" method="POST" id="formNuevoPedido">
         <div class="row g-3 g-md-4">
             
             <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
+                <div class="card app-panel p-3 p-md-4 h-100">
                     <div class="d-flex align-items-center mb-4">
                         <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                             <i class="fa-solid fa-address-card text-primary fs-5"></i>
@@ -41,10 +44,10 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Sucursal de Entrega</label>
-                        <div class="input-group shadow-sm rounded-3 overflow-hidden">
-                            <span class="input-group-text border-0 bg-light text-muted px-3"><i class="fa-solid fa-store"></i></span>
-                            <select name="id_sucursal" class="form-select border-0 bg-light py-2 fw-medium" required>
+                        <label class="form-label small fw-bold text-muted" for="order-branch">Sucursal de Entrega</label>
+                        <div class="order-select-field">
+                            <i class="fa-solid fa-store" aria-hidden="true"></i>
+                            <select name="id_sucursal" id="order-branch" class="form-select border-0 bg-light py-2 fw-medium" required>
                                 <option value="">-- Seleccionar --</option>
                                 <?php foreach($sucursales as $s): ?>
                                     <option value="<?= $s['id_sucursal'] ?>" <?= (isset($_SESSION['id_sucursal']) && $_SESSION['id_sucursal'] == $s['id_sucursal']) ? 'selected' : '' ?>>
@@ -63,7 +66,7 @@
             </div>
 
             <div class="col-12 col-lg-8">
-                <div class="card border-0 shadow-sm p-4 rounded-4 h-100 d-flex flex-column">
+                <div class="card app-panel p-3 p-md-4 h-100 d-flex flex-column">
                     <div class="d-flex align-items-center mb-4">
                         <div class="bg-success bg-opacity-10 p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                             <i class="fa-solid fa-list-check text-success fs-5"></i>
@@ -72,66 +75,37 @@
                     </div>
                     
                     <div class="row g-2 mb-4 bg-light p-3 rounded-4 border shadow-sm align-items-end">
-                        <div class="col-12 col-md-5">
-                            <label class="form-label small fw-bold text-muted mb-1">Producto</label>
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small fw-bold text-muted mb-1" for="select-producto">Producto</label>
                             <select id="select-producto" class="form-select border-0 shadow-sm py-2">
                                 <option value="">Selecciona un producto...</option>
                                 <?php foreach($productos as $p): ?>
                                     <option value="<?= $p['id_producto'] ?>" 
                                             data-precio="<?= $p['precio_base'] ?>" 
-                                            data-categoria="<?= strtolower($p['nombre_categoria'] ?? '') ?>"
-                                            data-nombre="<?= strtolower($p['nombre_producto'] ?? '') ?>">
+                                            data-branches="<?= e($p['branch_ids'] ?? '') ?>"
+                                            data-nombre="<?= e($p['nombre_producto'] ?? '') ?>">
                                         <?= htmlspecialchars($p['nombre_producto']) ?> (L. <?= number_format($p['precio_base'], 2) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1">Extra Diseño (L.)</label>
-                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
-                                <span class="input-group-text border-0 bg-white text-muted">L.</span>
-                                <input type="number" id="costo-extra" class="form-control border-0 py-2 text-center fw-medium" value="0" min="0" step="0.01" placeholder="Ej: 150">
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small fw-bold text-muted mb-1">Cant.</label>
+                        <div class="col-5 col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1" for="cant-producto">Cant.</label>
                             <input type="number" id="cant-producto" class="form-control border-0 shadow-sm py-2 text-center fw-bold text-primary" value="1" min="1">
                         </div>
-                        <div class="col-12 col-md-2">
-                            <button type="button" onclick="agregarFila()" class="btn btn-dark w-100 rounded-3 shadow-sm py-2 fw-bold transition-hover">
+                        <div class="col-7 col-md-3">
+                            <button type="button" id="add-order-line" class="btn btn-dark w-100 rounded-3 shadow-sm py-2 fw-bold transition-hover">
                                 <i class="fa-solid fa-plus me-1"></i> Añadir
                             </button>
                         </div>
                     </div>
 
-                    <div id="panel-opciones-pastel" class="bg-white p-3 rounded-4 border border-primary border-opacity-25 shadow-sm mb-4" style="display: none;">
-                        <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-layer-group me-2"></i>Personalización del Pastel (Extras)</h6>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-4">
-                                <label class="small fw-bold text-muted mb-1">Tipo de Masa</label>
-                                <select id="extra-masa" class="form-select border-0 bg-light py-2">
-                                    <option value="0|Vainilla">Vainilla (Base - L. 0.00)</option>
-                                    <option value="50|Chocolate">Chocolate (+ L. 50.00)</option>
-                                    <option value="75|Red Velvet">Red Velvet (+ L. 75.00)</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="small fw-bold text-muted mb-1">Relleno</label>
-                                <select id="extra-relleno" class="form-select border-0 bg-light py-2">
-                                    <option value="0|Jalea de Piña">Jalea de Piña (Base - L. 0.00)</option>
-                                    <option value="30|Dulce de Leche">Dulce de Leche (+ L. 30.00)</option>
-                                    <option value="40|Fresa Natural">Fresa Natural (+ L. 40.00)</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="small fw-bold text-muted mb-1">Cubierta</label>
-                                <select id="extra-cubierta" class="form-select border-0 bg-light py-2">
-                                    <option value="0|Betún">Betún Normal (Base - L. 0.00)</option>
-                                    <option value="45|Crema Chantilly">Crema Chantilly (+ L. 45.00)</option>
-                                    <option value="150|Fondant">Fondant (+ L. 150.00)</option>
-                                </select>
-                            </div>
+                    <div id="panel-opciones-producto" class="bg-white p-3 rounded-4 border border-primary border-opacity-25 shadow-sm mb-4 d-none">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                            <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-2"></i>Personalizacion</h6>
+                            <span class="badge text-bg-light" id="customization-surcharge">+ L. 0.00</span>
                         </div>
+                        <div class="order-customization-groups" id="order-customization-groups"></div>
                     </div>
 
                     <div class="table-responsive flex-grow-1 border rounded-3 mb-4">
@@ -197,6 +171,8 @@
     </form>
 </div>
 
+<script type="application/json" id="order-configurations"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
+
 <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -230,4 +206,4 @@
 <link rel="stylesheet" href="css/views/pedidos-nuevo.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-nuevo.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<script src="js/views/pedidos-nuevo.js"></script>
+<script src="js/views/pedidos-nuevo.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/pedidos-nuevo.js') ?>"></script>

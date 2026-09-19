@@ -3,18 +3,21 @@
 
 ?>
 
-<div class="container-fluid p-3 p-md-4"> 
-    <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div>
-                <h2 class="page-title fw-bold mb-1">Resumen de Lolita's</h2>
-                <p class="page-subtitle mb-0">Un vistazo rápido al estado de tu negocio.</p>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></span>
+            <div class="app-page-header__copy">
+                <h2 class="app-page-header__title">Resumen de Lolita's</h2>
+                <p class="app-page-header__subtitle">Un vistazo rápido al estado de tu negocio.</p>
             </div>
+        </div>
+        <div class="app-page-header__actions">
             <button class="btn btn-light d-md-none border-0 shadow-sm rounded-3 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
                 <i class="fa-solid fa-bars fa-xl text-primary"></i>
             </button>
         </div>
-    </div>
+    </header>
 
     <!-- Mensajes de estado alternativos -->
     <?php if (isset($_GET['status']) && $_GET['status'] == 'merma_registrada'): ?>
@@ -27,49 +30,37 @@
     <!-- Tarjetas de Métricas -->
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 text-white h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ff85a2 0%, #ff6b8b 100%);">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start">
+            <div class="app-stat-card">
+                <div class="app-stat-card__body">
                         <div>
-                            <h6 class="text-uppercase small fw-bold opacity-75 mb-1">Pedidos Pendientes</h6>
-                            <h2 class="display-5 fw-bold mb-0"><?= $metricas['pendientes'] ?></h2>
+                            <p class="app-stat-card__label">Pedidos pendientes</p>
+                            <p class="app-stat-card__value"><?= $metricas['pendientes'] ?></p>
                         </div>
-                        <div class="bg-white bg-opacity-25 rounded-3 p-3">
-                            <i class="fa-solid fa-clock fa-2x"></i>
-                        </div>
-                    </div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-clock"></i></span>
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 text-white h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start">
+            <div class="app-stat-card app-stat-card--warning">
+                <div class="app-stat-card__body">
                         <div>
-                            <h6 class="text-uppercase small fw-bold opacity-75 mb-1">Entregas para Hoy</h6>
-                            <h2 class="display-5 fw-bold mb-0"><?= $metricas['para_hoy'] ?></h2>
+                            <p class="app-stat-card__label">Entregas para hoy</p>
+                            <p class="app-stat-card__value"><?= $metricas['para_hoy'] ?></p>
                         </div>
-                        <div class="bg-white bg-opacity-25 rounded-3 p-3">
-                            <i class="fa-solid fa-calendar-day fa-2x"></i>
-                        </div>
-                    </div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-calendar-day"></i></span>
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 text-white h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #20c997 0%, #12a57a 100%);">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start">
+            <div class="app-stat-card app-stat-card--success">
+                <div class="app-stat-card__body">
                         <div>
-                            <h6 class="text-uppercase small fw-bold opacity-75 mb-1">Ventas Completadas</h6>
-                            <h2 class="fs-1 fw-bold mb-0">L. <?= number_format($metricas['ventas'], 2) ?></h2>
+                            <p class="app-stat-card__label">Ventas completadas</p>
+                            <p class="app-stat-card__value">L. <?= number_format($metricas['ventas'], 2) ?></p>
                         </div>
-                        <div class="bg-white bg-opacity-25 rounded-3 p-3">
-                            <i class="fa-solid fa-money-bill-trend-up fa-2x"></i>
-                        </div>
-                    </div>
+                        <span class="app-stat-card__icon"><i class="fa-solid fa-money-bill-trend-up"></i></span>
                 </div>
             </div>
         </div>

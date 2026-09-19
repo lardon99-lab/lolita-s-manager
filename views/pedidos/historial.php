@@ -3,7 +3,6 @@ require_once '../app/controllers/PedidoController.php';
 $pedidosCtrl = new PedidoController();
 
 // 1. Establecer la fecha de HOY por defecto para el control de caja diario
-date_default_timezone_set('America/Tegucigalpa');
 $hoy = date('Y-m-d');
 $desde = !empty($_GET['desde']) ? \App\Http\Validator::date($_GET['desde'], 'fecha desde') : $hoy;
 $hasta = !empty($_GET['hasta']) ? \App\Http\Validator::date($_GET['hasta'], 'fecha hasta') : $hoy;
@@ -38,37 +37,39 @@ $ventas = $pedidosCtrl->obtenerHistorialVentas($filtros);
 $mermas = $pedidosCtrl->obtenerMermas($filtros);
 
 // Cálculos de Caja Reales
-$totalIngresos = array_sum(array_column($ventas, 'total_pedido'));
-$totalMermas = array_sum(array_column($mermas, 'monto'));
-$totalCajaReal = $totalIngresos - $totalMermas;
+$resumenIngresos = $pedidosCtrl->obtenerResumenIngresosCaja($filtros);
+$totalIngresos = $resumenIngresos['total'];
+$totalGastos = array_sum(array_column($mermas, 'monto'));
+$totalCajaReal = $totalIngresos - $totalGastos;
 ?>
 
-<div class="container-fluid p-2 p-md-4">
-    <div class="page-shell rounded-4 p-3 p-md-4 mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-12 col-md-6">
-                <h2 class="page-title fw-bold mb-1">Explorador de Ventas</h2>
-                <p class="page-subtitle mb-0">Historial de transacciones y flujo de caja.</p>
+<div class="container-fluid app-page p-2 p-md-4">
+    <header class="app-page-header">
+        <div class="app-page-header__main">
+            <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-chart-column"></i></span>
+            <div class="app-page-header__copy">
+                <h2 class="app-page-header__title">Explorador de ventas</h2>
+                <p class="app-page-header__subtitle">Historial de transacciones y flujo de caja.</p>
             </div>
-            <div class="col-12 col-md-6 text-md-end">
-                <div class="d-inline-block bg-dark text-white p-3 rounded-4 shadow-sm border-start border-primary border-4 text-start">
+        </div>
+            <div class="app-page-header__actions">
+                <div class="history-balance text-start">
                 <div class="d-flex justify-content-between align-items-center mb-1 gap-4">
-                    <span class="text-white-50 small fw-bold text-uppercase">Total en Caja Real</span>
+                    <span class="small fw-bold text-uppercase text-muted">Total en caja real</span>
                     <?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?><button type="button" class="btn btn-warning btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalMerma">
                         <i class="fa-solid fa-minus-circle me-1"></i> Registrar Gasto
                     </button><?php endif; ?>
                 </div>
-                    <h2 class="text-success fw-bold mb-0 font-monospace">L. <?= number_format($totalCajaReal, 2) ?></h2>
-                    <?php if($totalMermas > 0): ?>
-                        <small class="text-danger mt-1 d-block"><i class="fa-solid fa-arrow-trend-down me-1"></i> - L. <?= number_format($totalMermas, 2) ?> en mermas</small>
+                    <strong class="history-balance__value">L. <?= number_format($totalCajaReal, 2) ?></strong>
+                    <small class="text-muted mt-1 d-block">Cobrado: L. <?= number_format($totalIngresos, 2) ?></small>
+                    <?php if($totalGastos > 0): ?>
+                        <small class="text-danger mt-1 d-block"><i class="fa-solid fa-arrow-trend-down me-1"></i> - L. <?= number_format($totalGastos, 2) ?> en gastos</small>
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
-    </div>
+    </header>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
-        <div class="card-body bg-light">
+    <div class="app-toolbar">
             <form method="GET" action="index.php" class="row g-3 align-items-end">
                 <input type="hidden" name="view" value="ventas-historial">
                 
@@ -139,10 +140,9 @@ $totalCajaReal = $totalIngresos - $totalMermas;
                     </div>
                 </div>
             </form>
-        </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card app-panel overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 mobile-card-table history-main-table">
                 <thead class="bg-dark text-white text-uppercase small">

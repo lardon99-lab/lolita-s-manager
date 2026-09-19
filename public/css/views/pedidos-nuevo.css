@@ -13,10 +13,60 @@
 
     .editable-order-table { min-width: 720px; }
 
+    .order-customization-groups { display: grid; gap: 1rem; }
+    .order-customization-group { min-width: 0; padding: 0; border: 0; }
+    .order-customization-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .order-customization-option { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px; padding: 0.5rem 0.7rem; background: #fff8fb; border: 1px solid #f3dce5; border-radius: 8px; cursor: pointer; }
+    .order-customization-option:has(input:checked) { color: #b84263; background: #ffe8ef; border-color: #ff85a2; }
+    .order-customization-option span { overflow-wrap: anywhere; }
+
+    .order-select-field { position: relative; min-width: 0; }
+    .order-select-field > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; color: #8d7a84; pointer-events: none; transform: translateY(-50%); }
+    .order-select-field .app-select__trigger { padding-left: 2.5rem; background: #f9f7f8; box-shadow: none; }
+
     @media (max-width: 767px) {
         #formNuevoPedido .card { padding: 1rem !important; }
-        .editable-order-table { min-width: 680px !important; }
-        #panel-opciones-pastel { padding: 0.75rem !important; }
+        .editable-order-table { min-width: 0 !important; }
+        .editable-order-table thead { display: none; }
+        .editable-order-table .order-detail-row {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            border: 1px solid #eadfe3;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .editable-order-table .order-detail-row td {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.6rem;
+            min-width: 0;
+            padding: 0.5rem !important;
+            border: 0;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            text-align: right !important;
+        }
+        .editable-order-table .order-detail-row td::before {
+            content: attr(data-label);
+            flex: 0 0 auto;
+            color: #8d7a84;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .editable-order-table .order-detail-row td:nth-child(1),
+        .editable-order-table .order-detail-row td:nth-child(2) { grid-column: 1 / -1; }
+        .editable-order-table .order-detail-row td:nth-child(1) { padding-right: 2.7rem !important; text-align: left !important; }
+        .editable-order-table .order-detail-row td:nth-child(1)::before,
+        .editable-order-table .order-detail-row td:nth-child(5)::before { display: none; }
+        .editable-order-table .order-detail-row td:nth-child(2) { display: block; text-align: left !important; }
+        .editable-order-table .order-detail-row td:nth-child(2)::before { display: block; margin-bottom: 0.35rem; }
+        .editable-order-table .order-detail-row td:nth-child(5) { position: absolute; top: 0.65rem; right: 0.65rem; padding: 0 !important; }
+        #panel-opciones-producto { padding: 0.75rem !important; }
         #btnGuardarPedido { font-size: 1rem !important; }
     }
 

@@ -4,6 +4,8 @@ use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\ProductImageStorage;
+use App\Services\ProductCustomizationService;
+use App\Services\InventoryWasteService;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -169,11 +171,15 @@ class InventarioController {
         if ($id_s_final && !Auth::canAccessBranch((int) $id_s_final, 'sales.create')) return [];
 
         // La consulta base
-        $query = "SELECT p.id_producto, p.nombre_producto, p.precio_base, i.stock_actual as stock, i.id_inventario, s.nombre_sucursal
+        $query = "SELECT p.id_producto, p.nombre_producto, p.precio_base,
+                         SUM(i.stock_actual) AS stock, MIN(i.id_inventario) AS id_inventario,
+                         s.nombre_sucursal, i.id_sucursal
                 FROM inventario i
                 INNER JOIN productos p ON i.id_producto = p.id_producto
                 INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                WHERE i.stock_actual > 0 AND p.estado = 'Activo'";
+                WHERE i.stock_actual > 0
+                  AND (i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE)
+                  AND p.estado = 'Activo'";
         
         // 3. Aplicar el filtro siempre que tengamos un ID de sucursal
         if ($id_s_final) {
@@ -182,7 +188,9 @@ class InventarioController {
             if ($id_rol !== 1 && $id_rol !== 3) return []; 
         }
 
-        $query .= " ORDER BY p.nombre_producto ASC";
+        $query .= " GROUP BY p.id_producto, p.nombre_producto, p.precio_base,
+                            s.nombre_sucursal, i.id_sucursal
+                    ORDER BY p.nombre_producto ASC";
 
         try {
             $stmt = $this->db->prepare($query);
@@ -228,20 +236,21 @@ class InventarioController {
                 $dias_vida_util = !empty($_POST['dias_vida_util']) ? (int) $_POST['dias_vida_util'] : 0;
                 if ($dias_vida_util < 0 || $dias_vida_util > 3650) throw new InvalidArgumentException('La vida util no es valida.');
 
+                $tamano = \App\Http\Validator::text($_POST['tamano'] ?? '', 'tamano', 80, false);
+                $cantidad_tortas = filter_var($_POST['cantidad_tortas'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+                if ($tipo_producto === 'pastel' && $cantidad_tortas === false) throw new InvalidArgumentException('La cantidad de tortas no es valida.');
+                $observaciones = \App\Http\Validator::text($_POST['observaciones'] ?? '', 'observaciones', 1000, false);
                 $detalle_producto = [
                     'tipo_producto' => $tipo_producto,
-                    'tamano' => $_POST['tamano'] ?? null,
-                    'cantidad_tortas' => $_POST['cantidad_tortas'] ?? null,
-                    'rellenos' => $_POST['rellenos'] ?? null,
-                    'coberturas' => $_POST['coberturas'] ?? null,
-                    'observaciones' => $_POST['observaciones'] ?? null,
+                    'tamano' => $tamano,
+                    'cantidad_tortas' => $cantidad_tortas,
                     'descripcion_general' => $descripcion_base
                 ];
 
                 if ($tipo_producto === 'pastel') {
                     $descripcion = json_encode($detalle_producto, JSON_UNESCAPED_UNICODE);
                 } else {
-                    $descripcion = !empty($descripcion_base) ? $descripcion_base : 'Producto de panadería / bebidas / otros.';
+                    $descripcion = $observaciones !== '' ? $observaciones : ($descripcion_base !== '' ? $descripcion_base : 'Producto de panadería / bebidas / otros.');
                 }
 
                 if (empty($sucursales)) throw new Exception("Debe seleccionar al menos una sucursal.");
@@ -271,6 +280,11 @@ class InventarioController {
                     $movement->execute([$inventoryId, (int) $_SESSION['id_usuario'], $stock_inicial, $stock_inicial, (int) $id_nuevo_p]);
                 }
 
+                (new ProductCustomizationService($this->db))->save([
+                    'id_producto' => $id_nuevo_p,
+                    'configuracion' => $tipo_producto === 'pastel' ? ($_POST['configuracion'] ?? '[]') : '[]',
+                ]);
+
                 (new AuditService($this->db))->record('product.created', 'productos', (int) $id_nuevo_p, null, ['sucursales' => $sucursales]);
 
                 $this->db->commit();
@@ -290,52 +304,34 @@ class InventarioController {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (ob_get_length()) ob_clean(); 
             header('Content-Type: application/json');
-            date_default_timezone_set('America/Tegucigalpa');
-            
+
             try {
                 if (!isset($_SESSION['id_usuario'])) {
                     throw new Exception("Error de sesión: No se detecta un usuario activo.");
-                }
-
-                $this->db->beginTransaction();
-
-                $id_inventario = !empty($_POST['id_inventario_merma']) ? (int)$_POST['id_inventario_merma'] : null;
-                if (empty($id_inventario) && !empty($_POST['id_producto_merma']) && !empty($_POST['id_sucursal_merma'])) {
-                    $stmtInventario = $this->db->prepare("SELECT id_inventario FROM inventario WHERE id_producto = ? AND id_sucursal = ? LIMIT 1");
-                    $stmtInventario->execute([(int)$_POST['id_producto_merma'], (int)$_POST['id_sucursal_merma']]);
-                    $id_inventario = (int)$stmtInventario->fetchColumn();
-                }
-
-                if (empty($id_inventario)) {
-                    throw new Exception("No se encontró el registro de inventario para registrar la merma.");
                 }
 
                 $cantidad = \App\Http\Validator::positiveInt($_POST['cantidad_merma'] ?? null, 'cantidad');
                 $motivo = \App\Http\Validator::text($_POST['motivo_merma'] ?? '', 'motivo', 250);
                 $id_usuario = (int)$_SESSION['id_usuario'];
 
-                $stmtCheck = $this->db->prepare("SELECT stock_actual, id_sucursal FROM inventario WHERE id_inventario = ? FOR UPDATE");
-                $stmtCheck->execute([$id_inventario]);
-                $inventory = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-                if (!$inventory) {
-                    throw new Exception("El producto no existe en el inventario.");
+                $this->db->beginTransaction();
+                $wasteService = new InventoryWasteService($this->db);
+                if (!empty($_POST['id_inventario_merma'])) {
+                    $stock = $wasteService->lockInventoryLot(
+                        \App\Http\Validator::positiveInt($_POST['id_inventario_merma'], 'inventario'),
+                        $cantidad
+                    );
+                } else {
+                    $productId = \App\Http\Validator::positiveInt($_POST['id_producto_merma'] ?? null, 'producto');
+                    $branchId = \App\Http\Validator::positiveInt($_POST['id_sucursal_merma'] ?? null, 'sucursal');
+                    Auth::requirePermission('inventory.adjust', $branchId);
+                    $stock = $wasteService->lockProductStock($productId, $branchId, $cantidad);
                 }
-                $stock = (int) $inventory['stock_actual'];
-                Auth::requirePermission('inventory.adjust', (int) $inventory['id_sucursal']);
 
-                if ($stock < $cantidad) {
-                    throw new Exception("No puedes mermar más del stock actual ($stock).");
-                }
-
-                $stmtUpdate = $this->db->prepare("UPDATE inventario SET stock_actual = stock_actual - ? WHERE id_inventario = ?");
-                $stmtUpdate->execute([$cantidad, $id_inventario]);
-
-                $stmtMerma = $this->db->prepare("INSERT INTO mermas (id_inventario, id_usuario, cantidad, motivo) VALUES (?, ?, ?, ?)");
-                $stmtMerma->execute([$id_inventario, $id_usuario, $cantidad, $motivo]);
-                $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior, motivo) VALUES (?, ?, 'Merma', ?, ?, ?, ?)");
-                $movement->execute([$id_inventario, $id_usuario, -$cantidad, $stock, $stock - $cantidad, $motivo]);
-                (new AuditService($this->db))->record('inventory.waste_recorded', 'inventario', $id_inventario, (int) $inventory['id_sucursal'], ['cantidad' => $cantidad, 'motivo' => $motivo]);
+                Auth::requirePermission('inventory.adjust', $stock['branch_id']);
+                $wasteService->deduct($stock['allocations'], $id_usuario, $motivo);
+                $referenceId = $stock['allocations'][0]['inventory_id'];
+                (new AuditService($this->db))->record('inventory.waste_recorded', 'inventario', $referenceId, $stock['branch_id'], ['cantidad' => $cantidad, 'motivo' => $motivo]);
 
                 $this->db->commit();
                 echo json_encode(['status' => 'success', 'message' => 'Merma registrada y stock actualizado.']);
@@ -353,11 +349,9 @@ class InventarioController {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (ob_get_length()) ob_clean();
             header('Content-Type: application/json');
-            date_default_timezone_set('America/Tegucigalpa');
-            
             try {
                 $id_inventario = (int)$_POST['id_inventario'];
-                $id_usuario = isset($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : 1; 
+                $id_usuario = \App\Http\Validator::positiveInt($_SESSION['id_usuario'] ?? null, 'usuario');
 
                 $this->db->beginTransaction();
 

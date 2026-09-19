@@ -27,45 +27,31 @@ final class PedidoService
             }
             $notes = Validator::text($input['observaciones'] ?? '', 'observaciones', 1000, false);
             $paymentType = Validator::enum($input['tipo_pago'] ?? '', ['Pendiente', 'Abonado', 'Pagado'], 'tipo de pago');
-            $products = is_array($input['productos'] ?? null) ? $input['productos'] : [];
-            $quantities = is_array($input['cantidades'] ?? null) ? $input['cantidades'] : [];
-            $customizations = is_array($input['personalizacion'] ?? null) ? $input['personalizacion'] : [];
-            $extras = is_array($input['costos_extras'] ?? null) ? $input['costos_extras'] : [];
-            if ($products === [] || count($products) > 100 || count($products) !== count($quantities)) throw new InvalidArgumentException('El pedido no contiene productos validos.');
-
             $clientQuery = $this->db->prepare("SELECT COUNT(*) FROM clientes WHERE id_cliente = ? AND estado = 'Activo'");
             $clientQuery->execute([$clientId]);
             if (!(bool) $clientQuery->fetchColumn()) throw new InvalidArgumentException('El cliente no existe o esta inactivo.');
 
-            $priceQuery = $this->db->prepare("SELECT precio_base FROM productos WHERE id_producto = ? AND estado = 'Activo'");
-            $items = [];
-            $total = 0.0;
-            foreach ($products as $index => $productValue) {
-                $productId = Validator::positiveInt($productValue, 'producto');
-                $quantity = Validator::positiveInt($quantities[$index] ?? null, 'cantidad');
-                if ($quantity > 1000) throw new InvalidArgumentException('La cantidad excede el limite permitido.');
-                $extra = Validator::money($extras[$index] ?? 0, 'costo extra', 100000);
-                $customization = Validator::text($customizations[$index] ?? '', 'personalizacion', 1000, false);
-                $priceQuery->execute([$productId]);
-                $basePrice = $priceQuery->fetchColumn();
-                if ($basePrice === false) throw new InvalidArgumentException('Uno de los productos ya no esta disponible.');
-                $unitPrice = round((float) $basePrice + $extra, 2);
-                $subtotal = round($unitPrice * $quantity, 2);
-                $total += $subtotal;
-                $items[] = [$productId, $quantity, $unitPrice, $customization, $subtotal];
-            }
-            $total = round($total, 2);
+            $this->db->beginTransaction();
+            $pricing = (new OrderPricingService($this->db))->price($branchId, $input);
+            $items = $pricing['items'];
+            $total = $pricing['total'];
             $paid = $paymentType === 'Pagado' ? $total : ($paymentType === 'Abonado' ? Validator::money($input['monto_abono'] ?? 0, 'abono', $total) : 0.0);
             if ($paid > $total) throw new InvalidArgumentException('El abono no puede superar el total.');
             $balance = round($total - $paid, 2);
             $paymentStatus = $balance <= 0 ? 'Pagado' : ($paid > 0 ? 'Abonado' : 'Pendiente');
 
-            $this->db->beginTransaction();
             $order = $this->db->prepare("INSERT INTO pedidos (id_cliente, id_sucursal, id_usuario, fecha_entrega, total_pedido, monto_abonado, saldo_pendiente, estado_pago, observaciones_generales, estado) VALUES (:cliente, :sucursal, :usuario, :fecha, :total, :abono, :saldo, :pago, :observaciones, 'Pendiente')");
             $order->execute([':cliente' => $clientId, ':sucursal' => $branchId, ':usuario' => (int) $_SESSION['id_usuario'], ':fecha' => $deliveryDate, ':total' => $total, ':abono' => $paid, ':saldo' => $balance, ':pago' => $paymentStatus, ':observaciones' => $notes]);
             $orderId = (int) $this->db->lastInsertId();
             $detail = $this->db->prepare('INSERT INTO pedido_detalles (id_pedido, id_producto, cantidad, precio_unitario, detalles_personalizacion, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
-            foreach ($items as $item) $detail->execute([$orderId, ...$item]);
+            $detailOption = $this->db->prepare('INSERT INTO pedido_detalle_opciones (id_detalle, id_opcion, grupo_nombre, opcion_nombre, recargo_unitario) VALUES (?, ?, ?, ?, ?)');
+            foreach ($items as $item) {
+                $detail->execute([$orderId, $item['product_id'], $item['quantity'], $item['unit_price'], $item['notes'], $item['subtotal']]);
+                $detailId = (int) $this->db->lastInsertId();
+                foreach ($item['options'] as $option) {
+                    $detailOption->execute([$detailId, $option['id_opcion'], $option['grupo_nombre'], $option['opcion_nombre'], $option['recargo']]);
+                }
+            }
             if ($paid > 0) {
                 $paymentMethod = Validator::enum($input['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
                 $payment = $this->db->prepare('INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago) VALUES (?, ?, ?, ?)');

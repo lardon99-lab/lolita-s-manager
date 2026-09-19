@@ -19,7 +19,8 @@ final class CatalogService
             "SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_base, p.dias_vida_util, p.estado,
                     p.id_categoria, c.nombre_categoria,
                     GROUP_CONCAT(DISTINCT i.id_sucursal ORDER BY i.id_sucursal) AS branch_ids,
-                    GROUP_CONCAT(DISTINCT s.nombre_sucursal ORDER BY s.nombre_sucursal SEPARATOR ', ') AS sucursales
+                    GROUP_CONCAT(DISTINCT s.nombre_sucursal ORDER BY s.nombre_sucursal SEPARATOR ', ') AS sucursales,
+                    (SELECT COUNT(*) FROM producto_personalizacion_grupos ppg WHERE ppg.id_producto = p.id_producto) AS grupos_personalizacion
              FROM productos p
              JOIN categorias c ON c.id_categoria = p.id_categoria
              LEFT JOIN inventario i ON i.id_producto = p.id_producto

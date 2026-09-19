@@ -8,6 +8,7 @@ use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
+use App\Services\InventoryStockService;
 
 final class VentaController
 {
@@ -42,32 +43,20 @@ final class VentaController
             }
 
             $this->db->beginTransaction();
-            $stockQuery = $this->db->prepare(
-                "SELECT p.precio_base, i.stock_actual, i.id_inventario
-                 FROM productos p
-                 JOIN inventario i ON i.id_producto = p.id_producto
-                 WHERE p.id_producto = :product AND i.id_sucursal = :branch AND p.estado = 'Activo'
-                 FOR UPDATE"
-            );
+            $stockService = new InventoryStockService($this->db);
             $items = [];
             $total = 0.0;
             foreach ($quantities as $productId => $quantity) {
-                $stockQuery->execute([':product' => $productId, ':branch' => $branchId]);
-                $stock = $stockQuery->fetch(PDO::FETCH_ASSOC);
-                if (!$stock) throw new InvalidArgumentException("El producto {$productId} no esta activo en la sucursal seleccionada.");
-                $stockBefore = (int) $stock['stock_actual'];
-                if ($stockBefore < $quantity) throw new InvalidArgumentException("Stock insuficiente para el producto {$productId}.");
-
-                $price = round((float) $stock['precio_base'], 2);
+                $stock = $stockService->lockForSale($productId, $branchId, $quantity);
+                $price = $stock['price'];
                 $subtotal = round($price * $quantity, 2);
                 $total = round($total + $subtotal, 2);
                 $items[] = [
                     'product_id' => $productId,
-                    'inventory_id' => (int) $stock['id_inventario'],
                     'quantity' => $quantity,
                     'price' => $price,
                     'subtotal' => $subtotal,
-                    'stock_before' => $stockBefore,
+                    'allocations' => $stock['allocations'],
                 ];
             }
             if ($total <= 0 || $total > 99999999.99) throw new InvalidArgumentException('El total de la venta no es valido.');
@@ -77,24 +66,10 @@ final class VentaController
             $saleId = (int) $this->db->lastInsertId();
 
             $insertItem = $this->db->prepare('INSERT INTO venta_items (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)');
-            $updateStock = $this->db->prepare('UPDATE inventario SET stock_actual = stock_actual - ? WHERE id_inventario = ? AND stock_actual >= ?');
-            $movement = $this->db->prepare(
-                "INSERT INTO movimientos_inventario
-                 (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior, referencia_tipo, referencia_id)
-                 VALUES (?, ?, 'Venta', ?, ?, ?, 'ventas_directas', ?)"
-            );
+            $userId = (int) $_SESSION['id_usuario'];
             foreach ($items as $item) {
                 $insertItem->execute([$saleId, $item['product_id'], $item['quantity'], $item['price'], $item['subtotal']]);
-                $updateStock->execute([$item['quantity'], $item['inventory_id'], $item['quantity']]);
-                if ($updateStock->rowCount() !== 1) throw new RuntimeException('El inventario cambio durante la venta. Intenta nuevamente.');
-                $movement->execute([
-                    $item['inventory_id'],
-                    (int) $_SESSION['id_usuario'],
-                    -$item['quantity'],
-                    $item['stock_before'],
-                    $item['stock_before'] - $item['quantity'],
-                    $saleId,
-                ]);
+                $stockService->deductForSale($item['allocations'], $userId, $saleId);
             }
 
             (new AuditService($this->db))->record('sale.created', 'ventas_directas', $saleId, $branchId, [

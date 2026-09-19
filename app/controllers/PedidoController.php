@@ -13,6 +13,7 @@ use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\PedidoService;
+use App\Services\ProductCustomizationService;
 
 final class PedidoController
 {
@@ -32,16 +33,20 @@ final class PedidoController
         Auth::requirePermission('orders.create');
         $clientes = $this->db->query("SELECT id_cliente, nombre_completo FROM clientes WHERE estado = 'Activo' ORDER BY nombre_completo")->fetchAll(PDO::FETCH_ASSOC);
         $productos = $this->db->query(
-            "SELECT p.id_producto, p.nombre_producto, p.precio_base, c.nombre_categoria
+            "SELECT p.id_producto, p.nombre_producto, p.precio_base, c.nombre_categoria,
+                    GROUP_CONCAT(DISTINCT i.id_sucursal ORDER BY i.id_sucursal) AS branch_ids
              FROM productos p
              JOIN categorias c ON c.id_categoria = p.id_categoria
+             JOIN inventario i ON i.id_producto = p.id_producto
              WHERE p.estado = 'Activo' AND c.estado = 'Activo'
+             GROUP BY p.id_producto, p.nombre_producto, p.precio_base, c.nombre_categoria
              ORDER BY p.nombre_producto"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         return [
             'clientes' => $clientes,
             'productos' => $productos,
+            'configuraciones' => (new ProductCustomizationService($this->db))->configurationsForProducts(array_column($productos, 'id_producto')),
             'sucursales' => $this->branchesFor('orders.create'),
         ];
     }
@@ -58,7 +63,11 @@ final class PedidoController
         $params = [':id' => $id];
         $scope = $this->branchScope('o.id_sucursal', Auth::allowedBranches('orders.view'), $params, 'detail');
         $stmt = $this->db->prepare(
-            "SELECT d.*, p.nombre_producto
+            "SELECT d.*, p.nombre_producto,
+                    (SELECT GROUP_CONCAT(CONCAT(pdo.grupo_nombre, ': ', pdo.opcion_nombre,
+                        CASE WHEN pdo.recargo_unitario > 0 THEN CONCAT(' (+ L. ', FORMAT(pdo.recargo_unitario, 2), ')') ELSE '' END)
+                        ORDER BY pdo.id_detalle_opcion SEPARATOR ' | ')
+                     FROM pedido_detalle_opciones pdo WHERE pdo.id_detalle = d.id_detalle) AS opciones_personalizacion
              FROM pedido_detalles d
              JOIN pedidos o ON o.id_pedido = d.id_pedido
              JOIN productos p ON p.id_producto = d.id_producto

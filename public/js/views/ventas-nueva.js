@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('items-count').innerText = `${carrito.length} Items`;
 
         if (carrito.length === 0) {
-            cuerpoCarrito.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5"><i class="fa-solid fa-basket-shopping fs-2 mb-3 d-block opacity-25"></i>El carrito está vacío</td></tr>';
+            cuerpoCarrito.innerHTML = '<tr class="sales-cart-empty"><td colspan="5"><i class="fa-solid fa-basket-shopping" aria-hidden="true"></i><span>El carrito está vacío</span></td></tr>';
             btnCobrar.disabled = true;
             labelTotal.innerText = "L. 0.00";
             return;
@@ -107,12 +107,15 @@ document.addEventListener('DOMContentLoaded', function() {
         carrito.forEach((item, index) => {
             total += item.subtotal;
             const row = document.createElement('tr');
+            row.className = 'sales-cart-item';
             const productCell = document.createElement('td');
             productCell.className = 'ps-3 py-3 align-middle fw-bold text-dark';
+            productCell.dataset.label = 'Producto';
             productCell.textContent = item.nombre;
 
             const quantityCell = document.createElement('td');
             quantityCell.className = 'text-center align-middle';
+            quantityCell.dataset.label = 'Cantidad';
             const quantityBadge = document.createElement('span');
             quantityBadge.className = 'badge bg-light text-dark border px-3';
             quantityBadge.textContent = String(item.cantidad);
@@ -120,13 +123,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const priceCell = document.createElement('td');
             priceCell.className = 'text-end align-middle text-muted';
+            priceCell.dataset.label = 'Precio';
             priceCell.textContent = `L. ${item.precio.toFixed(2)}`;
             const subtotalCell = document.createElement('td');
             subtotalCell.className = 'text-end fw-bold align-middle text-primary';
+            subtotalCell.dataset.label = 'Subtotal';
             subtotalCell.textContent = `L. ${item.subtotal.toFixed(2)}`;
 
             const actionCell = document.createElement('td');
             actionCell.className = 'text-center align-middle';
+            actionCell.dataset.label = 'Acciones';
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.className = 'btn btn-sm btn-outline-danger border-0';

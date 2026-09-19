@@ -4,6 +4,24 @@ use App\Security\Auth;
 
 trait CajaReporteTrait
 {
+    public function obtenerResumenIngresosCaja(array $filtros = []): array
+    {
+        Auth::requirePermission('reports.view');
+
+        if (!empty($filtros['sucursal'])) {
+            $branchId = (int) $filtros['sucursal'];
+            if (!Auth::canAccessBranch($branchId, 'reports.view')) {
+                return ['order_payments' => 0.0, 'direct_sales' => 0.0, 'total' => 0.0];
+            }
+            $filtros['sucursal'] = $branchId;
+        }
+
+        return (new \App\Reports\CashIncomeReport($this->db))->summarize(
+            $filtros,
+            Auth::allowedBranches('reports.view')
+        );
+    }
+
     public function obtenerHistorialVentas($filtros = []) {
         Auth::requirePermission('reports.view');
         $params = [];
@@ -66,7 +84,9 @@ trait CajaReporteTrait
                             s.nombre_sucursal as nombre_sucursal, 
                             p.total_pedido as total_pedido, 
                             'Pedido Especial' as tipo,
-                            GROUP_CONCAT(CONCAT('• ', pr.nombre_producto, ' (', det.cantidad, ')', 
+                            GROUP_CONCAT(CONCAT('• ', pr.nombre_producto, ' (', det.cantidad, ')',
+                                IF(dop.opciones IS NOT NULL AND dop.opciones <> '',
+                                CONCAT(' [', dop.opciones, ']'), ''),
                                 IF(det.detalles_personalizacion IS NOT NULL AND det.detalles_personalizacion <> '', 
                                 CONCAT(' [', det.detalles_personalizacion, ']'), '')
                             ) SEPARATOR '<br>') as productos
@@ -75,6 +95,13 @@ trait CajaReporteTrait
                         INNER JOIN sucursales s ON p.id_sucursal = s.id_sucursal
                         INNER JOIN pedido_detalles det ON p.id_pedido = det.id_pedido
                         INNER JOIN productos pr ON det.id_producto = pr.id_producto
+                        LEFT JOIN (
+                            SELECT id_detalle,
+                                   GROUP_CONCAT(CONCAT(grupo_nombre, ': ', opcion_nombre)
+                                   ORDER BY id_detalle_opcion SEPARATOR ' | ') AS opciones
+                            FROM pedido_detalle_opciones
+                            GROUP BY id_detalle
+                        ) dop ON dop.id_detalle = det.id_detalle
                         $condicionPedidos
                         GROUP BY p.id_pedido";
 
@@ -232,8 +259,14 @@ trait CajaReporteTrait
             }
         }
 
+        if (!empty($filtros['desde']) && !empty($filtros['hasta'])) {
+            $condiciones .= " AND DATE(m.fecha_registro) BETWEEN :inventory_waste_from AND :inventory_waste_to";
+            $params[':inventory_waste_from'] = $filtros['desde'];
+            $params[':inventory_waste_to'] = $filtros['hasta'];
+        }
+
         try {
-            $query = "SELECT m.cantidad, m.motivo, p.nombre_producto
+            $query = "SELECT m.cantidad, m.motivo, m.fecha_registro, p.nombre_producto
                       FROM mermas m
                       JOIN inventario i ON m.id_inventario = i.id_inventario
                       JOIN productos p ON i.id_producto = p.id_producto

@@ -6,18 +6,19 @@ trait ReporteCajaPdfTrait
 {
     public function descargarReportePDF($filtros = []) {
         Auth::requirePermission('reports.view');
+        $today = date('Y-m-d');
+        $filtros['desde'] = $today;
+        $filtros['hasta'] = $today;
         $reportBranches = Auth::allowedBranches('reports.view');
-        // 1. Obtener datos de ventas y mermas generales
-        $ventas = $this->obtenerHistorialVentas($filtros);
-        $totalIngresos = array_sum(array_column($ventas, 'total_pedido'));
+        // 1. Obtener exclusivamente los movimientos del dia actual.
+        $resumenIngresos = $this->obtenerResumenIngresosCaja($filtros);
+        $totalIngresos = $resumenIngresos['total'];
 
         $mermasCaja = $this->obtenerMermas($filtros);
         $mermasInventario = $this->obtenerMermasInventario($filtros);
-        $totalMermas = array_sum(array_column($mermasCaja, 'monto'));
+        $totalGastos = array_sum(array_column($mermasCaja, 'monto'));
 
-        $totalCajaReal = $totalIngresos - $totalMermas;
-
-        date_default_timezone_set('America/Tegucigalpa');
+        $totalCajaReal = $totalIngresos - $totalGastos;
 
         // ====================================================================
         // 2. LÓGICA: PREPARAR DATOS PARA LAS 3 COLUMNAS
@@ -36,7 +37,7 @@ trait ReporteCajaPdfTrait
 
         foreach ($mermasInventario as $m) {
             $mermas_producto[] = [
-                'nombre' => htmlspecialchars($m['nombre_producto']) . ' • ' . htmlspecialchars($m['motivo']),
+                'nombre' => $m['nombre_producto'] . ' • ' . $m['motivo'],
                 'valor' => (int)$m['cantidad'] . ' und.'
             ];
         }
@@ -207,7 +208,7 @@ trait ReporteCajaPdfTrait
             <div class="header">
                 <div class="titulo">Reporte de Ventas y Caja - Lolita's Manager</div>
                 <div class="subtitulo">
-                    Resumen consolidado de Inventario, Gastos y Ventas<br>
+                    Resumen diario de Inventario, Gastos y Ventas del <strong><?= date('d/m/Y') ?></strong><br>
                     Generado el: <strong><?= date('d/m/Y h:i A') ?></strong>
                 </div>
             </div>
@@ -293,12 +294,14 @@ trait ReporteCajaPdfTrait
 
                         <table class="total-card">
                             <thead>
-                                <tr><th>Total Caja (Ventas - Gastos - Mermas)</th></tr>
+                                <tr><th>Resumen de caja del dia</th></tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>
-                                        <span class="total-monto">L. <?= number_format($totalCajaReal, 2) ?></span>
+                                        Cobrado: L. <?= number_format($totalIngresos, 2) ?><br>
+                                        Gastos: L. <?= number_format($totalGastos, 2) ?><br><br>
+                                        <span class="total-monto">Neto: L. <?= number_format($totalCajaReal, 2) ?></span>
                                     </td>
                                 </tr>
                             </tbody>
