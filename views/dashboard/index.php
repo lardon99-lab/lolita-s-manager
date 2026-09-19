@@ -12,11 +12,6 @@
                 <p class="app-page-header__subtitle">Un vistazo rápido al estado de tu negocio.</p>
             </div>
         </div>
-        <div class="app-page-header__actions">
-            <button class="btn btn-light d-md-none border-0 shadow-sm rounded-3 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
-                <i class="fa-solid fa-bars fa-xl text-primary"></i>
-            </button>
-        </div>
     </header>
 
     <!-- Mensajes de estado alternativos -->

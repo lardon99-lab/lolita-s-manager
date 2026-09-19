@@ -20,7 +20,7 @@
                     <td data-label="Telefono"><?= e($cliente['telefono'] ?: 'Sin telefono') ?></td>
                     <td data-label="Correo"><?= e($cliente['email'] ?: 'Sin correo') ?></td>
                     <td data-label="Estado"><span class="badge <?= $cliente['estado'] === 'Activo' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($cliente['estado']) ?></span></td>
-                    <td data-label="Acciones" class="text-end">
+                    <td data-label="Acciones" class="text-end"><div class="management-actions">
                         <button class="btn btn-sm btn-outline-primary js-edit-client" type="button"
                             data-id="<?= (int) $cliente['id_cliente'] ?>" data-name="<?= e($cliente['nombre_completo']) ?>"
                             data-phone="<?= e($cliente['telefono']) ?>" data-email="<?= e($cliente['email']) ?>" title="Editar">
@@ -31,7 +31,7 @@
                             title="<?= $cliente['estado'] === 'Activo' ? 'Desactivar' : 'Activar' ?>">
                             <i class="fa-solid <?= $cliente['estado'] === 'Activo' ? 'fa-user-slash' : 'fa-user-check' ?>"></i>
                         </button>
-                    </td>
+                    </div></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -40,7 +40,7 @@
 </div>
 
 <div class="modal fade" id="clientModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down"><div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
         <form id="clientForm">
             <div class="modal-header"><h5 class="modal-title">Cliente</h5><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
             <div class="modal-body">

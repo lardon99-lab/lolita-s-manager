@@ -35,6 +35,15 @@
         background: #fff;
         box-shadow: 0 5px 16px rgba(64, 53, 61, 0.06);
     }
+
+    #modalNuevoProducto .modal-body {
+        scrollbar-gutter: stable;
+    }
+
+    #modalNuevoProducto .modal-footer {
+        border-top: 1px solid var(--border-color) !important;
+        padding-top: 0.85rem !important;
+    }
     
     /* Adaptaciones móviles */
     @media (max-width: 576px) {
@@ -54,4 +63,12 @@
             height: 44px !important;
         }
         #modalNuevoProducto .form-section-card { padding: 0.75rem; }
+        #modalNuevoProducto .modal-header {
+            align-items: flex-start;
+            padding: 0.85rem !important;
+        }
+        #modalNuevoProducto .modal-header p { line-height: 1.4; }
+        #modalNuevoProducto .modal-body { padding: 0.85rem !important; }
+        #modalNuevoProducto .modal-footer { padding: 0.75rem 0.85rem !important; }
+        #modalNuevoProducto .modal-footer .btn { min-height: 48px; }
     }

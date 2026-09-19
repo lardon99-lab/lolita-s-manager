@@ -15,47 +15,116 @@
     text-transform: uppercase;
 }
 
+.management-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .45rem;
+}
+
+.management-actions .btn {
+    display: inline-flex;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+}
+
 @media (max-width: 767.98px) {
     .management-page header .btn {
         width: 100%;
     }
 
-    .management-table,
-    .management-table tbody,
-    .management-table tr,
-    .management-table td {
+    .management-page > .table-responsive {
+        overflow: visible;
+    }
+
+    .management-table {
         display: block;
         width: 100%;
+        min-width: 0 !important;
     }
 
     .management-table thead {
         display: none;
     }
 
-    .management-table tr {
-        padding: .5rem 0;
-        border-bottom: 1px solid #ece7e9;
+    .management-table tbody {
+        display: grid;
+        width: 100%;
+        gap: .75rem;
+        padding: .75rem;
+        background: #fffafb;
     }
 
-    .management-table tr:last-child {
-        border-bottom: 0;
+    .management-table tr {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #eadfe3;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 5px 16px rgba(64, 53, 61, 0.06);
     }
 
     .management-table td {
-        display: grid;
-        grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
-        gap: .75rem;
+        display: flex;
+        min-width: 0;
+        padding: .75rem !important;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: .3rem;
         border: 0;
-        padding: .45rem .85rem;
+        border-bottom: 1px solid #f2e8ec;
+        white-space: normal !important;
         text-align: left !important;
         overflow-wrap: anywhere;
     }
 
+    .management-table td:first-child,
+    .management-table td[data-label="Acciones"],
+    .management-table td[colspan] {
+        grid-column: 1 / -1;
+    }
+
     .management-table td::before {
+        display: block;
         color: #8b7c82;
         content: attr(data-label);
         font-size: .72rem;
         font-weight: 600;
         text-transform: uppercase;
+    }
+
+    .management-table td[data-label="Acciones"] {
+        border-bottom: 0;
+    }
+
+    .management-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .management-table td[colspan] {
+        align-items: center;
+        text-align: center !important;
+    }
+
+    .management-table td[colspan]::before {
+        display: none;
+    }
+}
+
+@media (max-width: 479.98px) {
+    .management-table tr {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .management-table td {
+        grid-column: 1 !important;
     }
 }

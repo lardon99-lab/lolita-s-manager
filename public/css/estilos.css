@@ -362,6 +362,28 @@ canvas {
     box-shadow: 0 24px 64px rgba(64, 53, 61, 0.2) !important;
 }
 
+/* Keep long forms inside the viewport and make only their body scroll. */
+.modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: inherit;
+    flex-direction: column;
+}
+
+.modal-dialog-scrollable .modal-content > form > .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-dialog-scrollable .modal-header,
+.modal-dialog-scrollable .modal-footer {
+    flex: 0 0 auto;
+}
+
 .modal-header {
     min-height: 68px;
     padding: 1rem 1.25rem !important;
@@ -537,8 +559,14 @@ canvas {
         margin: 0.75rem auto;
     }
 
-    .modal-fullscreen-sm-down .modal-content {
-        height: auto;
+    .modal-dialog-scrollable.modal-fullscreen-sm-down {
+        height: calc(100dvh - 1.5rem);
+        max-height: calc(100dvh - 1.5rem);
+    }
+
+    .modal-dialog-scrollable.modal-fullscreen-sm-down .modal-content {
+        height: 100%;
+        max-height: 100%;
         border-radius: 0.5rem !important;
     }
 

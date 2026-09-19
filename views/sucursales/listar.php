@@ -16,12 +16,12 @@
                     <td data-label="Direccion"><?= e($sucursal['direccion'] ?: 'Sin direccion') ?></td>
                     <td data-label="Telefono"><?= e($sucursal['telefono'] ?: 'Sin telefono') ?></td>
                     <td data-label="Estado"><span class="badge <?= $sucursal['estado'] === 'Activa' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($sucursal['estado']) ?></span></td>
-                    <td data-label="Acciones" class="text-end">
+                    <td data-label="Acciones" class="text-end"><div class="management-actions">
                         <button class="btn btn-sm btn-outline-primary js-edit-branch" type="button" data-id="<?= (int) $sucursal['id_sucursal'] ?>"
                             data-name="<?= e($sucursal['nombre_sucursal']) ?>" data-address="<?= e($sucursal['direccion']) ?>" data-phone="<?= e($sucursal['telefono']) ?>" title="Editar"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-sm btn-outline-secondary js-state-branch" type="button" data-id="<?= (int) $sucursal['id_sucursal'] ?>"
                             data-state="<?= $sucursal['estado'] === 'Activa' ? 'Inactiva' : 'Activa' ?>" title="<?= $sucursal['estado'] === 'Activa' ? 'Desactivar' : 'Activar' ?>"><i class="fa-solid fa-power-off"></i></button>
-                    </td>
+                    </div></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -29,7 +29,7 @@
     </div>
 </div>
 <div class="modal fade" id="branchModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down"><div class="modal-content"><form id="branchForm">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content"><form id="branchForm">
         <div class="modal-header"><h5 class="modal-title">Sucursal</h5><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
         <div class="modal-body">
             <input type="hidden" name="id_sucursal" id="branchId">
