@@ -225,6 +225,19 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                                     <?php if(!empty($det['opciones_personalizacion'])): ?>
                                         <div class="small text-primary mt-1"><i class="fa-solid fa-sliders me-1"></i><?= e($det['opciones_personalizacion']) ?></div>
                                     <?php endif; ?>
+                                    <?php if(!empty($det['id_diseno'])): ?>
+                                        <div class="order-design-summary mt-2">
+                                            <div class="small fw-bold text-dark"><i class="fa-solid fa-palette text-primary me-1"></i>Diseno personalizado</div>
+                                            <?php if(!empty($det['color_descripcion'])): ?><div class="small text-muted">Color: <?= e($det['color_descripcion']) ?></div><?php endif; ?>
+                                            <?php if(!empty($det['frase'])): ?><div class="small text-muted">Frase: <?= e($det['frase']) ?></div><?php endif; ?>
+                                            <?php if(!empty($det['instrucciones'])): ?><div class="small text-muted"><?= e($det['instrucciones']) ?></div><?php endif; ?>
+                                            <?php if(!empty($det['archivo_nombre_interno'])): ?>
+                                                <a class="btn btn-sm btn-outline-primary mt-2" href="api.php?resource=pedidos&amp;action=ver_diseno&amp;id=<?= (int) $det['id_diseno'] ?>" target="_blank" rel="noopener">
+                                                    <i class="fa-solid fa-image me-1" aria-hidden="true"></i>Ver referencia
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <?php if(!empty($det['detalles_personalizacion'])): ?>
                                         <div class="small text-muted mt-1 bg-light p-2 rounded-3 border">
                                             <i class="fa-solid fa-quote-left text-primary opacity-50 me-1"></i>

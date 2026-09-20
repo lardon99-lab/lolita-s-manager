@@ -8,6 +8,7 @@ use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
+use App\Services\ClientService;
 
 final class ClienteController
 {
@@ -29,15 +30,13 @@ final class ClienteController
         if (!Auth::hasPermission('orders.create') && !Auth::hasPermission('clients.manage')) {
             Response::json(['status' => 'error', 'message' => 'No tienes permiso para crear clientes.'], 403);
         }
-        [$name, $phone, $email] = $this->validatedInput($_POST);
         try {
-            $stmt = $this->db->prepare('INSERT INTO clientes (nombre_completo, telefono, email) VALUES (?, ?, ?)');
-            $stmt->execute([$name, $phone, $email]);
-            $id = (int) $this->db->lastInsertId();
-            (new AuditService($this->db))->record('client.created', 'clientes', $id, null, ['nombre' => $name]);
+            $client = (new ClientService($this->db))->create($_POST);
+            $id = (int) $client['id_cliente'];
+            (new AuditService($this->db))->record('client.created', 'clientes', $id, null, ['nombre' => $client['nombre_completo']]);
 
             if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
-                Response::json(['status' => 'success', 'message' => 'Cliente creado.', 'id_cliente' => $id]);
+                Response::json(['status' => 'success', 'message' => 'Cliente creado.', 'cliente' => $client]);
             }
             Response::redirect('index.php?view=pedidos-nuevo&status=client_ok');
         } catch (PDOException $e) {
@@ -47,6 +46,18 @@ final class ClienteController
             }
             Response::redirect('index.php?view=pedidos-nuevo&status=error');
         }
+    }
+
+    public function buscar(): void
+    {
+        if (!Auth::hasPermission('orders.create') && !Auth::hasPermission('clients.manage')) {
+            Response::json(['status' => 'error', 'message' => 'No tienes permiso para consultar clientes.'], 403);
+        }
+        $term = (string) ($_GET['q'] ?? '');
+        Response::json([
+            'status' => 'success',
+            'clientes' => (new ClientService($this->db))->search($term),
+        ]);
     }
 
     public function actualizar(): void
@@ -95,9 +106,13 @@ final class ClienteController
 
 if (isset($_GET['action'])) {
     Auth::requireLogin();
+    $controller = new ClienteController();
+    if ((string) $_GET['action'] === 'buscar') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
+        $controller->buscar();
+    }
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
     Csrf::validateRequest();
-    $controller = new ClienteController();
     match ((string) $_GET['action']) {
         'guardar' => $controller->guardar(),
         'actualizar' => $controller->actualizar(),

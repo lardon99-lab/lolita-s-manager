@@ -9,7 +9,7 @@
         </div>
     </header>
 
-    <form action="api.php?resource=pedidos&action=crear" method="POST" id="formNuevoPedido">
+    <form action="api.php?resource=pedidos&action=crear" method="POST" enctype="multipart/form-data" id="formNuevoPedido">
         <div class="row g-3 g-md-4">
             
             <div class="col-12 col-lg-4">
@@ -23,19 +23,18 @@
                     
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Cliente</label>
-                        <div class="input-group shadow-sm rounded-3 overflow-hidden">
-                            <span class="input-group-text border-0 bg-light text-muted px-3"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input list="lista-clientes" name="id_cliente_search" id="cliente-input" class="form-control border-0 bg-light py-2" placeholder="Buscar cliente..." required>
-                            <datalist id="lista-clientes">
-                                <?php foreach($clientes as $c): ?>
-                                    <option data-id="<?= $c['id_cliente'] ?>" value="<?= htmlspecialchars($c['nombre_completo']) ?>">
-                                <?php endforeach; ?>
-                            </datalist>
-                            <button type="button" class="btn btn-primary px-3 transition-hover" data-bs-toggle="modal" data-bs-target="#modalCliente" title="Nuevo Cliente">
+                        <div class="app-combobox" id="order-client-combobox">
+                            <div class="app-combobox__control">
+                                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                <input name="id_cliente_search" id="cliente-input" class="app-combobox__input js-client-combobox-input" placeholder="Buscar por nombre o telefono..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="client-search-results" required>
+                            </div>
+                            <div id="client-search-results" class="app-combobox__list js-client-combobox-list" role="listbox" hidden></div>
+                            <button id="openClientModal" type="button" class="btn btn-primary app-combobox__add" data-bs-toggle="modal" data-bs-target="#modalCliente" title="Registrar cliente" aria-label="Registrar cliente">
                                 <i class="fa-solid fa-user-plus"></i>
                             </button>
+                            <input type="hidden" name="id_cliente" id="id_cliente_real" class="js-client-combobox-value">
+                            <div class="app-combobox__status js-client-combobox-status" aria-live="polite">Escribe para buscar un cliente existente.</div>
                         </div>
-                        <input type="hidden" name="id_cliente" id="id_cliente_real">
                     </div>
 
                     <div class="mb-3">
@@ -83,6 +82,7 @@
                                     <option value="<?= $p['id_producto'] ?>" 
                                             data-precio="<?= $p['precio_base'] ?>" 
                                             data-branches="<?= e($p['branch_ids'] ?? '') ?>"
+                                            data-type="<?= e($p['tipo_producto'] ?? 'panaderia') ?>"
                                             data-nombre="<?= e($p['nombre_producto'] ?? '') ?>">
                                         <?= htmlspecialchars($p['nombre_producto']) ?> (L. <?= number_format($p['precio_base'], 2) ?>)
                                     </option>
@@ -172,6 +172,7 @@
 </div>
 
 <script type="application/json" id="order-configurations"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
+<script type="application/json" id="order-design-configurations"><?= json_encode($configuraciones_diseno, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
 
 <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
@@ -180,8 +181,9 @@
                 <h5 class="modal-title fw-bold text-primary"><i class="fa-solid fa-user-plus me-2"></i>Registrar Nuevo Cliente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="api.php?resource=clientes&action=guardar" method="POST">
+            <form action="api.php?resource=clientes&action=guardar" method="POST" id="formQuickClient">
                 <div class="modal-body p-4">
+                    <div class="alert alert-danger js-client-form-error" role="alert" hidden></div>
                     <div class="form-floating mb-3">
                         <input type="text" name="nombre" id="nombreCliente" class="form-control bg-light border-0" required placeholder="Ej: Juan Pérez">
                         <label for="nombreCliente" class="text-muted">Nombre Completo</label>
@@ -206,4 +208,7 @@
 <link rel="stylesheet" href="css/views/pedidos-nuevo.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-nuevo.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
+<script src="js/components/client-combobox.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/client-combobox.js') ?>"></script>
+<script src="js/components/order-cake-customizer.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/order-cake-customizer.js') ?>"></script>
+<script src="js/views/order-client-selector.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/order-client-selector.js') ?>"></script>
 <script src="js/views/pedidos-nuevo.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/pedidos-nuevo.js') ?>"></script>

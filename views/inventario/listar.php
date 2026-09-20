@@ -315,11 +315,31 @@
                                 <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1">
                             </div>
                         </div>
-                        <div class="d-flex align-items-center justify-content-between gap-2 mt-4 mb-3">
-                            <h6 class="fw-bold mb-0"><i class="fa-solid fa-sliders text-primary me-2"></i>Opciones y recargos</h6>
-                            <button class="btn btn-sm btn-outline-primary" id="addNewProductCustomizationGroup" type="button"><i class="fa-solid fa-plus me-1"></i>Grupo</button>
+                        <div class="mt-4 mb-3">
+                            <h6 class="fw-bold mb-1"><i class="fa-solid fa-sliders text-primary me-2"></i>Opciones y recargos</h6>
+                            <p class="text-muted small mb-0">Agrega los sabores, rellenos y cubiertas disponibles para este pastel.</p>
                         </div>
-                        <div id="newProductCustomizationGroups" class="customization-groups"></div>
+                        <div id="newProductCustomizationGroups" class="cake-option-groups"></div>
+
+                        <section class="cake-design-policy mt-3">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" name="permite_diseno" value="1" id="allowCakeDesign">
+                                <label class="form-check-label fw-bold" for="allowCakeDesign">Permitir diseno personalizado</label>
+                                <div class="small text-muted">Color, frase, instrucciones y referencia visual al crear el pedido.</div>
+                            </div>
+                            <div id="cakeDesignPolicyFields" class="row g-3 d-none">
+                                <div class="col-12 col-sm-6">
+                                    <label class="small text-muted fw-bold mb-1" for="cakeDesignSurcharge">Recargo por diseno</label>
+                                    <div class="input-group"><span class="input-group-text">L.</span><input id="cakeDesignSurcharge" name="recargo_diseno" class="form-control" type="number" min="0" max="1000000" step="0.01" value="0.00"></div>
+                                </div>
+                                <div class="col-12 col-sm-6 d-flex align-items-end">
+                                    <div class="form-check form-switch cake-image-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="permite_imagen" value="1" id="allowCakeDesignImage" checked>
+                                        <label class="form-check-label" for="allowCakeDesignImage">Permitir imagen de referencia</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                     <div class="form-section-card mb-3" id="camposPanaderia" style="display:none;">
@@ -357,5 +377,5 @@
 <link rel="stylesheet" href="css/views/inventario.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/inventario.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<script src="js/components/product-customization-editor.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/product-customization-editor.js') ?>"></script>
+<script src="js/components/cake-configuration-editor.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/cake-configuration-editor.js') ?>"></script>
 <script src="js/views/inventario.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/inventario.js') ?>"></script>

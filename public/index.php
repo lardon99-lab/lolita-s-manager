@@ -88,9 +88,9 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         require_once __DIR__ . '/../app/controllers/PedidoController.php';
                         $pedidosCtrl = new PedidoController();
                         $data = $pedidosCtrl->prepararFormulario();
-                        $clientes = $data['clientes'];
                         $productos = $data['productos'];
                         $configuraciones = $data['configuraciones'];
+                        $configuraciones_diseno = $data['configuraciones_diseno'];
                         $sucursales = $data['sucursales'];
                         include __DIR__ . '/../views/pedidos/nuevo.php';
                         break;

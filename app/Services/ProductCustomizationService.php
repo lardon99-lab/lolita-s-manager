@@ -22,7 +22,7 @@ final class ProductCustomizationService
         }
 
         $groups = $this->db->prepare(
-            "SELECT g.id_grupo, g.nombre, pg.minimo_selecciones, pg.maximo_selecciones
+            "SELECT g.id_grupo, g.codigo, g.nombre, pg.minimo_selecciones, pg.maximo_selecciones
              FROM producto_personalizacion_grupos pg
              JOIN personalizacion_grupos g ON g.id_grupo = pg.id_grupo
              WHERE pg.id_producto = ? AND g.estado = 'Activo'
@@ -77,8 +77,9 @@ final class ProductCustomizationService
             $this->db->prepare('DELETE FROM producto_personalizacion_grupos WHERE id_producto = ?')->execute([$productId]);
 
             $groupUpsert = $this->db->prepare(
-                "INSERT INTO personalizacion_grupos (nombre, estado) VALUES (?, 'Activo')
-                 ON DUPLICATE KEY UPDATE id_grupo = LAST_INSERT_ID(id_grupo), estado = 'Activo'"
+                "INSERT INTO personalizacion_grupos (codigo, nombre, estado) VALUES (?, ?, 'Activo')
+                 ON DUPLICATE KEY UPDATE id_grupo = LAST_INSERT_ID(id_grupo),
+                    codigo = COALESCE(VALUES(codigo), codigo), estado = 'Activo'"
             );
             $optionUpsert = $this->db->prepare(
                 "INSERT INTO personalizacion_opciones (id_grupo, nombre, estado) VALUES (?, ?, 'Activo')
@@ -92,7 +93,7 @@ final class ProductCustomizationService
             );
 
             foreach ($configuration as $groupOrder => $group) {
-                $groupUpsert->execute([$group['nombre']]);
+                $groupUpsert->execute([$group['codigo'], $group['nombre']]);
                 $groupId = (int) $this->db->lastInsertId();
                 $productGroup->execute([$productId, $groupId, $group['minimo'], $group['maximo'], $groupOrder]);
                 foreach ($group['opciones'] as $optionOrder => $option) {
@@ -118,6 +119,10 @@ final class ProductCustomizationService
         foreach ($groups as $group) {
             if (!is_array($group)) throw new InvalidArgumentException('Uno de los grupos no es valido.');
             $name = Validator::text($group['nombre'] ?? '', 'grupo', 50);
+            $code = trim((string) ($group['codigo'] ?? ''));
+            if ($code !== '' && !in_array($code, ['cake_flavor', 'cake_filling', 'cake_covering'], true)) {
+                throw new InvalidArgumentException('El tipo de grupo no es valido.');
+            }
             $nameKey = mb_strtolower($name);
             if (isset($groupNames[$nameKey])) throw new InvalidArgumentException('No puedes repetir un grupo.');
             $groupNames[$nameKey] = true;
@@ -148,7 +153,13 @@ final class ProductCustomizationService
                 ];
             }
             if ($defaultCount > $maximum) throw new InvalidArgumentException("El grupo {$name} tiene demasiadas opciones predeterminadas.");
-            $result[] = ['nombre' => $name, 'minimo' => $minimum, 'maximo' => $maximum, 'opciones' => $validatedOptions];
+            $result[] = [
+                'codigo' => $code !== '' ? $code : null,
+                'nombre' => $name,
+                'minimo' => $minimum,
+                'maximo' => $maximum,
+                'opciones' => $validatedOptions,
+            ];
         }
         return $result;
     }

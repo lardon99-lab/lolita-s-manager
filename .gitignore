@@ -3,6 +3,8 @@
 /storage/logs/*.log
 /storage/sessions/*
 /storage/rate-limits/*
+/storage/backups/*
+/storage/order-designs/*
 /.phpunit.cache/
 /.phpunit.result.cache
 /.test-cookies.txt

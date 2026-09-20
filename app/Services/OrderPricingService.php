@@ -19,7 +19,7 @@ final class OrderPricingService
         }
 
         $productQuery = $this->db->prepare(
-            "SELECT p.precio_base
+            "SELECT p.precio_base, p.tipo_producto
              FROM productos p
              JOIN inventario i ON i.id_producto = p.id_producto AND i.id_sucursal = ?
              WHERE p.id_producto = ? AND p.estado = 'Activo'
@@ -36,6 +36,10 @@ final class OrderPricingService
              WHERE po.id_producto = ? AND po.estado = 'Activo'
                AND o.estado = 'Activo' AND g.estado = 'Activo'"
         );
+        $designQuery = $this->db->prepare(
+            'SELECT permite_diseno, permite_imagen, recargo_diseno
+             FROM producto_diseno_config WHERE id_producto = ?'
+        );
 
         $items = [];
         $total = 0.0;
@@ -46,8 +50,9 @@ final class OrderPricingService
             $notes = Validator::text($line['personalizacion'] ?? '', 'personalizacion', 1000, false);
 
             $productQuery->execute([$branchId, $productId]);
-            $basePrice = $productQuery->fetchColumn();
-            if ($basePrice === false) throw new InvalidArgumentException('Uno de los productos no esta disponible en la sucursal seleccionada.');
+            $product = $productQuery->fetch(PDO::FETCH_ASSOC);
+            if (!$product) throw new InvalidArgumentException('Uno de los productos no esta disponible en la sucursal seleccionada.');
+            $basePrice = (float) $product['precio_base'];
 
             $groupQuery->execute([$productId]);
             $groups = [];
@@ -83,7 +88,9 @@ final class OrderPricingService
                 }
             }
 
-            $unitPrice = round((float) $basePrice + $surcharge, 2);
+            $design = $this->validateDesign($productId, $line, $designQuery, $product['tipo_producto'] === 'pastel');
+            $design['upload_key'] = (string) ($line['_upload_key'] ?? '');
+            $unitPrice = round($basePrice + $surcharge + $design['surcharge'], 2);
             $subtotal = round($unitPrice * $quantity, 2);
             $total = round($total + $subtotal, 2);
             $items[] = [
@@ -93,6 +100,7 @@ final class OrderPricingService
                 'notes' => $notes,
                 'subtotal' => $subtotal,
                 'options' => $pricedOptions,
+                'design' => $design,
             ];
         }
 
@@ -100,16 +108,57 @@ final class OrderPricingService
         return ['items' => $items, 'total' => $total];
     }
 
+    private function validateDesign(int $productId, array $line, \PDOStatement $query, bool $isCake): array
+    {
+        $raw = is_array($line['diseno'] ?? null) ? $line['diseno'] : [];
+        $enabled = filter_var($raw['activo'] ?? false, FILTER_VALIDATE_BOOL);
+        $phrase = Validator::text($raw['frase'] ?? '', 'frase del pastel', 250, false);
+        if ($phrase !== '' && !$isCake) {
+            throw new InvalidArgumentException('Solo los pasteles pueden llevar una frase.');
+        }
+        $empty = [
+            'enabled' => false,
+            'color' => '',
+            'phrase' => $phrase,
+            'instructions' => '',
+            'surcharge' => 0.0,
+            'allow_image' => false,
+        ];
+        if (!$enabled) return $empty;
+
+        $query->execute([$productId]);
+        $policy = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$policy || !(bool) $policy['permite_diseno']) {
+            throw new InvalidArgumentException('El producto no permite diseno personalizado.');
+        }
+
+        return [
+            'enabled' => true,
+            'color' => Validator::text($raw['color'] ?? '', 'color del diseno', 150, false),
+            'phrase' => $phrase,
+            'instructions' => Validator::text($raw['instrucciones'] ?? '', 'instrucciones del diseno', 1000, false),
+            'surcharge' => round((float) $policy['recargo_diseno'], 2),
+            'allow_image' => (bool) $policy['permite_imagen'],
+        ];
+    }
+
     private function normalizeLines(array $input): array
     {
         if (is_array($input['lineas'] ?? null)) {
-            return array_values(array_filter($input['lineas'], 'is_array'));
+            $lines = [];
+            foreach ($input['lineas'] as $key => $line) {
+                if (!is_array($line)) continue;
+                $line['_upload_key'] = (string) $key;
+                $lines[] = $line;
+            }
+            return $lines;
         }
 
         $products = is_array($input['productos'] ?? null) ? array_values($input['productos']) : [];
         $quantities = is_array($input['cantidades'] ?? null) ? array_values($input['cantidades']) : [];
         $customizations = is_array($input['personalizacion'] ?? null) ? array_values($input['personalizacion']) : [];
         $selections = is_array($input['opciones'] ?? null) ? $input['opciones'] : [];
+        $designs = is_array($input['disenos'] ?? null) ? $input['disenos'] : [];
         if (count($products) !== count($quantities)) return [];
         $lines = [];
         foreach ($products as $index => $product) {
@@ -118,6 +167,7 @@ final class OrderPricingService
                 'cantidad' => $quantities[$index] ?? null,
                 'personalizacion' => $customizations[$index] ?? '',
                 'opciones' => is_array($selections[$index] ?? null) ? $selections[$index] : [],
+                'diseno' => is_array($designs[$index] ?? null) ? $designs[$index] : [],
             ];
         }
         return $lines;

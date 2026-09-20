@@ -113,6 +113,142 @@
     cursor: not-allowed;
 }
 
+.app-combobox {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    width: 100%;
+}
+
+.app-combobox__control {
+    position: relative;
+    min-width: 0;
+}
+
+.app-combobox__control > i {
+    position: absolute;
+    top: 50%;
+    left: 0.9rem;
+    color: #887780;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.app-combobox__input {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.65rem 0.8rem 0.65rem 2.65rem;
+    color: var(--text-color);
+    background: #f9f7f8;
+    border: 1px solid #eadce3;
+    border-radius: 8px 0 0 8px;
+    outline: 0;
+}
+
+.app-combobox__input:focus,
+.app-combobox:focus-within .app-combobox__input {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(255, 133, 162, 0.14);
+}
+
+.app-combobox__add {
+    width: 48px;
+    min-height: 48px;
+    border-radius: 0 8px 8px 0;
+}
+
+.app-combobox__list {
+    position: absolute;
+    z-index: 1100;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    left: 0;
+    max-height: min(320px, 45vh);
+    padding: 0.35rem;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #eadce3;
+    border-radius: 8px;
+    box-shadow: 0 14px 30px rgba(64, 53, 61, 0.16);
+}
+
+.app-combobox__option,
+.app-combobox__create {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    min-height: 52px;
+    padding: 0.55rem 0.65rem;
+    color: #3b3237;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    text-align: left;
+}
+
+.app-combobox__option:hover,
+.app-combobox__option.is-active {
+    background: #fff1f5;
+}
+
+.app-combobox__avatar {
+    display: inline-flex;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: #b62f55;
+    background: #ffe6ed;
+    border-radius: 50%;
+}
+
+.app-combobox__option-copy {
+    display: grid;
+    min-width: 0;
+}
+
+.app-combobox__option-copy strong,
+.app-combobox__option-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-combobox__option-copy small {
+    color: #887780;
+    font-size: 0.72rem;
+}
+
+.app-combobox__create {
+    min-height: 46px;
+    margin-top: 0.25rem;
+    color: #b62f55;
+    border-top: 1px solid #f0e3e7;
+    font-weight: 700;
+}
+
+.app-combobox__empty {
+    padding: 0.85rem;
+    color: #887780;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.app-combobox__status {
+    grid-column: 1 / -1;
+    min-height: 1rem;
+    margin-top: 0.35rem;
+    color: #887780;
+    font-size: 0.7rem;
+}
+
+.app-combobox.is-unresolved .app-combobox__status {
+    color: #b72e53;
+}
+
 .form-select[multiple],
 .form-select[size]:not([size="1"]) {
     padding: 0.35rem;
@@ -173,6 +309,135 @@
     height: 42px;
 }
 
+.cake-option-groups {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.cake-option-group,
+.cake-design-policy {
+    overflow: hidden;
+    border: 1px solid #eadfe3;
+    border-radius: 8px;
+    background: #fffafb;
+}
+
+.cake-option-group__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 64px;
+    padding: 0.7rem 0.85rem;
+    color: #332c30;
+    background: #fff;
+    border: 0;
+    text-align: left;
+}
+
+.cake-option-group__identity,
+.cake-option-group__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.cake-option-group__identity > span:last-child {
+    display: grid;
+    min-width: 0;
+}
+
+.cake-option-group__identity small {
+    color: #8d7a84;
+    font-size: 0.72rem;
+}
+
+.cake-option-group__icon {
+    display: inline-flex;
+    flex: 0 0 38px;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    color: #be365c;
+    background: #ffe8ef;
+    border-radius: 8px;
+}
+
+.cake-option-group__summary {
+    color: #8d7a84;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.cake-option-group__toggle[aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.cake-option-group__body {
+    padding: 0.85rem;
+    border-top: 1px solid #f0e5e8;
+}
+
+.cake-option-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.cake-option-row {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 0.42fr) auto 42px;
+    gap: 0.65rem;
+    align-items: end;
+    padding: 0.75rem;
+    border: 1px solid #eee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.cake-option-row label > span:first-child:not(.input-group),
+.cake-option-row__price > span:first-child {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: #81717a;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.cake-option-row__default {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 42px;
+    margin-bottom: 0;
+    font-size: 0.76rem;
+}
+
+.cake-option-row__remove {
+    width: 42px;
+    height: 42px;
+}
+
+.cake-add-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 42px;
+    margin-top: 0.75rem;
+}
+
+.cake-design-policy {
+    padding: 0.9rem;
+}
+
+.cake-image-switch {
+    min-height: 42px;
+    padding-top: 0.5rem;
+}
+
 @media (max-width: 575.98px) {
     .app-select__menu {
         max-height: min(240px, 40vh);
@@ -190,6 +455,45 @@
     .customization-group__header > :first-child,
     .customization-option > :first-child {
         grid-column: 1 / -1;
+    }
+
+    .cake-option-group__toggle {
+        min-height: 70px;
+        padding: 0.65rem;
+    }
+
+    .cake-option-group__identity small {
+        display: none;
+    }
+
+    .cake-option-group__summary span {
+        display: none;
+    }
+
+    .cake-option-group__body {
+        padding: 0.65rem;
+    }
+
+    .cake-option-row {
+        grid-template-columns: minmax(0, 1fr) 42px;
+        padding: 0.65rem;
+    }
+
+    .cake-option-row__name,
+    .cake-option-row__price {
+        grid-column: 1 / -1;
+    }
+
+    .cake-option-row__default {
+        grid-column: 1;
+    }
+
+    .cake-option-row__remove {
+        grid-column: 2;
+    }
+
+    .cake-add-option {
+        width: 100%;
     }
 }
 

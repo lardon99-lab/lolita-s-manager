@@ -13,6 +13,8 @@ trait PendientesReporteTrait
             $query = "SELECT p.id_pedido, p.fecha_entrega, p.total_pedido, p.saldo_pendiente,
                             c.nombre_completo as cliente, s.nombre_sucursal as sucursal,
                             det.cantidad, det.precio_unitario, det.detalles_personalizacion, det.subtotal,
+                            dd.color_descripcion, dd.frase, dd.instrucciones,
+                            dd.archivo_nombre_interno,
                             (SELECT GROUP_CONCAT(CONCAT(pdo.grupo_nombre, ': ', pdo.opcion_nombre)
                                 ORDER BY pdo.id_detalle_opcion SEPARATOR ' | ')
                              FROM pedido_detalle_opciones pdo
@@ -21,6 +23,7 @@ trait PendientesReporteTrait
                     JOIN clientes c ON p.id_cliente = c.id_cliente
                     JOIN sucursales s ON p.id_sucursal = s.id_sucursal
                     JOIN pedido_detalles det ON p.id_pedido = det.id_pedido
+                    LEFT JOIN pedido_detalle_diseno dd ON dd.id_detalle = det.id_detalle
                     WHERE p.estado = 'Pendiente' 
                     AND DATE(p.fecha_entrega) = :hoy";
 
@@ -99,7 +102,7 @@ trait PendientesReporteTrait
                             <tr>
                                 <th>Cantidad</th>
                                 <th class="text-end">Precio</th>
-                                <th>Relleno / Cobertura</th>
+                                <th>Personalizacion</th>
                                 <th>Fecha Entrega</th>
                                 <th>Cliente</th>
                                 <th>Sucursal</th>
@@ -111,7 +114,17 @@ trait PendientesReporteTrait
                                 <td><strong><?= (int)$p['cantidad'] ?></strong></td>
                                 <td class="text-end">L. <?= number_format((float)$p['precio_unitario'], 2) ?></td>
                                 <td style="font-size: 8.5px;"><?php
-                                    $specifications = array_filter([$p['opciones_personalizacion'] ?? '', $p['detalles_personalizacion'] ?? '']);
+                                    $design = array_filter([
+                                        !empty($p['color_descripcion']) ? 'Color: ' . $p['color_descripcion'] : '',
+                                        !empty($p['frase']) ? 'Frase: ' . $p['frase'] : '',
+                                        $p['instrucciones'] ?? '',
+                                        !empty($p['archivo_nombre_interno']) ? 'Imagen de referencia adjunta' : '',
+                                    ]);
+                                    $specifications = array_filter([
+                                        $p['opciones_personalizacion'] ?? '',
+                                        $design !== [] ? implode(' | ', $design) : '',
+                                        $p['detalles_personalizacion'] ?? '',
+                                    ]);
                                     echo htmlspecialchars($specifications !== [] ? implode(' | ', $specifications) : 'Sin especificaciones');
                                 ?></td>
                                 <td><strong><?= date('d/m/Y', strtotime($p['fecha_entrega'])) ?></strong></td>

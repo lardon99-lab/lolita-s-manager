@@ -5,6 +5,7 @@ use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\ProductImageStorage;
 use App\Services\ProductCustomizationService;
+use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
 
 require_once __DIR__ . '/../core/Database.php';
@@ -257,9 +258,10 @@ class InventarioController {
 
                 $imagen_url = $imageStorage->store(isset($_FILES['imagen']) && is_array($_FILES['imagen']) ? $_FILES['imagen'] : null);
 
-                $stmtProd = $this->db->prepare("INSERT INTO productos (id_categoria, nombre_producto, descripcion, precio_base, imagen_url, dias_vida_util) VALUES (:id_cat, :nom, :desc, :pre, :img, :dias)");
+                $stmtProd = $this->db->prepare("INSERT INTO productos (id_categoria, tipo_producto, nombre_producto, descripcion, precio_base, imagen_url, dias_vida_util) VALUES (:id_cat, :tipo, :nom, :desc, :pre, :img, :dias)");
                 $stmtProd->execute([
                     ':id_cat' => $id_categoria,
+                    ':tipo'   => $tipo_producto,
                     ':nom'    => $nombre,
                     ':desc'   => $descripcion,
                     ':pre'    => $precio,
@@ -283,6 +285,11 @@ class InventarioController {
                 (new ProductCustomizationService($this->db))->save([
                     'id_producto' => $id_nuevo_p,
                     'configuracion' => $tipo_producto === 'pastel' ? ($_POST['configuracion'] ?? '[]') : '[]',
+                ]);
+                (new ProductDesignService($this->db))->save((int) $id_nuevo_p, [
+                    'permite_diseno' => $tipo_producto === 'pastel' ? ($_POST['permite_diseno'] ?? false) : false,
+                    'permite_imagen' => $_POST['permite_imagen'] ?? false,
+                    'recargo_diseno' => $_POST['recargo_diseno'] ?? 0,
                 ]);
 
                 (new AuditService($this->db))->record('product.created', 'productos', (int) $id_nuevo_p, null, ['sucursales' => $sucursales]);

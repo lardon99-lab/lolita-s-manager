@@ -19,3 +19,8 @@ Las migraciones se aplican en orden lexicografico. Antes de ejecutarlas en produ
 5. Aplicarlas con `php bin/migrate.php --run` o ejecutar el archivo desde phpMyAdmin.
 
 El ejecutor crea `schema_migrations` para impedir que una migracion completada se repita.
+
+La estructura consolidada mas reciente para phpMyAdmin es
+`test_lolitas_db_estructura_phpmyadmin_2026-09-20.sql`. Para actualizar una
+instalacion existente se deben ejecutar las migraciones pendientes en lugar de
+importar nuevamente toda la estructura.

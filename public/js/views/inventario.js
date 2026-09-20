@@ -4,8 +4,10 @@ const camposPastel = document.getElementById('camposPastel');
 const camposPanaderia = document.getElementById('camposPanaderia');
 const newProductCustomizationContainer = document.getElementById('newProductCustomizationGroups');
 const newProductCustomizationEditor = newProductCustomizationContainer
-    ? ProductCustomizationEditor.create(newProductCustomizationContainer)
+    ? CakeConfigurationEditor.create(newProductCustomizationContainer)
     : null;
+const allowCakeDesign = document.getElementById('allowCakeDesign');
+const cakeDesignPolicyFields = document.getElementById('cakeDesignPolicyFields');
 
 function actualizarVistaTipoProducto() {
     const isPastel = pastelRadio && pastelRadio.checked;
@@ -22,8 +24,8 @@ if (pastelRadio && panaderiaRadio) {
 
 actualizarVistaTipoProducto();
 
-document.getElementById('addNewProductCustomizationGroup')?.addEventListener('click', () => {
-    newProductCustomizationEditor?.addGroup();
+allowCakeDesign?.addEventListener('change', () => {
+    cakeDesignPolicyFields?.classList.toggle('d-none', !allowCakeDesign.checked);
 });
 
 // 1. MANEJO DEL FORMULARIO DE NUEVO PRODUCTO

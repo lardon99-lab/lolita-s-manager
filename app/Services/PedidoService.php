@@ -15,8 +15,10 @@ final class PedidoService
 {
     public function __construct(private PDO $db) {}
 
-    public function crear(array $input): void
+    public function crear(array $input, array $files = []): void
     {
+        $storedDesignFiles = [];
+        $designStorage = new OrderDesignStorage(dirname(__DIR__, 2) . '/storage/order-designs');
         try {
             $clientId = Validator::positiveInt($input['id_cliente'] ?? null, 'cliente');
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
@@ -45,11 +47,37 @@ final class PedidoService
             $orderId = (int) $this->db->lastInsertId();
             $detail = $this->db->prepare('INSERT INTO pedido_detalles (id_pedido, id_producto, cantidad, precio_unitario, detalles_personalizacion, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
             $detailOption = $this->db->prepare('INSERT INTO pedido_detalle_opciones (id_detalle, id_opcion, grupo_nombre, opcion_nombre, recargo_unitario) VALUES (?, ?, ?, ?, ?)');
+            $detailDesign = $this->db->prepare(
+                'INSERT INTO pedido_detalle_diseno
+                    (id_detalle, color_descripcion, frase, instrucciones, recargo_unitario,
+                     archivo_nombre_interno, archivo_nombre_original, archivo_mime, archivo_tamano)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
             foreach ($items as $item) {
                 $detail->execute([$orderId, $item['product_id'], $item['quantity'], $item['unit_price'], $item['notes'], $item['subtotal']]);
                 $detailId = (int) $this->db->lastInsertId();
                 foreach ($item['options'] as $option) {
                     $detailOption->execute([$detailId, $option['id_opcion'], $option['grupo_nombre'], $option['opcion_nombre'], $option['recargo']]);
+                }
+                $design = $item['design'];
+                $upload = $this->designUpload($files, (string) ($design['upload_key'] ?? ''));
+                if ($upload !== null && (!$design['enabled'] || !$design['allow_image'])) {
+                    throw new InvalidArgumentException('Este producto no permite adjuntar una imagen de diseno.');
+                }
+                if ($design['enabled'] || $design['phrase'] !== '') {
+                    $stored = $designStorage->store($upload);
+                    if ($stored !== null) $storedDesignFiles[] = $stored['internal_name'];
+                    $detailDesign->execute([
+                        $detailId,
+                        $design['color'] !== '' ? $design['color'] : null,
+                        $design['phrase'] !== '' ? $design['phrase'] : null,
+                        $design['instructions'] !== '' ? $design['instructions'] : null,
+                        $design['surcharge'],
+                        $stored['internal_name'] ?? null,
+                        $stored['original_name'] ?? null,
+                        $stored['mime'] ?? null,
+                        $stored['size'] ?? null,
+                    ]);
                 }
             }
             if ($paid > 0) {
@@ -57,14 +85,28 @@ final class PedidoService
                 $payment = $this->db->prepare('INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago) VALUES (?, ?, ?, ?)');
                 $payment->execute([$orderId, (int) $_SESSION['id_usuario'], $paid, $paymentMethod]);
             }
-            $this->db->commit();
             (new AuditService($this->db))->record('create', 'pedido', $orderId, $branchId, ['total' => $total, 'paid' => $paid]);
+            $this->db->commit();
             Response::redirect('index.php?view=pedidos-lista&msg=pedido_ok');
         } catch (Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();
+            foreach ($storedDesignFiles as $filename) $designStorage->remove($filename);
             Logger::error($error);
             $_SESSION['flash_error'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No fue posible guardar el pedido.';
             Response::redirect('index.php?view=pedidos-nuevo&status=error');
         }
+    }
+
+    private function designUpload(array $files, string $key): ?array
+    {
+        $group = $files['design_files'] ?? null;
+        if (!is_array($group) || $key === '' || !isset($group['error'][$key])) return null;
+        return [
+            'name' => $group['name'][$key] ?? '',
+            'type' => $group['type'][$key] ?? '',
+            'tmp_name' => $group['tmp_name'][$key] ?? '',
+            'error' => $group['error'][$key],
+            'size' => $group['size'][$key] ?? 0,
+        ];
     }
 }

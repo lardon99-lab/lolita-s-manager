@@ -14,6 +14,8 @@ use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\PedidoService;
 use App\Services\ProductCustomizationService;
+use App\Services\ProductDesignService;
+use App\Services\OrderDesignStorage;
 
 final class PedidoController
 {
@@ -31,29 +33,28 @@ final class PedidoController
     public function prepararFormulario(): array
     {
         Auth::requirePermission('orders.create');
-        $clientes = $this->db->query("SELECT id_cliente, nombre_completo FROM clientes WHERE estado = 'Activo' ORDER BY nombre_completo")->fetchAll(PDO::FETCH_ASSOC);
         $productos = $this->db->query(
-            "SELECT p.id_producto, p.nombre_producto, p.precio_base, c.nombre_categoria,
+            "SELECT p.id_producto, p.nombre_producto, p.precio_base, p.tipo_producto, c.nombre_categoria,
                     GROUP_CONCAT(DISTINCT i.id_sucursal ORDER BY i.id_sucursal) AS branch_ids
              FROM productos p
              JOIN categorias c ON c.id_categoria = p.id_categoria
              JOIN inventario i ON i.id_producto = p.id_producto
              WHERE p.estado = 'Activo' AND c.estado = 'Activo'
-             GROUP BY p.id_producto, p.nombre_producto, p.precio_base, c.nombre_categoria
+             GROUP BY p.id_producto, p.nombre_producto, p.precio_base, p.tipo_producto, c.nombre_categoria
              ORDER BY p.nombre_producto"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         return [
-            'clientes' => $clientes,
             'productos' => $productos,
             'configuraciones' => (new ProductCustomizationService($this->db))->configurationsForProducts(array_column($productos, 'id_producto')),
+            'configuraciones_diseno' => (new ProductDesignService($this->db))->configurationsForProducts(array_column($productos, 'id_producto')),
             'sucursales' => $this->branchesFor('orders.create'),
         ];
     }
 
     public function crear(): void
     {
-        (new PedidoService($this->db))->crear($_POST);
+        (new PedidoService($this->db))->crear($_POST, $_FILES);
     }
 
     public function obtenerDetalles(int|string $orderId): array
@@ -64,6 +65,8 @@ final class PedidoController
         $scope = $this->branchScope('o.id_sucursal', Auth::allowedBranches('orders.view'), $params, 'detail');
         $stmt = $this->db->prepare(
             "SELECT d.*, p.nombre_producto,
+                    dd.id_diseno, dd.color_descripcion, dd.frase, dd.instrucciones,
+                    dd.recargo_unitario AS recargo_diseno, dd.archivo_nombre_interno,
                     (SELECT GROUP_CONCAT(CONCAT(pdo.grupo_nombre, ': ', pdo.opcion_nombre,
                         CASE WHEN pdo.recargo_unitario > 0 THEN CONCAT(' (+ L. ', FORMAT(pdo.recargo_unitario, 2), ')') ELSE '' END)
                         ORDER BY pdo.id_detalle_opcion SEPARATOR ' | ')
@@ -71,10 +74,43 @@ final class PedidoController
              FROM pedido_detalles d
              JOIN pedidos o ON o.id_pedido = d.id_pedido
              JOIN productos p ON p.id_producto = d.id_producto
+             LEFT JOIN pedido_detalle_diseno dd ON dd.id_detalle = d.id_detalle
              WHERE d.id_pedido = :id{$scope}"
         );
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function verDiseno(): void
+    {
+        Auth::requirePermission('orders.view');
+        $designId = Validator::positiveInt($_GET['id'] ?? null, 'diseno');
+        $params = [':id' => $designId];
+        $scope = $this->branchScope('p.id_sucursal', Auth::allowedBranches('orders.view'), $params, 'design');
+        $stmt = $this->db->prepare(
+            "SELECT dd.archivo_nombre_interno, dd.archivo_mime
+             FROM pedido_detalle_diseno dd
+             JOIN pedido_detalles det ON det.id_detalle = dd.id_detalle
+             JOIN pedidos p ON p.id_pedido = det.id_pedido
+             WHERE dd.id_diseno = :id{$scope}"
+        );
+        $stmt->execute($params);
+        $file = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$file || !$file['archivo_nombre_interno']) {
+            http_response_code(404);
+            exit('Referencia no encontrada.');
+        }
+        $path = (new OrderDesignStorage(dirname(__DIR__, 2) . '/storage/order-designs'))->path((string) $file['archivo_nombre_interno']);
+        if (!is_file($path)) {
+            http_response_code(404);
+            exit('Referencia no encontrada.');
+        }
+        header('Content-Type: ' . $file['archivo_mime']);
+        header('Content-Length: ' . filesize($path));
+        header('Content-Disposition: inline; filename="referencia-diseno"');
+        header('X-Content-Type-Options: nosniff');
+        readfile($path);
+        exit;
     }
 
     public function listarTodos(string $estado = 'Todos'): array
@@ -211,6 +247,7 @@ if (isset($_GET['action'])) {
         'crear' => $controller->crear(),
         'actualizar_estado_ajax' => $controller->actualizarEstadoAjax(),
         'reporte_pendientes' => $controller->generarReportePendientes(),
+        'ver_diseno' => $controller->verDiseno(),
         'guardarMerma' => $controller->guardarMerma(),
         'exportarPdf' => $controller->descargarReportePDF($_GET),
         default => Response::json(['status' => 'error', 'message' => 'Accion no encontrada.'], 404),

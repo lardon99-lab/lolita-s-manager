@@ -20,6 +20,30 @@
     .order-customization-option:has(input:checked) { color: #b84263; background: #ffe8ef; border-color: #ff85a2; }
     .order-customization-option span { overflow-wrap: anywhere; }
 
+    .order-cake-group { margin: 0; padding: 0; border: 0; }
+    .order-cake-group + .order-cake-group { margin-top: 1rem; }
+    .order-cake-group legend { display: flex; align-items: center; gap: 0.55rem; width: auto; margin-bottom: 0.55rem; color: #55484f; font-size: 0.8rem; font-weight: 700; }
+    .order-cake-group legend span { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #b62f55; background: #ffe8ef; border-radius: 50%; font-size: 0.7rem; }
+    .order-cake-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.55rem; }
+    .order-cake-option { display: flex; align-items: center; gap: 0.6rem; min-width: 0; min-height: 54px; padding: 0.55rem 0.7rem; background: #fff; border: 1px solid #eadfe3; border-radius: 8px; cursor: pointer; }
+    .order-cake-option:has(input:checked) { color: #a92e52; background: #fff0f4; border-color: #ff85a2; box-shadow: 0 0 0 2px rgba(255, 133, 162, 0.1); }
+    .order-cake-option > span { display: grid; min-width: 0; }
+    .order-cake-option strong { overflow-wrap: anywhere; font-size: 0.82rem; }
+    .order-cake-option small { color: #887780; font-size: 0.68rem; }
+    .order-cake-message { margin-top: 1rem; padding: 0.85rem; background: #fffafb; border: 1px solid #eadfe3; border-radius: 8px; }
+    .order-cake-message label { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.45rem; color: #55484f; font-size: 0.8rem; font-weight: 700; }
+    .order-cake-message label i { color: #c13a60; }
+    .order-cake-message small { display: block; margin-top: 0.3rem; color: #887780; font-size: 0.67rem; }
+    .order-design { margin-top: 1rem; padding: 0.85rem; background: #fffafb; border: 1px solid #eadfe3; border-radius: 8px; }
+    .order-design__toggle { display: flex; align-items: center; min-height: 44px; margin: 0; padding-left: 2.7rem; }
+    .order-design__toggle label { display: grid; }
+    .order-design__toggle small { color: #887780; font-size: 0.7rem; }
+    .order-design__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.85rem; }
+    .order-design__fields label > span { display: block; margin-bottom: 0.3rem; color: #73636c; font-size: 0.72rem; font-weight: 700; }
+    .order-design__instructions, .order-design__file { grid-column: 1 / -1; }
+    .order-design__file small { display: block; margin-top: 0.25rem; color: #887780; font-size: 0.67rem; }
+    .order-quantity-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: var(--primary-color); background: rgba(255, 133, 162, 0.12); border: 1px solid rgba(255, 133, 162, 0.28); border-radius: 50%; font-size: 0.9rem; font-weight: 700; }
+
     .order-select-field { position: relative; min-width: 0; }
     .order-select-field > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; color: #8d7a84; pointer-events: none; transform: translateY(-50%); }
     .order-select-field .app-select__trigger { padding-left: 2.5rem; background: #f9f7f8; box-shadow: none; }
@@ -67,6 +91,9 @@
         .editable-order-table .order-detail-row td:nth-child(2)::before { display: block; margin-bottom: 0.35rem; }
         .editable-order-table .order-detail-row td:nth-child(5) { position: absolute; top: 0.65rem; right: 0.65rem; padding: 0 !important; }
         #panel-opciones-producto { padding: 0.75rem !important; }
+        .order-cake-options { grid-template-columns: 1fr; }
+        .order-design__fields { grid-template-columns: 1fr; }
+        .order-design__instructions, .order-design__file { grid-column: auto; }
         #btnGuardarPedido { font-size: 1rem !important; }
     }
 

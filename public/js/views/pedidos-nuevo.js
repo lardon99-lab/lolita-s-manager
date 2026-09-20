@@ -2,7 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('formNuevoPedido');
     const productSelect = document.getElementById('select-producto');
     const branchSelect = document.getElementById('order-branch');
+    if (!form || !productSelect || !branchSelect) return;
     const configurations = JSON.parse(document.getElementById('order-configurations')?.textContent || '{}');
+    const designPolicies = JSON.parse(document.getElementById('order-design-configurations')?.textContent || '{}');
+    const customizer = OrderCakeCustomizer.create(
+        document.getElementById('panel-opciones-producto'),
+        document.getElementById('order-customization-groups'),
+        configurations,
+        designPolicies
+    );
     let rowIndex = 0;
 
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,82 +22,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const branches = String(option.dataset.branches || '').split(',');
             option.hidden = branchId !== '' && !branches.includes(branchId);
         });
-        if (productSelect.selectedOptions[0]?.hidden) {
-            productSelect.value = '';
-            window.AppSelect?.sync(productSelect);
+        if (productSelect.selectedOptions[0]?.hidden) productSelect.value = '';
+        window.AppSelect?.sync(productSelect);
+        customizer.render(productSelect.value, productSelect.selectedOptions[0]?.dataset.type || '');
+    }
+
+    function hiddenInput(name, value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = String(value);
+        return input;
+    }
+
+    function appendDesignInputs(cell, index, design) {
+        cell.append(hiddenInput(`lineas[${index}][diseno][activo]`, design.enabled ? 1 : 0));
+        cell.append(hiddenInput(`lineas[${index}][diseno][frase]`, design.phrase));
+        if (!design.enabled) return;
+        cell.append(hiddenInput(`lineas[${index}][diseno][color]`, design.color));
+        cell.append(hiddenInput(`lineas[${index}][diseno][instrucciones]`, design.instructions));
+        if (design.file?.files?.length) {
+            design.file.name = `design_files[${index}]`;
+            design.file.classList.add('d-none');
+            cell.appendChild(design.file);
         }
-        renderCustomization();
-    }
-
-    function renderCustomization() {
-        const panel = document.getElementById('panel-opciones-producto');
-        const container = document.getElementById('order-customization-groups');
-        const groups = configurations[productSelect.value] || [];
-        container.replaceChildren();
-        panel.classList.toggle('d-none', groups.length === 0);
-        groups.forEach((group) => container.appendChild(createGroup(group)));
-        updateCustomizationSurcharge();
-    }
-
-    function createGroup(group) {
-        const wrapper = document.createElement('fieldset');
-        wrapper.className = 'order-customization-group';
-        const legend = document.createElement('legend');
-        legend.className = 'small fw-bold text-muted mb-2';
-        legend.textContent = `${group.nombre}${Number(group.minimo_selecciones) > 0 ? ' *' : ''}`;
-        wrapper.appendChild(legend);
-        const options = document.createElement('div');
-        options.className = 'order-customization-options';
-        (group.opciones || []).forEach((option) => {
-            const label = document.createElement('label');
-            label.className = 'order-customization-option';
-            const input = document.createElement('input');
-            input.className = 'form-check-input';
-            input.type = Number(group.maximo_selecciones) === 1 ? 'radio' : 'checkbox';
-            input.name = `current-group-${group.id_grupo}`;
-            input.value = option.id_opcion;
-            input.dataset.surcharge = option.recargo;
-            input.dataset.optionName = option.nombre;
-            input.dataset.groupName = group.nombre;
-            input.required = Number(group.minimo_selecciones) > 0 && input.type === 'radio';
-            input.checked = Boolean(Number(option.predeterminada));
-            input.addEventListener('change', () => {
-                if (input.type === 'checkbox') enforceMaximum(options, Number(group.maximo_selecciones));
-                updateCustomizationSurcharge();
-            });
-            const text = document.createElement('span');
-            text.textContent = `${option.nombre}${Number(option.recargo) > 0 ? ` (+ L. ${money(option.recargo)})` : ''}`;
-            label.append(input, text);
-            options.appendChild(label);
-        });
-        wrapper.appendChild(options);
-        return wrapper;
-    }
-
-    function enforceMaximum(container, maximum) {
-        const checked = [...container.querySelectorAll('input:checked')];
-        const reached = checked.length >= maximum;
-        container.querySelectorAll('input:not(:checked)').forEach((input) => { input.disabled = reached; });
-    }
-
-    function selectedOptions() {
-        return [...document.querySelectorAll('#order-customization-groups input:checked')];
-    }
-
-    function updateCustomizationSurcharge() {
-        const surcharge = selectedOptions().reduce((sum, input) => sum + Number(input.dataset.surcharge || 0), 0);
-        document.getElementById('customization-surcharge').textContent = `+ L. ${money(surcharge)}`;
-    }
-
-    function validateSelections(groups) {
-        for (const group of groups) {
-            const selected = selectedOptions().filter((input) => input.dataset.groupName === group.nombre).length;
-            if (selected < Number(group.minimo_selecciones) || selected > Number(group.maximo_selecciones)) {
-                Swal.fire('Seleccion incompleta', `Revisa las opciones de ${group.nombre}.`, 'warning');
-                return false;
-            }
-        }
-        return true;
     }
 
     function addOrderLine() {
@@ -103,12 +59,18 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire('Cantidad no valida', 'Ingresa una cantidad entre 1 y 1000.', 'warning');
             return false;
         }
-        const groups = configurations[productSelect.value] || [];
-        if (!validateSelections(groups)) return false;
+        const customization = customizer.snapshot();
+        if (!customization.valid) {
+            Swal.fire('Personalizacion incompleta', customization.message, 'warning');
+            return false;
+        }
+        if (customization.design.file?.files?.[0]?.size > 5 * 1024 * 1024) {
+            Swal.fire('Imagen demasiado grande', 'La referencia debe pesar como maximo 5 MB.', 'warning');
+            return false;
+        }
+
         const basePrice = Number(selectedProduct.dataset.precio || 0);
-        const choices = selectedOptions();
-        const surcharge = choices.reduce((sum, input) => sum + Number(input.dataset.surcharge || 0), 0);
-        const subtotal = (basePrice + surcharge) * quantity;
+        const subtotal = (basePrice + customization.surcharge) * quantity;
         const index = rowIndex++;
         const row = document.getElementById('tabla-detalles').querySelector('tbody').insertRow();
         row.className = 'order-detail-row';
@@ -117,27 +79,34 @@ document.addEventListener('DOMContentLoaded', () => {
         productCell.className = 'ps-3 py-3';
         productCell.dataset.label = 'Producto';
         productCell.append(hiddenInput(`lineas[${index}][producto]`, productSelect.value));
+        customization.choices.forEach((choice) => productCell.append(hiddenInput(`lineas[${index}][opciones][]`, choice.value)));
+        appendDesignInputs(productCell, index, customization.design);
         const name = document.createElement('div');
         name.className = 'fw-bold text-dark fs-6';
         name.textContent = selectedProduct.dataset.nombre || selectedProduct.textContent.split('(')[0].trim();
         const price = document.createElement('div');
         price.className = 'small text-muted mt-1';
-        price.textContent = `Base: L. ${money(basePrice)}${surcharge > 0 ? ` + L. ${money(surcharge)}` : ''}`;
+        price.textContent = `Base: L. ${money(basePrice)}${customization.surcharge > 0 ? ` + L. ${money(customization.surcharge)}` : ''}`;
         productCell.append(name, price);
-        choices.forEach((choice) => productCell.append(hiddenInput(`lineas[${index}][opciones][]`, choice.value)));
 
         const detailsCell = row.insertCell();
         detailsCell.className = 'py-3';
-        detailsCell.dataset.label = 'Personalización';
+        detailsCell.dataset.label = 'Personalizacion';
+        const parts = customization.choices.map((choice) => `${choice.dataset.groupName}: ${choice.dataset.optionName}`);
+        if (customization.design.phrase) parts.push(`Frase: ${customization.design.phrase}`);
+        if (customization.design.enabled) {
+            parts.push(`Diseno: ${customization.design.color || 'personalizado'}`);
+            if (customization.design.file?.files?.length) parts.push('Referencia adjunta');
+        }
         const summary = document.createElement('div');
         summary.className = 'small text-muted mb-2';
-        summary.textContent = choices.length ? choices.map((choice) => `${choice.dataset.groupName}: ${choice.dataset.optionName}`).join(' | ') : 'Sin opciones adicionales';
+        summary.textContent = parts.length ? parts.join(' | ') : 'Sin opciones adicionales';
         const details = document.createElement('textarea');
         details.name = `lineas[${index}][personalizacion]`;
         details.className = 'form-control form-control-sm border-0 bg-light shadow-sm';
         details.rows = 2;
         details.maxLength = 1000;
-        details.placeholder = 'Colores, dedicatoria y detalles especiales';
+        details.placeholder = 'Notas adicionales para produccion';
         detailsCell.append(summary, details);
 
         const quantityCell = row.insertCell();
@@ -145,8 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quantityCell.dataset.label = 'Cantidad';
         quantityCell.append(hiddenInput(`lineas[${index}][cantidad]`, quantity));
         const badge = document.createElement('span');
-        badge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center';
-        badge.style.cssText = 'width:32px;height:32px;font-size:.9rem';
+        badge.className = 'order-quantity-badge';
         badge.textContent = quantity;
         quantityCell.appendChild(badge);
 
@@ -169,17 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
         productSelect.value = '';
         window.AppSelect?.sync(productSelect);
         document.getElementById('cant-producto').value = '1';
-        renderCustomization();
+        customizer.render('', '');
         calculateTotal();
         return true;
-    }
-
-    function hiddenInput(name, value) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = String(value);
-        return input;
     }
 
     function calculateTotal() {
@@ -202,10 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'Abonado' && (Number(deposit.value) <= 0 || Number(deposit.value) > total)) deposit.value = (total * .5).toFixed(2);
     };
 
-    document.getElementById('cliente-input').addEventListener('input', (event) => {
-        const match = [...document.getElementById('lista-clientes').options].find((option) => option.value === event.target.value);
-        document.getElementById('id_cliente_real').value = match?.dataset.id || '';
-    });
     document.getElementById('add-order-line').addEventListener('click', addOrderLine);
     form.addEventListener('submit', (event) => {
         const clientId = document.getElementById('id_cliente_real').value;
@@ -224,6 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     branchSelect.addEventListener('change', filterProducts);
-    productSelect.addEventListener('change', renderCustomization);
+    productSelect.addEventListener('change', () => customizer.render(productSelect.value, productSelect.selectedOptions[0]?.dataset.type || ''));
     filterProducts();
 });
