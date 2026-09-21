@@ -7,6 +7,7 @@ use App\Services\ProductImageStorage;
 use App\Services\ProductCustomizationService;
 use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
+use App\Services\InventoryRestockService;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -57,107 +58,43 @@ class InventarioController {
         return $this->producto->obtenerPorSucursal($id_sucursal);
     }
 
-    public function abastecer() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            // 1. Limpiamos buffer y declaramos JSON para evitar errores de conexión en Fetch/AJAX
-            if (ob_get_length()) ob_clean();
-            header('Content-Type: application/json');
+    public function abastecer(): void
+    {
+        try {
+            $branchId = \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal');
+            $userId = \App\Http\Validator::positiveInt($_SESSION['id_usuario'] ?? null, 'usuario');
+            $notes = \App\Http\Validator::text($_POST['observaciones'] ?? '', 'observaciones', 500, false);
+            $idempotencyKey = \App\Http\Validator::text($_POST['idempotency_key'] ?? '', 'identificador de recepcion', 120);
 
-            try {
-            // Recibimos los datos enviados desde la vista
-            $id_producto = \App\Http\Validator::positiveInt($_POST['id_producto'] ?? null, 'producto');
-            $id_sucursal = \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal');
-            $cantidad_nueva = \App\Http\Validator::positiveInt($_POST['cantidad'] ?? null, 'cantidad');
-            if ($cantidad_nueva > 100000) throw new InvalidArgumentException('La cantidad excede el limite permitido.');
-
-            if (!$id_producto || !$id_sucursal || !$cantidad_nueva) {
-                echo json_encode(['status' => 'error', 'message' => 'Faltan datos obligatorios.']);
-                exit();
+            if (isset($_POST['items'])) {
+                $decoded = json_decode((string) $_POST['items'], true, 512, JSON_THROW_ON_ERROR);
+                if (!is_array($decoded)) throw new InvalidArgumentException('El detalle del abastecimiento no es valido.');
+                $items = array_values($decoded);
+            } else {
+                $items = [[
+                    'product_id' => $_POST['id_producto'] ?? null,
+                    'quantity' => $_POST['cantidad'] ?? null,
+                    'expiry' => $_POST['fecha_caducidad'] ?? null,
+                ]];
             }
 
-                $this->db->beginTransaction();
-                // Obtenemos producto, sucursal y vida útil usando id_producto e id_sucursal
-                $sqlInfo = "SELECT i.id_inventario, i.id_producto, i.id_sucursal, i.stock_minimo, p.dias_vida_util 
-                            FROM inventario i 
-                            JOIN productos p ON i.id_producto = p.id_producto 
-                            WHERE i.id_producto = :id_p AND i.id_sucursal = :id_s LIMIT 1";
-                
-                $stmtInfo = $this->db->prepare($sqlInfo);
-                $stmtInfo->execute([':id_p' => $id_producto, ':id_s' => $id_sucursal]);
-                $info = $stmtInfo->fetch(PDO::FETCH_ASSOC);
-
-                if (!$info) {
-                    throw new Exception("El registro de inventario no existe para esta sucursal.");
-                }
-
-                // Calculamos la nueva fecha de caducidad
-                $nueva_fecha = null; 
-                if ($info['dias_vida_util'] > 0) {
-                    date_default_timezone_set('America/Tegucigalpa');
-                    $nueva_fecha = date('Y-m-d', strtotime("+" . $info['dias_vida_util'] . " days"));
-                }
-
-                // Verificamos si YA EXISTE un lote exacto
-                $queryCheck = "SELECT id_inventario, stock_actual FROM inventario
-                               WHERE id_producto = :id_producto 
-                               AND id_sucursal = :id_sucursal 
-                               AND (fecha_caducidad = :fecha1 OR (fecha_caducidad IS NULL AND :fecha2 IS NULL))
-                               FOR UPDATE";
-                
-                $stmtCheck = $this->db->prepare($queryCheck);
-                $stmtCheck->execute([
-                    ':id_producto' => $info['id_producto'],
-                    ':id_sucursal' => $info['id_sucursal'],
-                    ':fecha1'      => $nueva_fecha,
-                    ':fecha2'      => $nueva_fecha
-                ]);
-                
-                $loteExistente = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-                if ($loteExistente) {
-                    // SI EXISTE: Actualizamos el stock
-                    $queryUpdate = "UPDATE inventario 
-                                    SET stock_actual = stock_actual + :cantidad 
-                                    WHERE id_inventario = :id_lote";
-                    $stmtUpdate = $this->db->prepare($queryUpdate);
-                    $stmtUpdate->execute([
-                        ':cantidad' => $cantidad_nueva,
-                        ':id_lote'  => $loteExistente['id_inventario']
-                    ]);
-                    $movementInventoryId = (int) $loteExistente['id_inventario'];
-                    $stockBefore = (int) $loteExistente['stock_actual'];
-                } else {
-                    // NO EXISTE: Insertamos un NUEVO LOTE
-                    $queryInsert = "INSERT INTO inventario (id_sucursal, id_producto, stock_actual, stock_minimo, fecha_caducidad) 
-                                    VALUES (:id_sucursal, :id_producto, :cantidad, :minimo, :fecha)";
-                    $stmtInsert = $this->db->prepare($queryInsert);
-                    $stmtInsert->execute([
-                        ':id_sucursal' => $info['id_sucursal'],
-                        ':id_producto' => $info['id_producto'],
-                        ':cantidad'    => $cantidad_nueva,
-                        ':minimo'      => $info['stock_minimo'],
-                        ':fecha'       => $nueva_fecha
-                    ]);
-                    $movementInventoryId = (int) $this->db->lastInsertId();
-                    $stockBefore = 0;
-                }
-
-                $movement = $this->db->prepare("INSERT INTO movimientos_inventario (id_inventario, id_usuario, tipo, cantidad, stock_anterior, stock_posterior) VALUES (?, ?, 'Abastecimiento', ?, ?, ?)");
-                $movement->execute([$movementInventoryId, (int) $_SESSION['id_usuario'], $cantidad_nueva, $stockBefore, $stockBefore + $cantidad_nueva]);
-                (new AuditService($this->db))->record('inventory.restocked', 'inventario', $movementInventoryId, $id_sucursal, ['cantidad' => $cantidad_nueva]);
-
-                // 2. Respondemos con éxito en formato JSON en lugar del header()
-                $this->db->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Inventario abastecido correctamente.']);
-                exit();
-                
-            } catch (Exception $e) {
-                if ($this->db->inTransaction()) $this->db->rollBack();
-                // 3. Atrapamos errores y los enviamos en JSON
-                \App\Support\Logger::error($e);
-                echo json_encode(['status' => 'error', 'message' => 'No fue posible abastecer el inventario.']);
-                exit();
-            }
+            Auth::requirePermission('inventory.adjust', $branchId);
+            $result = (new InventoryRestockService($this->db))->restock(
+                $branchId,
+                $userId,
+                $items,
+                $idempotencyKey,
+                $notes
+            );
+            $message = $result['duplicate']
+                ? 'Esta recepcion ya habia sido registrada; no se duplico el stock.'
+                : "Se ingresaron {$result['units']} unidades de {$result['products']} productos.";
+            \App\Http\Response::json(['status' => 'success', 'message' => $message, 'receipt' => $result]);
+        } catch (InvalidArgumentException | JsonException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        } catch (Throwable $error) {
+            \App\Support\Logger::error($error);
+            \App\Http\Response::json(['status' => 'error', 'message' => 'No fue posible registrar el abastecimiento.'], 500);
         }
     }
 

@@ -10,15 +10,18 @@ class Producto {
     // Listar productos filtrados por sucursal (AGRUPADO)
     public function obtenerPorSucursal($id_sucursal) {
         $query = "SELECT 
-                    p.id_producto, i.id_sucursal, p.nombre_producto, p.precio_base,
-                    c.nombre_categoria, SUM(i.stock_actual) as stock_actual, MAX(i.stock_minimo) as stock_minimo,
+                    p.id_producto, i.id_sucursal, p.nombre_producto, p.precio_base, p.dias_vida_util, p.estado,
+                    c.nombre_categoria,
+                    SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) as stock_actual,
+                    SUM(CASE WHEN i.fecha_caducidad < CURRENT_DATE THEN i.stock_actual ELSE 0 END) as stock_vencido,
+                    MAX(i.stock_minimo) as stock_minimo,
                     s.nombre_sucursal
                 FROM inventario i
                 INNER JOIN productos p ON i.id_producto = p.id_producto
                 INNER JOIN categorias c ON p.id_categoria = c.id_categoria
                 INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
                 WHERE i.id_sucursal = :id_sucursal
-                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, p.precio_base, c.nombre_categoria, s.nombre_sucursal";
+                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, p.precio_base, p.dias_vida_util, p.estado, c.nombre_categoria, s.nombre_sucursal";
 
         $stmt = $this->conn->prepare($query); 
         $stmt->bindValue(':id_sucursal', (int)$id_sucursal, PDO::PARAM_INT);
@@ -29,14 +32,15 @@ class Producto {
     // Alertas de stock (AGRUPADO CON HAVING)
     public function obtenerAlertasStock() {
         $query = "SELECT 
-                    p.id_producto, i.id_sucursal, p.nombre_producto, 
-                    SUM(i.stock_actual) as stock_actual, MAX(i.stock_minimo) as stock_minimo, 
+                    p.id_producto, i.id_sucursal, p.nombre_producto, p.dias_vida_util, p.estado,
+                    SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) as stock_actual,
+                    MAX(i.stock_minimo) as stock_minimo,
                     s.nombre_sucursal
                 FROM inventario i
                 INNER JOIN productos p ON i.id_producto = p.id_producto
                 INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, s.nombre_sucursal
-                HAVING SUM(i.stock_actual) <= MAX(i.stock_minimo)
+                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, p.dias_vida_util, p.estado, s.nombre_sucursal
+                HAVING SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) <= MAX(i.stock_minimo)
                 ORDER BY stock_actual ASC";
 
         $stmt = $this->conn->prepare($query);
@@ -47,13 +51,15 @@ class Producto {
     // Listar todo el inventario (AGRUPADO)
     public function obtenerTodoElInventario() {
         $query = "SELECT 
-                    p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, 
-                    SUM(i.stock_actual) as stock_actual, MAX(i.stock_minimo) as stock_minimo, p.precio_base, s.nombre_sucursal
+                    p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.dias_vida_util, p.estado,
+                    SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) as stock_actual,
+                    SUM(CASE WHEN i.fecha_caducidad < CURRENT_DATE THEN i.stock_actual ELSE 0 END) as stock_vencido,
+                    MAX(i.stock_minimo) as stock_minimo, p.precio_base, s.nombre_sucursal
                 FROM inventario i
                 INNER JOIN productos p ON i.id_producto = p.id_producto
                 INNER JOIN categorias c ON p.id_categoria = c.id_categoria
                 INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.precio_base, s.nombre_sucursal
+                GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.dias_vida_util, p.estado, p.precio_base, s.nombre_sucursal
                 ORDER BY s.nombre_sucursal, p.nombre_producto ASC";
 
         $stmt = $this->conn->prepare($query);
@@ -65,15 +71,17 @@ class Producto {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if ($ids === []) return [];
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $query = "SELECT p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria,
-                         SUM(i.stock_actual) AS stock_actual, MAX(i.stock_minimo) AS stock_minimo,
+        $query = "SELECT p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.dias_vida_util, p.estado,
+                         SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) AS stock_actual,
+                         SUM(CASE WHEN i.fecha_caducidad < CURRENT_DATE THEN i.stock_actual ELSE 0 END) AS stock_vencido,
+                         MAX(i.stock_minimo) AS stock_minimo,
                          p.precio_base, s.nombre_sucursal
                   FROM inventario i
                   INNER JOIN productos p ON i.id_producto = p.id_producto
                   INNER JOIN categorias c ON p.id_categoria = c.id_categoria
                   INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
                   WHERE i.id_sucursal IN ($placeholders)
-                  GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.precio_base, s.nombre_sucursal
+                  GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, c.nombre_categoria, p.dias_vida_util, p.estado, p.precio_base, s.nombre_sucursal
                   ORDER BY s.nombre_sucursal, p.nombre_producto ASC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute($ids);

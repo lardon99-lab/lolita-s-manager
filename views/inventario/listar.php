@@ -11,6 +11,11 @@
             </div>
         </div>
             <div class="app-page-header__actions">
+                <?php if ($id_sucursal_filtro && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.adjust')): ?>
+                    <button type="button" class="btn btn-success px-4 shadow-sm fw-bold" data-restock-open data-restock-branch="<?= (int) $id_sucursal_filtro ?>">
+                        <i class="fa-solid fa-boxes-packing me-2" aria-hidden="true"></i>Abastecer inventario
+                    </button>
+                <?php endif; ?>
                 <?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
                     <button class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
                         <i class="fa-solid fa-box-open me-2"></i>Registrar Producto
@@ -135,7 +140,13 @@
                         <td class="text-end pe-4 py-3" data-label="Acciones">
                             <div class="d-flex justify-content-end gap-2">
                                 <?php if (\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust')): ?>
-                                    <button class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalAbastecer<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" title="Abastecer">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift btn-abastecer-directo"
+                                            style="width: 35px; height: 35px;"
+                                            data-producto="<?= (int) $p['id_producto'] ?>"
+                                            data-sucursal="<?= (int) $p['id_sucursal'] ?>"
+                                            title="Abastecer <?= e($p['nombre_producto']) ?>"
+                                            aria-label="Abastecer <?= e($p['nombre_producto']) ?>">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalMerma<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" title="Merma">
@@ -146,33 +157,6 @@
                                 <?php endif; ?>
                             </div>
                         </td>
-
-                        <div class="modal fade" id="modalAbastecer<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-sm modal-dialog-centered modal-fullscreen-sm-down">
-                                <div class="modal-content border-0 shadow-lg rounded-4">
-                                    <div class="modal-header border-0 bg-primary bg-opacity-10 rounded-top-4">
-                                        <h6 class="fw-bold text-primary m-0"><i class="fa-solid fa-plus-circle me-2"></i>Abastecer Producto</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <form class="formAbastecer">
-                                        <div class="modal-body text-center px-4">
-                                            <p class="fw-bold mb-3"><?= htmlspecialchars($p['nombre_producto']) ?></p>
-                                            
-                                            <input type="hidden" name="id_producto" value="<?= $p['id_producto'] ?>">
-                                            <input type="hidden" name="id_sucursal" value="<?= $p['id_sucursal'] ?>">
-                                            
-                                            <div class="form-floating mb-3">
-                                                <input type="number" name="cantidad" id="cant_<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" class="form-control form-control-lg text-center border-0 bg-light rounded-3 fw-bold fs-4" value="10" min="1" required>
-                                                <label for="cant_<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>">Cantidad a sumar</label>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer border-0 px-4 pb-4 pt-0">
-                                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold text-white shadow-sm">Confirmar Ingreso</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
 
                         <div class="modal fade" id="modalMerma<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-sm modal-dialog-centered modal-fullscreen-sm-down">
@@ -373,6 +357,12 @@
         </div>
     </div>
 </div>
+
+<?php
+$restockProducts = $productos;
+$restockDefaultBranch = (int) ($id_sucursal_filtro ?? 0);
+include __DIR__ . '/partials/restock-panel.php';
+?>
 
 <link rel="stylesheet" href="css/views/inventario.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/inventario.css') ?>">
 

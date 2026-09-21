@@ -244,6 +244,12 @@
     </div>
 </div>
 
+<?php
+$restockProducts = array_merge($inventario_agotado, $inventario_stock_bajo);
+$restockDefaultBranch = 0;
+include __DIR__ . '/../inventario/partials/restock-panel.php';
+?>
+
 <link rel="stylesheet" href="css/views/dashboard.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/dashboard.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>

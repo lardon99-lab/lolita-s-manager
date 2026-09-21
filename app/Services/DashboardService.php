@@ -24,12 +24,14 @@ final class DashboardService
 
         [$inventoryScope, $inventoryParams] = $this->scope('i.id_sucursal', 'inventory.view');
         $stockSql = "SELECT p.id_producto, i.id_sucursal, MIN(i.id_inventario) AS id_inventario, p.nombre_producto,
-                            SUM(i.stock_actual) AS stock_actual, MAX(i.stock_minimo) AS stock_minimo, s.nombre_sucursal
+                            p.dias_vida_util,
+                            SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) AS stock_actual,
+                            MAX(i.stock_minimo) AS stock_minimo, s.nombre_sucursal
                      FROM inventario i JOIN productos p ON i.id_producto = p.id_producto
                      JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                     WHERE 1=1{$inventoryScope}
-                     GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, s.nombre_sucursal
-                     HAVING SUM(i.stock_actual) <= MAX(i.stock_minimo)
+                     WHERE p.estado = 'Activo'{$inventoryScope}
+                     GROUP BY p.id_producto, i.id_sucursal, p.nombre_producto, p.dias_vida_util, s.nombre_sucursal
+                     HAVING SUM(CASE WHEN i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE THEN i.stock_actual ELSE 0 END) <= MAX(i.stock_minimo)
                      ORDER BY stock_actual ASC";
         $stockStmt = $this->db->prepare($stockSql);
         $stockStmt->execute($inventoryParams);
