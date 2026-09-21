@@ -16,7 +16,21 @@ final class AuthTest extends TestCase
         $_SESSION = ['id_rol' => Auth::EMPLOYEE, 'id_sucursal' => 2];
         self::assertTrue(Auth::canAccessBranch(2));
         self::assertFalse(Auth::canAccessBranch(1));
+        self::assertFalse(Auth::hasPermission('inventory.adjust'));
+        self::assertFalse(Auth::canAccessBranch(2, 'inventory.adjust'));
         self::assertSame([2], Auth::allowedBranches());
+    }
+
+    public function testEmployeeCannotAdjustInventoryWithStaleSessionPermission(): void
+    {
+        $_SESSION = [
+            'id_rol' => Auth::EMPLOYEE,
+            'id_sucursal' => 2,
+            'permissions' => ['inventory.view', 'inventory.adjust'],
+        ];
+
+        self::assertFalse(Auth::hasPermission('inventory.adjust'));
+        self::assertFalse(Auth::canAccessBranch(2, 'inventory.adjust'));
     }
 
     public function testAdminUsesExplicitBranchAssignments(): void

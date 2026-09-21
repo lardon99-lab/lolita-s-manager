@@ -56,7 +56,7 @@ INSERT INTO rol_permisos (id_rol, id_permiso)
 SELECT 2, id_permiso
 FROM permisos
 WHERE codigo IN (
-    'inventory.view', 'inventory.adjust',
+    'inventory.view',
     'orders.view', 'orders.create', 'orders.update',
     'sales.view', 'sales.create', 'reports.view'
 );

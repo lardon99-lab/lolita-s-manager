@@ -19,7 +19,7 @@ final class Auth
             'sales.view', 'sales.create', 'reports.view', 'cash.adjust', 'users.manage', 'clients.manage',
         ],
         self::EMPLOYEE => [
-            'inventory.view', 'inventory.adjust',
+            'inventory.view',
             'orders.view', 'orders.create', 'orders.update',
             'sales.view', 'sales.create', 'reports.view',
         ],
@@ -45,6 +45,8 @@ final class Auth
     public static function hasPermission(string $permission): bool
     {
         $role = (int) ($_SESSION['id_rol'] ?? 0);
+        if ($role === self::EMPLOYEE && $permission === 'inventory.adjust') return false;
+
         $permissions = isset($_SESSION['permissions']) && is_array($_SESSION['permissions'])
             ? $_SESSION['permissions']
             : (self::ROLE_PERMISSIONS[$role] ?? []);

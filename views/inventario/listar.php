@@ -361,7 +361,9 @@
 <?php
 $restockProducts = $productos;
 $restockDefaultBranch = (int) ($id_sucursal_filtro ?? 0);
-include __DIR__ . '/partials/restock-panel.php';
+if (\App\Security\Auth::hasPermission('inventory.adjust')) {
+    include __DIR__ . '/partials/restock-panel.php';
+}
 ?>
 
 <link rel="stylesheet" href="css/views/inventario.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/inventario.css') ?>">

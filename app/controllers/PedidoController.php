@@ -116,7 +116,7 @@ final class PedidoController
     public function listarTodos(string $estado = 'Todos'): array
     {
         Auth::requirePermission('orders.view');
-        $allowedStates = ['Todos', 'Pendiente', 'En PreparaciÃ³n', 'Listo', 'Entregado', 'Cancelado'];
+        $allowedStates = ['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Entregado', 'Cancelado'];
         if (!in_array($estado, $allowedStates, true)) $estado = 'Todos';
 
         $conditions = [];
@@ -140,7 +140,7 @@ final class PedidoController
     public function actualizarEstadoAjax(): void
     {
         $id = Validator::positiveInt($_POST['id'] ?? null, 'pedido');
-        $newState = Validator::enum($_POST['nuevo_estado'] ?? '', ['En PreparaciÃ³n', 'Listo', 'Entregado', 'Cancelado'], 'estado');
+        $newState = Validator::enum($_POST['nuevo_estado'] ?? '', ['En Preparación', 'Listo', 'Entregado', 'Cancelado'], 'estado');
         $settle = filter_var($_POST['liquidar'] ?? false, FILTER_VALIDATE_BOOL);
         $paymentMethod = Validator::enum($_POST['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
 
@@ -153,8 +153,8 @@ final class PedidoController
             Auth::requirePermission('orders.update', (int) $order['id_sucursal']);
 
             $transitions = [
-                'Pendiente' => ['En PreparaciÃ³n', 'Cancelado'],
-                'En PreparaciÃ³n' => ['Listo', 'Cancelado'],
+                'Pendiente' => ['En Preparación', 'Cancelado'],
+                'En Preparación' => ['Listo', 'Cancelado'],
                 'Listo' => ['Entregado', 'Cancelado'],
                 'Entregado' => [],
                 'Cancelado' => [],

@@ -1,11 +1,11 @@
 const orderTransitions = {
-    'Pendiente': ['En PreparaciÃ³n', 'Cancelado'],
-    'En PreparaciÃ³n': ['Listo', 'Cancelado'],
+    'Pendiente': ['En Preparación', 'Cancelado'],
+    'En Preparación': ['Listo', 'Cancelado'],
     'Listo': ['Entregado', 'Cancelado'],
 };
 
 const orderStateStyles = {
-    'En PreparaciÃ³n': ['fa-fire-burner', 'btn-info'],
+    'En Preparación': ['fa-fire-burner', 'btn-info'],
     'Listo': ['fa-check', 'btn-success'],
     'Entregado': ['fa-box-archive', 'btn-secondary'],
     'Cancelado': ['fa-xmark', 'btn-danger'],
@@ -51,7 +51,7 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
     if (nuevoEstado === 'Entregado' && saldo > 0) {
         const payment = await Swal.fire({
             title: 'Liquidar saldo pendiente',
-            text: `Confirma la recepciÃ³n de L. ${saldo.toFixed(2)} y selecciona el mÃ©todo de pago.`,
+            text: `Confirma la recepción de L. ${saldo.toFixed(2)} y selecciona el método de pago.`,
             icon: 'warning',
             input: 'select',
             inputOptions: {
@@ -70,7 +70,7 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
     } else {
         const confirmation = await Swal.fire({
             title: 'Confirmar cambio',
-            text: `El pedido pasarÃ¡ a ${nuevoEstado}.`,
+            text: `El pedido pasará a ${nuevoEstado}.`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Confirmar',
@@ -102,5 +102,5 @@ function procesarCambioEstado(id, estado, liquidarSaldo = false, metodoPago = 'E
             return Swal.fire({ icon: 'success', title: 'Estado actualizado', text: data.message });
         })
         .then(() => location.reload())
-        .catch((error) => Swal.fire('Error', error.message || 'Fallo en la comunicaciÃ³n con el servidor.', 'error'));
+        .catch((error) => Swal.fire('Error', error.message || 'Fallo en la comunicación con el servidor.', 'error'));
 }
