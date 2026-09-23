@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         configurations,
         designPolicies
     );
+    const productCombobox = ProductCombobox.create(productSelect);
     let rowIndex = 0;
 
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.hidden = branchId !== '' && !branches.includes(branchId);
         });
         if (productSelect.selectedOptions[0]?.hidden) productSelect.value = '';
-        window.AppSelect?.sync(productSelect);
+        productCombobox.sync();
         customizer.render(productSelect.value, productSelect.selectedOptions[0]?.dataset.type || '');
     }
 
@@ -38,8 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendDesignInputs(cell, index, design) {
         cell.append(hiddenInput(`lineas[${index}][diseno][activo]`, design.enabled ? 1 : 0));
         cell.append(hiddenInput(`lineas[${index}][diseno][frase]`, design.phrase));
-        if (!design.enabled) return;
         cell.append(hiddenInput(`lineas[${index}][diseno][color]`, design.color));
+        if (!design.enabled) return;
         cell.append(hiddenInput(`lineas[${index}][diseno][instrucciones]`, design.instructions));
         if (design.file?.files?.length) {
             design.file.name = `design_files[${index}]`;
@@ -93,9 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsCell.className = 'py-3';
         detailsCell.dataset.label = 'Personalizacion';
         const parts = customization.choices.map((choice) => `${choice.dataset.groupName}: ${choice.dataset.optionName}`);
+        if (customization.design.color) parts.push(`Colores: ${customization.design.color}`);
         if (customization.design.phrase) parts.push(`Frase: ${customization.design.phrase}`);
         if (customization.design.enabled) {
-            parts.push(`Diseno: ${customization.design.color || 'personalizado'}`);
+            parts.push('Diseno personalizado');
             if (customization.design.file?.files?.length) parts.push('Referencia adjunta');
         }
         const summary = document.createElement('div');
@@ -134,8 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         remove.addEventListener('click', () => { row.remove(); calculateTotal(); });
         actionCell.appendChild(remove);
 
-        productSelect.value = '';
-        window.AppSelect?.sync(productSelect);
+        productCombobox.clear();
         document.getElementById('cant-producto').value = '1';
         customizer.render('', '');
         calculateTotal();

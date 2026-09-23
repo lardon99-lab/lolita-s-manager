@@ -7,7 +7,11 @@
             <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></span>
             <div class="app-page-header__copy">
                 <h2 class="app-page-header__title">Inventario</h2>
-                <p class="app-page-header__subtitle">Consulta, abastece y registra productos de forma rápida y ordenada.</p>
+                <p class="app-page-header__subtitle">
+                    <?= \App\Security\Auth::hasPermission('inventory.adjust')
+                        ? 'Consulta, abastece y registra productos de forma rápida y ordenada.'
+                        : 'Consulta existencias y registra las mermas de tu sucursal.' ?>
+                </p>
             </div>
         </div>
             <div class="app-page-header__actions">
@@ -149,10 +153,13 @@
                                             aria-label="Abastecer <?= e($p['nombre_producto']) ?>">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
+                                <?php endif; ?>
+                                <?php if (\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.waste')): ?>
                                     <button class="btn btn-sm btn-outline-danger rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalMerma<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" title="Merma">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
-                                <?php else: ?>
+                                <?php endif; ?>
+                                <?php if (!\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust') && !\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.waste')): ?>
                                     <span class="text-muted small"><i class="fa-solid fa-ban"></i></span>
                                 <?php endif; ?>
                             </div>
@@ -309,7 +316,7 @@
                             <div class="form-check form-switch mb-3">
                                 <input class="form-check-input" type="checkbox" role="switch" name="permite_diseno" value="1" id="allowCakeDesign">
                                 <label class="form-check-label fw-bold" for="allowCakeDesign">Permitir diseno personalizado</label>
-                                <div class="small text-muted">Color, frase, instrucciones y referencia visual al crear el pedido.</div>
+                                <div class="small text-muted">Instrucciones especiales y referencia visual al crear el pedido. Los colores y la frase siempre están disponibles para pasteles.</div>
                             </div>
                             <div id="cakeDesignPolicyFields" class="row g-3 d-none">
                                 <div class="col-12 col-sm-6">

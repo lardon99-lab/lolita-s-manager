@@ -18,7 +18,7 @@ final class DashboardService
         $limit = date('Y-m-d', strtotime('+7 days'));
 
         $pending = $this->scalar("SELECT COUNT(*) FROM pedidos p WHERE p.estado = 'Pendiente'{$pedidoScope}", $pedidoParams);
-        $todayOrders = $this->scalar("SELECT COUNT(*) FROM pedidos p WHERE DATE(p.fecha_entrega) = :today AND p.estado != 'Entregado'{$pedidoScope}", [':today' => $today] + $pedidoParams);
+        $todayOrders = $this->scalar("SELECT COUNT(*) FROM pedidos p WHERE DATE(p.fecha_entrega) = :today AND p.estado IN ('Pendiente', 'Terminado'){$pedidoScope}", [':today' => $today] + $pedidoParams);
         $delivered = $this->scalar("SELECT COALESCE(SUM(p.total_pedido), 0) FROM pedidos p WHERE p.estado = 'Entregado' AND DATE(p.fecha_registro) = :today{$pedidoScope}", [':today' => $today] + $pedidoParams);
         $direct = $this->scalar("SELECT COALESCE(SUM(v.total), 0) FROM ventas_directas v WHERE DATE(v.fecha_venta) = :today{$ventaScope}", [':today' => $today] + $ventaParams);
 

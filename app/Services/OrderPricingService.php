@@ -112,13 +112,14 @@ final class OrderPricingService
     {
         $raw = is_array($line['diseno'] ?? null) ? $line['diseno'] : [];
         $enabled = filter_var($raw['activo'] ?? false, FILTER_VALIDATE_BOOL);
+        $color = Validator::text($raw['color'] ?? '', 'colores del pastel', 150, false);
         $phrase = Validator::text($raw['frase'] ?? '', 'frase del pastel', 250, false);
-        if ($phrase !== '' && !$isCake) {
-            throw new InvalidArgumentException('Solo los pasteles pueden llevar una frase.');
+        if (($color !== '' || $phrase !== '') && !$isCake) {
+            throw new InvalidArgumentException('Solo los pasteles pueden llevar colores o una frase.');
         }
         $empty = [
             'enabled' => false,
-            'color' => '',
+            'color' => $color,
             'phrase' => $phrase,
             'instructions' => '',
             'surcharge' => 0.0,
@@ -134,7 +135,7 @@ final class OrderPricingService
 
         return [
             'enabled' => true,
-            'color' => Validator::text($raw['color'] ?? '', 'color del diseno', 150, false),
+            'color' => $color,
             'phrase' => $phrase,
             'instructions' => Validator::text($raw['instrucciones'] ?? '', 'instrucciones del diseno', 1000, false),
             'surcharge' => round((float) $policy['recargo_diseno'], 2),

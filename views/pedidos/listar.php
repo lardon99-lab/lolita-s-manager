@@ -1,6 +1,4 @@
 <?php
-$id_rol = (int)($_SESSION['id_rol'] ?? 0);
-$canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
 ?>
 
 <div class="container-fluid app-page p-2 p-md-4">
@@ -35,10 +33,8 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                     <label class="small text-muted fw-bold text-uppercase tracking-wide mb-2 d-block" for="filtroEstadoPedido">Estado</label>
                     <select id="filtroEstadoPedido" class="form-select border-0 shadow-sm" onchange="window.location.href='index.php?view=pedidos-lista&estado=' + encodeURIComponent(this.value)">
                         <option value="Pendiente" <?= $filtro_estado === 'Pendiente' ? 'selected' : '' ?>>Pendiente</option>
-                        <option value="En Preparación" <?= $filtro_estado === 'En Preparación' ? 'selected' : '' ?>>En Preparación</option>
-                        <option value="Listo" <?= $filtro_estado === 'Listo' ? 'selected' : '' ?>>Listo</option>
+                        <option value="Terminado" <?= $filtro_estado === 'Terminado' ? 'selected' : '' ?>>Terminado</option>
                         <option value="Entregado" <?= $filtro_estado === 'Entregado' ? 'selected' : '' ?>>Entregado</option>
-                        <option value="Cancelado" <?= $filtro_estado === 'Cancelado' ? 'selected' : '' ?>>Cancelado</option>
                         <option value="Todos" <?= $filtro_estado === 'Todos' ? 'selected' : '' ?>>Todos</option>
                     </select>
                 </div>
@@ -121,8 +117,7 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                             <?php 
                             $statusConfig = [
                                 'Pendiente' => ['bg' => 'bg-warning', 'text' => 'text-dark', 'border' => 'border-warning', 'icon' => 'fa-clock'],
-                                'En Preparación' => ['bg' => 'bg-info', 'text' => 'text-info', 'border' => 'border-info', 'icon' => 'fa-fire-burner'],
-                                'Listo' => ['bg' => 'bg-success', 'text' => 'text-success', 'border' => 'border-success', 'icon' => 'fa-check'],
+                                'Terminado' => ['bg' => 'bg-success', 'text' => 'text-success', 'border' => 'border-success', 'icon' => 'fa-check'],
                                 'Entregado' => ['bg' => 'bg-secondary', 'text' => 'text-secondary', 'border' => 'border-secondary', 'icon' => 'fa-box-archive'],
                                 'Cancelado' => ['bg' => 'bg-danger', 'text' => 'text-danger', 'border' => 'border-danger', 'icon' => 'fa-xmark']
                             ];
@@ -139,13 +134,20 @@ $canUpdateOrders = \App\Security\Auth::hasPermission('orders.update');
                                 </button>
                                 
                                 <?php 
-                                $puedoGestionar = false;
-                                if ($canUpdateOrders && !in_array($ped['estado'], ['Entregado', 'Cancelado'], true)) $puedoGestionar = true;
+                                $transiciones = [];
+                                foreach (\App\Security\OrderStatusPolicy::transitions((string) $ped['estado']) as $destino => $permiso) {
+                                    $rol = (int) ($_SESSION['id_rol'] ?? 0);
+                                    if (\App\Security\OrderStatusPolicy::roleCanTransition($rol, (string) $ped['estado'], $destino)
+                                        && \App\Security\Auth::hasPermission($permiso)) {
+                                        $transiciones[] = $destino;
+                                    }
+                                }
+                                $puedoGestionar = $transiciones !== [];
                                 ?>
 
                                 <?php if ($puedoGestionar): ?>
                                     <button class="btn btn-sm btn-light text-dark rounded-circle shadow-sm border transition-hover" style="width: 35px; height: 35px;"
-                                            onclick='gestionarPedido(<?= (int) $ped['id_pedido'] ?>, <?= json_encode($ped['estado'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= (float) $ped['saldo_pendiente'] ?>, <?= (int) $id_rol ?>)'
+                                            onclick='gestionarPedido(<?= (int) $ped['id_pedido'] ?>, <?= json_encode($ped['estado'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= (float) $ped['saldo_pendiente'] ?>, <?= json_encode($transiciones, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'
                                             title="Gestionar Estado">
                                         <i class="fa-solid fa-gear"></i>
                                     </button>

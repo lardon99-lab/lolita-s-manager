@@ -18,6 +18,10 @@ final class AuthTest extends TestCase
         self::assertFalse(Auth::canAccessBranch(1));
         self::assertFalse(Auth::hasPermission('inventory.adjust'));
         self::assertFalse(Auth::canAccessBranch(2, 'inventory.adjust'));
+        self::assertTrue(Auth::hasPermission('inventory.waste'));
+        self::assertTrue(Auth::hasPermission('cash.adjust'));
+        self::assertTrue(Auth::hasPermission('orders.deliver'));
+        self::assertFalse(Auth::hasPermission('orders.finish'));
         self::assertSame([2], Auth::allowedBranches());
     }
 
@@ -26,11 +30,12 @@ final class AuthTest extends TestCase
         $_SESSION = [
             'id_rol' => Auth::EMPLOYEE,
             'id_sucursal' => 2,
-            'permissions' => ['inventory.view', 'inventory.adjust'],
+            'permissions' => ['inventory.view', 'inventory.adjust', 'inventory.waste'],
         ];
 
         self::assertFalse(Auth::hasPermission('inventory.adjust'));
         self::assertFalse(Auth::canAccessBranch(2, 'inventory.adjust'));
+        self::assertTrue(Auth::canAccessBranch(2, 'inventory.waste'));
     }
 
     public function testAdminUsesExplicitBranchAssignments(): void

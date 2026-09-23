@@ -21,11 +21,14 @@ VALUES
 INSERT INTO permisos (codigo, descripcion) VALUES
     ('inventory.view', 'Consultar inventario de sucursales asignadas'),
     ('inventory.view_all', 'Consultar inventario de todas las sucursales'),
-    ('inventory.adjust', 'Registrar abastecimientos y mermas'),
+    ('inventory.adjust', 'Registrar abastecimientos de inventario'),
+    ('inventory.waste', 'Registrar mermas de inventario en sucursales asignadas'),
     ('products.manage', 'Crear y editar productos'),
     ('orders.view', 'Consultar pedidos'),
     ('orders.create', 'Crear pedidos'),
     ('orders.update', 'Actualizar pedidos y sus estados'),
+    ('orders.finish', 'Marcar pedidos pendientes como terminados'),
+    ('orders.deliver', 'Entregar pedidos terminados y cobrar saldos'),
     ('sales.view', 'Consultar ventas y caja'),
     ('sales.create', 'Registrar ventas directas'),
     ('sales.void', 'Anular ventas mediante movimientos compensatorios'),
@@ -45,8 +48,8 @@ INSERT INTO rol_permisos (id_rol, id_permiso)
 SELECT 1, id_permiso
 FROM permisos
 WHERE codigo IN (
-    'inventory.view', 'inventory.adjust', 'products.manage',
-    'orders.view', 'orders.create', 'orders.update',
+    'inventory.view', 'inventory.adjust', 'inventory.waste', 'products.manage',
+    'orders.view', 'orders.create', 'orders.finish',
     'sales.view', 'sales.create', 'reports.view',
     'users.manage', 'clients.manage', 'cash.adjust'
 );
@@ -56,9 +59,9 @@ INSERT INTO rol_permisos (id_rol, id_permiso)
 SELECT 2, id_permiso
 FROM permisos
 WHERE codigo IN (
-    'inventory.view',
-    'orders.view', 'orders.create', 'orders.update',
-    'sales.view', 'sales.create', 'reports.view'
+    'inventory.view', 'inventory.waste',
+    'orders.view', 'orders.create', 'orders.deliver',
+    'sales.view', 'sales.create', 'reports.view', 'cash.adjust'
 );
 
 -- Propietarios: acceso de consulta a las sucursales que se les asignen.

@@ -105,4 +105,29 @@ final class OrderPricingServiceTest extends TestCase
         self::assertFalse($result['items'][0]['design']['enabled']);
         self::assertSame('Feliz cumpleanos Pepe', $result['items'][0]['design']['phrase']);
     }
+
+    public function testAllowsMultipleCakeColorsWithoutSurcharge(): void
+    {
+        $result = $this->service->price(2, ['lineas' => [[
+            'producto' => 1,
+            'cantidad' => 1,
+            'opciones' => [100],
+            'diseno' => ['color' => 'Celeste, Rosado, Amarillo'],
+        ]]]);
+
+        self::assertSame(365.0, $result['total']);
+        self::assertFalse($result['items'][0]['design']['enabled']);
+        self::assertSame('Celeste, Rosado, Amarillo', $result['items'][0]['design']['color']);
+        self::assertSame(0.0, $result['items'][0]['design']['surcharge']);
+    }
+
+    public function testRejectsColorsForANonCakeProduct(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->service->price(3, ['lineas' => [[
+            'producto' => 2,
+            'cantidad' => 1,
+            'diseno' => ['color' => 'Rosado'],
+        ]]]);
+    }
 }

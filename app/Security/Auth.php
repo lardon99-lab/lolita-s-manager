@@ -14,14 +14,14 @@ final class Auth
 
     private const ROLE_PERMISSIONS = [
         self::ADMIN => [
-            'inventory.view', 'inventory.adjust', 'products.manage',
-            'orders.view', 'orders.create', 'orders.update',
+            'inventory.view', 'inventory.adjust', 'inventory.waste', 'products.manage',
+            'orders.view', 'orders.create', 'orders.finish',
             'sales.view', 'sales.create', 'reports.view', 'cash.adjust', 'users.manage', 'clients.manage',
         ],
         self::EMPLOYEE => [
-            'inventory.view',
-            'orders.view', 'orders.create', 'orders.update',
-            'sales.view', 'sales.create', 'reports.view',
+            'inventory.view', 'inventory.waste',
+            'orders.view', 'orders.create', 'orders.deliver',
+            'sales.view', 'sales.create', 'reports.view', 'cash.adjust',
         ],
         self::SUPERUSER => ['*'],
         self::OWNER => ['inventory.view', 'orders.view', 'sales.view', 'reports.view'],
@@ -45,7 +45,7 @@ final class Auth
     public static function hasPermission(string $permission): bool
     {
         $role = (int) ($_SESSION['id_rol'] ?? 0);
-        if ($role === self::EMPLOYEE && $permission === 'inventory.adjust') return false;
+        if ($role === self::EMPLOYEE && in_array($permission, ['inventory.adjust', 'orders.finish'], true)) return false;
 
         $permissions = isset($_SESSION['permissions']) && is_array($_SESSION['permissions'])
             ? $_SESSION['permissions']

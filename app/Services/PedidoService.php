@@ -64,7 +64,7 @@ final class PedidoService
                 if ($upload !== null && (!$design['enabled'] || !$design['allow_image'])) {
                     throw new InvalidArgumentException('Este producto no permite adjuntar una imagen de diseno.');
                 }
-                if ($design['enabled'] || $design['phrase'] !== '') {
+                if ($design['enabled'] || $design['phrase'] !== '' || $design['color'] !== '') {
                     $stored = $designStorage->store($upload);
                     if ($stored !== null) $storedDesignFiles[] = $stored['internal_name'];
                     $detailDesign->execute([

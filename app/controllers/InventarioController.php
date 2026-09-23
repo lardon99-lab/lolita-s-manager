@@ -268,11 +268,11 @@ class InventarioController {
                 } else {
                     $productId = \App\Http\Validator::positiveInt($_POST['id_producto_merma'] ?? null, 'producto');
                     $branchId = \App\Http\Validator::positiveInt($_POST['id_sucursal_merma'] ?? null, 'sucursal');
-                    Auth::requirePermission('inventory.adjust', $branchId);
+                    Auth::requirePermission('inventory.waste', $branchId);
                     $stock = $wasteService->lockProductStock($productId, $branchId, $cantidad);
                 }
 
-                Auth::requirePermission('inventory.adjust', $stock['branch_id']);
+                Auth::requirePermission('inventory.waste', $stock['branch_id']);
                 $wasteService->deduct($stock['allocations'], $id_usuario, $motivo);
                 $referenceId = $stock['allocations'][0]['inventory_id'];
                 (new AuditService($this->db))->record('inventory.waste_recorded', 'inventario', $referenceId, $stock['branch_id'], ['cantidad' => $cantidad, 'motivo' => $motivo]);
@@ -307,7 +307,7 @@ class InventarioController {
                     throw new Exception("El registro de inventario no existe.");
                 }
                 $stock_perdido = (int) $inventory['stock_actual'];
-                Auth::requirePermission('inventory.adjust', (int) $inventory['id_sucursal']);
+                Auth::requirePermission('inventory.waste', (int) $inventory['id_sucursal']);
 
                 if ($stock_perdido > 0) {
                     $stmtUpdate = $this->db->prepare("UPDATE inventario SET stock_actual = 0 WHERE id_inventario = ?");
@@ -357,13 +357,13 @@ if ($action !== null) {
     } elseif (in_array($action, ['abastecer', 'abastecer_producto'], true)) {
         Auth::requirePermission('inventory.adjust', (int) ($_POST['id_sucursal'] ?? 0));
     } elseif ($action === 'registrarMerma' && !empty($_POST['id_sucursal_merma'])) {
-        Auth::requirePermission('inventory.adjust', (int) $_POST['id_sucursal_merma']);
+        Auth::requirePermission('inventory.waste', (int) $_POST['id_sucursal_merma']);
     } elseif ($action === 'registrar_merma') {
         $inventoryId = (int) ($_POST['id_inventario'] ?? 0);
         $accessDb = (new Database())->getConnection();
         $accessStmt = $accessDb->prepare('SELECT id_sucursal FROM inventario WHERE id_inventario = ?');
         $accessStmt->execute([$inventoryId]);
-        Auth::requirePermission('inventory.adjust', (int) $accessStmt->fetchColumn());
+        Auth::requirePermission('inventory.waste', (int) $accessStmt->fetchColumn());
     }
     // Si hay una acción, limpiamos el buffer para asegurar un JSON impecable
     if (ob_get_length()) ob_clean();

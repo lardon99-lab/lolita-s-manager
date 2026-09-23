@@ -11,7 +11,10 @@
             container.replaceChildren();
             panel.classList.toggle('d-none', groups.length === 0 && !policy.permite_diseno && productType !== 'pastel');
             groups.forEach((group, index) => container.appendChild(createGroup(group, index)));
-            if (productType === 'pastel') container.appendChild(createCakeMessage());
+            if (productType === 'pastel') {
+                container.appendChild(createCakeColors());
+                container.appendChild(createCakeMessage());
+            }
             if (policy.permite_diseno) container.appendChild(createDesign(policy));
             updateSurcharge();
         }
@@ -23,6 +26,39 @@
                 <label for="currentCakeMessage"><i class="fa-solid fa-quote-left" aria-hidden="true"></i>Frase para el pastel</label>
                 <input id="currentCakeMessage" class="form-control js-cake-message" maxlength="250" placeholder="Ej. Feliz cumpleaños Pepe">
                 <small>Opcional. Se enviara exactamente como se escriba.</small>`;
+            return section;
+        }
+
+        function createCakeColors() {
+            const presets = [
+                ['Blanco', '#ffffff'], ['Rosado', '#ff9fba'], ['Celeste', '#8ed8f8'],
+                ['Amarillo', '#ffd95c'], ['Rojo', '#e94b5f'], ['Verde', '#68b984'],
+                ['Morado', '#a984d6'], ['Dorado', '#d4a72c'], ['Negro', '#252329'],
+            ];
+            const section = document.createElement('section');
+            section.className = 'order-cake-colors';
+            const title = document.createElement('div');
+            title.className = 'order-cake-colors__title';
+            title.innerHTML = '<i class="fa-solid fa-palette" aria-hidden="true"></i><span>Colores del pastel <small>Sin recargo</small></span>';
+            const options = document.createElement('div');
+            options.className = 'order-cake-colors__options';
+            presets.forEach(([name, hex]) => {
+                const label = document.createElement('label');
+                label.className = 'order-cake-color';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.className = 'js-cake-color';
+                input.value = name;
+                const swatch = document.createElement('span');
+                swatch.className = 'order-cake-color__swatch';
+                swatch.style.backgroundColor = hex;
+                label.append(input, swatch, document.createTextNode(name));
+                options.appendChild(label);
+            });
+            const other = document.createElement('label');
+            other.className = 'order-cake-colors__other';
+            other.innerHTML = '<span>Otros colores</span><input class="form-control js-cake-color-other" maxlength="150" placeholder="Ej. Marfil, turquesa">';
+            section.append(title, options, other);
             return section;
         }
 
@@ -76,7 +112,6 @@
                     <label class="form-check-label" for="currentDesignEnabled"><strong>Diseno personalizado</strong><small>${Number(policy.recargo_diseno) > 0 ? `Recargo: L. ${money(policy.recargo_diseno)}` : 'Sin recargo adicional'}</small></label>
                 </div>
                 <div class="order-design__fields js-design-fields" hidden>
-                    <label><span>Color o combinacion</span><input class="form-control js-design-color" maxlength="150" placeholder="Ej. Rosa pastel y dorado"></label>
                     <label class="order-design__instructions"><span>Indicaciones del diseno</span><textarea class="form-control js-design-instructions" maxlength="1000" rows="3" placeholder="Forma, decoracion y otros detalles"></textarea></label>
                     ${policy.permite_imagen ? '<label class="order-design__file"><span>Imagen de referencia</span><input class="form-control js-design-file" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG o WebP. Maximo 5 MB.</small></label>' : ''}
                 </div>`;
@@ -113,9 +148,18 @@
                 }
             }
             const designEnabled = Boolean(container.querySelector('.js-design-enabled:checked'));
+            const presetColors = [...container.querySelectorAll('.js-cake-color:checked')].map((input) => input.value);
+            const customColors = String(container.querySelector('.js-cake-color-other')?.value || '')
+                .split(',')
+                .map((color) => color.trim())
+                .filter(Boolean);
+            const colors = [...new Set([...presetColors, ...customColors])].join(', ');
+            if (colors.length > 150) {
+                return { valid: false, message: 'La combinacion de colores es demasiado larga.' };
+            }
             const design = {
                 enabled: designEnabled,
-                color: container.querySelector('.js-design-color')?.value.trim() || '',
+                color: colors,
                 phrase: container.querySelector('.js-cake-message')?.value.trim() || '',
                 instructions: container.querySelector('.js-design-instructions')?.value.trim() || '',
                 file: container.querySelector('.js-design-file') || null,

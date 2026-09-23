@@ -282,7 +282,7 @@ CREATE TABLE `pedidos` (
   `id_usuario` int NOT NULL,
   `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `fecha_entrega` datetime NOT NULL,
-  `estado` enum('Pendiente','En Preparación','Listo','Entregado','Cancelado') COLLATE utf8mb4_unicode_ci DEFAULT 'Pendiente',
+  `estado` enum('Pendiente','Terminado','Entregado','Cancelado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pendiente',
   `total_pedido` decimal(10,2) DEFAULT '0.00',
   `observaciones_generales` text COLLATE utf8mb4_unicode_ci,
   `monto_abonado` decimal(10,2) DEFAULT '0.00',

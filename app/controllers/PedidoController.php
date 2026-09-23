@@ -11,6 +11,7 @@ use App\Http\Response;
 use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
+use App\Security\OrderStatusPolicy;
 use App\Services\AuditService;
 use App\Services\PedidoService;
 use App\Services\ProductCustomizationService;
@@ -116,7 +117,7 @@ final class PedidoController
     public function listarTodos(string $estado = 'Todos'): array
     {
         Auth::requirePermission('orders.view');
-        $allowedStates = ['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Entregado', 'Cancelado'];
+        $allowedStates = OrderStatusPolicy::filterStates();
         if (!in_array($estado, $allowedStates, true)) $estado = 'Todos';
 
         $conditions = [];
@@ -140,7 +141,7 @@ final class PedidoController
     public function actualizarEstadoAjax(): void
     {
         $id = Validator::positiveInt($_POST['id'] ?? null, 'pedido');
-        $newState = Validator::enum($_POST['nuevo_estado'] ?? '', ['En Preparación', 'Listo', 'Entregado', 'Cancelado'], 'estado');
+        $newState = Validator::enum($_POST['nuevo_estado'] ?? '', [OrderStatusPolicy::FINISHED, OrderStatusPolicy::DELIVERED], 'estado');
         $settle = filter_var($_POST['liquidar'] ?? false, FILTER_VALIDATE_BOOL);
         $paymentMethod = Validator::enum($_POST['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
 
@@ -150,19 +151,13 @@ final class PedidoController
             $stmt->execute([$id]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$order) throw new InvalidArgumentException('El pedido no existe.');
-            Auth::requirePermission('orders.update', (int) $order['id_sucursal']);
-
-            $transitions = [
-                'Pendiente' => ['En Preparación', 'Cancelado'],
-                'En Preparación' => ['Listo', 'Cancelado'],
-                'Listo' => ['Entregado', 'Cancelado'],
-                'Entregado' => [],
-                'Cancelado' => [],
-            ];
             $currentState = (string) $order['estado'];
-            if (!in_array($newState, $transitions[$currentState] ?? [], true)) {
+            $requiredPermission = OrderStatusPolicy::requiredPermission($currentState, $newState);
+            $role = (int) ($_SESSION['id_rol'] ?? 0);
+            if ($requiredPermission === null || !OrderStatusPolicy::roleCanTransition($role, $currentState, $newState)) {
                 throw new InvalidArgumentException('La transicion de estado no es valida.');
             }
+            Auth::requirePermission($requiredPermission, (int) $order['id_sucursal']);
 
             $balance = (float) $order['saldo_pendiente'];
             if ($newState === 'Entregado' && $balance > 0 && !$settle) {

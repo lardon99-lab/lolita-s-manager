@@ -41,7 +41,8 @@
                 combobox.select(data.cliente);
                 modal.hide();
                 form.reset();
-                document.querySelector('[name="fecha_entrega"]')?.focus();
+                const delivery = document.querySelector('[name="fecha_entrega"]');
+                (delivery?._flatpickr?.altInput || delivery)?.focus();
             } catch (requestError) {
                 error.textContent = requestError.message;
                 error.hidden = false;

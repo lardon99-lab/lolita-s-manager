@@ -12,6 +12,19 @@
     .tracking-wide { letter-spacing: 1px; }
 
     .editable-order-table { min-width: 720px; }
+    .product-combobox { grid-template-columns: minmax(0, 1fr); }
+    .product-combobox .app-combobox__input { border-radius: 8px; background: #fff; }
+    .product-combobox .app-combobox__status {
+        position: absolute;
+        top: calc(100% + 0.3rem);
+        right: 0;
+        left: 0;
+        min-height: 1rem;
+        margin: 0;
+    }
+    .product-combobox__native { display: none !important; }
+    .order-line-builder { padding-bottom: 2rem !important; }
+    .order-line-builder__action .btn { min-height: 42px; }
 
     .order-customization-groups { display: grid; gap: 1rem; }
     .order-customization-group { min-width: 0; padding: 0; border: 0; }
@@ -34,6 +47,17 @@
     .order-cake-message label { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.45rem; color: #55484f; font-size: 0.8rem; font-weight: 700; }
     .order-cake-message label i { color: #c13a60; }
     .order-cake-message small { display: block; margin-top: 0.3rem; color: #887780; font-size: 0.67rem; }
+    .order-cake-colors { margin-top: 1rem; padding: 0.85rem; background: #fffafb; border: 1px solid #eadfe3; border-radius: 8px; }
+    .order-cake-colors__title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.65rem; color: #55484f; font-size: 0.8rem; font-weight: 700; }
+    .order-cake-colors__title i { color: #c13a60; }
+    .order-cake-colors__title span { display: flex; align-items: baseline; gap: 0.4rem; }
+    .order-cake-colors__title small { color: #198754; font-size: 0.65rem; }
+    .order-cake-colors__options { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .order-cake-color { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 38px; padding: 0.35rem 0.6rem; border: 1px solid #eadfe3; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.72rem; font-weight: 600; }
+    .order-cake-color:has(input:checked) { color: #a92e52; background: #fff0f4; border-color: #ff85a2; box-shadow: 0 0 0 2px rgba(255, 133, 162, 0.1); }
+    .order-cake-color input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .order-cake-color__swatch { width: 18px; height: 18px; border: 1px solid rgba(36, 33, 40, 0.2); border-radius: 50%; }
+    .order-cake-colors__other { display: grid; gap: 0.3rem; margin-top: 0.7rem; color: #73636c; font-size: 0.72rem; font-weight: 700; }
     .order-design { margin-top: 1rem; padding: 0.85rem; background: #fffafb; border: 1px solid #eadfe3; border-radius: 8px; }
     .order-design__toggle { display: flex; align-items: center; min-height: 44px; margin: 0; padding-left: 2.7rem; }
     .order-design__toggle label { display: grid; }
@@ -47,9 +71,20 @@
     .order-select-field { position: relative; min-width: 0; }
     .order-select-field > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; color: #8d7a84; pointer-events: none; transform: translateY(-50%); }
     .order-select-field .app-select__trigger { padding-left: 2.5rem; background: #f9f7f8; box-shadow: none; }
+    .order-delivery-field { position: relative; }
+    .order-delivery-field > i { position: absolute; z-index: 3; top: 50%; left: 0.9rem; color: #b62f55; pointer-events: none; transform: translateY(-50%); }
+    .order-delivery-input { min-height: 48px; padding-left: 2.65rem; background: #f9f7f8; border: 1px solid #eadce3; border-radius: 8px; box-shadow: none; }
+    .order-delivery-input:focus { background: #fff; border-color: #ff85a2; box-shadow: 0 0 0 0.2rem rgba(255, 133, 162, 0.14); }
+    .flatpickr-calendar { border: 1px solid #eadce3; border-radius: 8px; box-shadow: 0 14px 30px rgba(64, 53, 61, 0.16); font-family: inherit; }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #f7668a; border-color: #f7668a; }
+    .flatpickr-day.today { border-color: #b62f55; }
+    .flatpickr-day:hover { background: #fff1f5; border-color: #ffe0e9; }
+    .flatpickr-time input:hover, .flatpickr-time input:focus, .flatpickr-time .flatpickr-am-pm:hover, .flatpickr-time .flatpickr-am-pm:focus { background: #fff1f5; }
 
     @media (max-width: 767px) {
         #formNuevoPedido .card { padding: 1rem !important; }
+        .order-line-builder { padding-bottom: 1rem !important; }
+        .order-product-search { margin-bottom: 1.1rem; }
         .editable-order-table { min-width: 0 !important; }
         .editable-order-table thead { display: none; }
         .editable-order-table .order-detail-row {

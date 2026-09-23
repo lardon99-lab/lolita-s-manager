@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 
 use App\Security\Auth;
 use App\Security\Csrf;
+use App\Security\OrderStatusPolicy;
 
 // El helper ya inicia sesión y valida si existe el id_usuario
 SesionHelper::protegerVista();
@@ -98,7 +99,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                     case 'pedidos-lista':
                         require_once __DIR__ . '/../app/controllers/PedidoController.php';
                         $pedidosCtrl = new PedidoController();
-                        $allowedStates = ['Todos', 'Pendiente', 'En Preparación', 'Listo', 'Entregado', 'Cancelado'];
+                        $allowedStates = OrderStatusPolicy::filterStates();
                         $filtro_estado = in_array($_GET['estado'] ?? 'Pendiente', $allowedStates, true) ? ($_GET['estado'] ?? 'Pendiente') : 'Pendiente';
                         $listado = $pedidosCtrl->listarTodos($filtro_estado);
                         include __DIR__ . '/../views/pedidos/listar.php';

@@ -39,7 +39,10 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-danger"><i class="fa-regular fa-clock me-1"></i> Fecha y Hora de Entrega</label>
-                        <input type="datetime-local" name="fecha_entrega" class="form-control border-0 bg-light shadow-sm rounded-3 py-2 fw-medium" required>
+                        <div class="order-delivery-field">
+                            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                            <input type="text" id="order-delivery-at" name="fecha_entrega" class="form-control order-delivery-input" placeholder="Selecciona fecha y hora" autocomplete="off" required>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -73,17 +76,18 @@
                         <h5 class="fw-bold mb-0">Detalle del Pedido</h5>
                     </div>
                     
-                    <div class="row g-2 mb-4 bg-light p-3 rounded-4 border shadow-sm align-items-end">
-                        <div class="col-12 col-md-7">
+                    <div class="row g-2 mb-4 bg-light p-3 rounded-4 border shadow-sm align-items-end order-line-builder">
+                        <div class="col-12 col-md-7 order-product-search">
                             <label class="form-label small fw-bold text-muted mb-1" for="select-producto">Producto</label>
-                            <select id="select-producto" class="form-select border-0 shadow-sm py-2">
+                            <select id="select-producto" class="form-select border-0 shadow-sm py-2" data-native-select="true" aria-label="Producto">
                                 <option value="">Selecciona un producto...</option>
                                 <?php foreach($productos as $p): ?>
                                     <option value="<?= $p['id_producto'] ?>" 
                                             data-precio="<?= $p['precio_base'] ?>" 
                                             data-branches="<?= e($p['branch_ids'] ?? '') ?>"
                                             data-type="<?= e($p['tipo_producto'] ?? 'panaderia') ?>"
-                                            data-nombre="<?= e($p['nombre_producto'] ?? '') ?>">
+                                            data-nombre="<?= e($p['nombre_producto'] ?? '') ?>"
+                                            data-categoria="<?= e($p['nombre_categoria'] ?? '') ?>">
                                         <?= htmlspecialchars($p['nombre_producto']) ?> (L. <?= number_format($p['precio_base'], 2) ?>)
                                     </option>
                                 <?php endforeach; ?>
@@ -93,7 +97,7 @@
                             <label class="form-label small fw-bold text-muted mb-1" for="cant-producto">Cant.</label>
                             <input type="number" id="cant-producto" class="form-control border-0 shadow-sm py-2 text-center fw-bold text-primary" value="1" min="1">
                         </div>
-                        <div class="col-7 col-md-3">
+                        <div class="col-7 col-md-3 order-line-builder__action">
                             <button type="button" id="add-order-line" class="btn btn-dark w-100 rounded-3 shadow-sm py-2 fw-bold transition-hover">
                                 <i class="fa-solid fa-plus me-1"></i> Añadir
                             </button>
@@ -205,10 +209,15 @@
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <link rel="stylesheet" href="css/views/pedidos-nuevo.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-nuevo.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
 <script src="js/components/client-combobox.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/client-combobox.js') ?>"></script>
+<script src="js/components/product-combobox.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/product-combobox.js') ?>"></script>
 <script src="js/components/order-cake-customizer.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/order-cake-customizer.js') ?>"></script>
+<script src="js/views/order-delivery-picker.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/order-delivery-picker.js') ?>"></script>
 <script src="js/views/order-client-selector.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/order-client-selector.js') ?>"></script>
 <script src="js/views/pedidos-nuevo.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/pedidos-nuevo.js') ?>"></script>

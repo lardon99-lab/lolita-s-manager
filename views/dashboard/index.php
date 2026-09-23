@@ -86,7 +86,7 @@
                                     <span class="text-muted">- Venció el: <span class="text-danger fw-bold"><?= $fecha_formateada ?></span></span>
                                 </div>
                                 
-                                <?php if (\App\Security\Auth::canAccessBranch((int) $cad['id_sucursal'], 'inventory.adjust')): ?>
+                                <?php if (\App\Security\Auth::canAccessBranch((int) $cad['id_sucursal'], 'inventory.waste')): ?>
                                 <button type="button" 
                                         class="btn btn-sm btn-danger rounded-pill fw-bold px-3 btn-mermar-caducado" 
                                         data-id="<?= $cad['id_inventario'] ?>" 
