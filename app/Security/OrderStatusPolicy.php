@@ -39,4 +39,9 @@ final class OrderStatusPolicy
     {
         return ['Todos', self::PENDING, self::FINISHED, self::DELIVERED];
     }
+
+    public static function defaultFilterState(int $role): string
+    {
+        return $role === Auth::EMPLOYEE ? self::FINISHED : self::PENDING;
+    }
 }

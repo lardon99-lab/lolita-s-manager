@@ -50,6 +50,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link rel="stylesheet" href="css/estilos.css?v=<?= filemtime(__DIR__ . '/css/estilos.css') ?>">
     <link rel="stylesheet" href="css/components.css?v=<?= filemtime(__DIR__ . '/css/components.css') ?>">
 </head>
@@ -79,7 +80,9 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         break;
 
                     case 'inventario':
-                        $requestedBranch = isset($_GET['sucursal_id']) && $_GET['sucursal_id'] !== '' ? (int) $_GET['sucursal_id'] : null;
+                        $requestedBranch = isset($_GET['sucursal_id']) && $_GET['sucursal_id'] !== ''
+                            ? \App\Http\Validator::positiveInt($_GET['sucursal_id'], 'sucursal')
+                            : null;
                         extract((new \App\Services\InventarioPageService((new Database())->getConnection()))->data($requestedBranch), EXTR_SKIP);
                         $inventoryPrepared = true;
                         include __DIR__ . '/../views/inventario/listar.php';
@@ -100,7 +103,11 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         require_once __DIR__ . '/../app/controllers/PedidoController.php';
                         $pedidosCtrl = new PedidoController();
                         $allowedStates = OrderStatusPolicy::filterStates();
-                        $filtro_estado = in_array($_GET['estado'] ?? 'Pendiente', $allowedStates, true) ? ($_GET['estado'] ?? 'Pendiente') : 'Pendiente';
+                        $defaultOrderState = OrderStatusPolicy::defaultFilterState((int) ($_SESSION['id_rol'] ?? 0));
+                        $requestedOrderState = $_GET['estado'] ?? $defaultOrderState;
+                        $filtro_estado = in_array($requestedOrderState, $allowedStates, true)
+                            ? $requestedOrderState
+                            : $defaultOrderState;
                         $listado = $pedidosCtrl->listarTodos($filtro_estado);
                         include __DIR__ . '/../views/pedidos/listar.php';
                         break;
@@ -152,7 +159,13 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/components/form-validation.js?v=<?= filemtime(__DIR__ . '/js/components/form-validation.js') ?>"></script>
+    <script src="js/components/table-search.js?v=<?= filemtime(__DIR__ . '/js/components/table-search.js') ?>"></script>
+    <script src="js/components/date-picker.js?v=<?= filemtime(__DIR__ . '/js/components/date-picker.js') ?>"></script>
+    <script src="js/components/multi-select.js?v=<?= filemtime(__DIR__ . '/js/components/multi-select.js') ?>"></script>
     <script src="js/components/custom-select.js?v=<?= filemtime(__DIR__ . '/js/components/custom-select.js') ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>

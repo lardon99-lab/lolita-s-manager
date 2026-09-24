@@ -9,6 +9,7 @@ use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
 use App\Services\SupplyRestockService;
+use App\Http\Input\ProductInput;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -43,7 +44,7 @@ class InventarioController {
 
         // 2. Si es Admin (1) o SuperUser (3) y usa el filtro de la URL
         if (isset($_GET['sucursal_id']) && $_GET['sucursal_id'] !== "") {
-            $branchId = (int) $_GET['sucursal_id'];
+            $branchId = \App\Http\Validator::positiveInt($_GET['sucursal_id'], 'sucursal');
             if (!Auth::canAccessBranch($branchId, 'inventory.view')) return [];
             return $this->producto->obtenerPorSucursal($branchId);
         }
@@ -194,32 +195,30 @@ class InventarioController {
             try {
                 $this->db->beginTransaction();
 
-                $id_categoria = !empty($_POST['id_categoria']) ? \App\Http\Validator::positiveInt($_POST['id_categoria'], 'categoria') : null;
-                if (!empty($_POST['nueva_categoria_nombre'])) {
-                    $newCategory = \App\Http\Validator::text($_POST['nueva_categoria_nombre'], 'categoria', 100);
+                $input = ProductInput::create($_POST);
+                $id_categoria = $input['category_id'];
+                if ($input['new_category'] !== null) {
                     $stmtCat = $this->db->prepare("INSERT INTO categorias (nombre_categoria) VALUES (:nom)");
-                    $stmtCat->execute([':nom' => $newCategory]);
-                    $id_categoria = $this->db->lastInsertId();
+                    $stmtCat->execute([':nom' => $input['new_category']]);
+                    $id_categoria = (int) $this->db->lastInsertId();
                 }
 
                 if (!$id_categoria) throw new Exception("Debe seleccionar o crear una categoría.");
 
-                $nombre = \App\Http\Validator::text($_POST['nombre_producto'] ?? '', 'producto', 150);
-                $precio = \App\Http\Validator::money($_POST['precio_base'] ?? null, 'precio', 1000000);
-                $tipo_producto = \App\Http\Validator::enum($_POST['tipo_producto'] ?? 'panaderia', ['pastel', 'panaderia', 'bebida', 'batido'], 'tipo de producto');
-                $usesSupplies = in_array($tipo_producto, ['bebida', 'batido'], true);
+                $nombre = $input['name'];
+                $precio = $input['price'];
+                $tipo_producto = $input['type'];
+                $usesSupplies = $input['uses_supplies'];
                 $inventoryControl = $usesSupplies ? 'insumos' : 'producto';
-                $descripcion_base = \App\Http\Validator::text($_POST['descripcion'] ?? '', 'descripcion', 2000, false);
-                $sucursales = array_values(array_unique(array_map('intval', (array) ($_POST['id_sucursal'] ?? []))));
-                $stock_inicial = isset($_POST['stock_inicial']) && $_POST['stock_inicial'] !== '' ? (int) $_POST['stock_inicial'] : 0;
-                if ($stock_inicial < 0 || $stock_inicial > 100000) throw new InvalidArgumentException('El stock inicial no es valido.');
-                $dias_vida_util = !empty($_POST['dias_vida_util']) ? (int) $_POST['dias_vida_util'] : 0;
-                if ($dias_vida_util < 0 || $dias_vida_util > 3650) throw new InvalidArgumentException('La vida util no es valida.');
+                $descripcion_base = $input['description'];
+                $sucursales = $input['branch_ids'];
+                foreach ($sucursales as $branchId) Auth::requirePermission('products.manage', $branchId);
+                $stock_inicial = $input['initial_stock'];
+                $dias_vida_util = $input['shelf_life'];
 
-                $tamano = \App\Http\Validator::text($_POST['tamano'] ?? '', 'tamano', 80, false);
-                $cantidad_tortas = filter_var($_POST['cantidad_tortas'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
-                if ($tipo_producto === 'pastel' && $cantidad_tortas === false) throw new InvalidArgumentException('La cantidad de tortas no es valida.');
-                $observaciones = \App\Http\Validator::text($_POST['observaciones'] ?? '', 'observaciones', 1000, false);
+                $tamano = $input['size'];
+                $cantidad_tortas = $input['cake_count'];
+                $observaciones = $input['notes'];
                 $detalle_producto = [
                     'tipo_producto' => $tipo_producto,
                     'tamano' => $tamano,
@@ -232,8 +231,6 @@ class InventarioController {
                 } else {
                     $descripcion = $observaciones !== '' ? $observaciones : ($descripcion_base !== '' ? $descripcion_base : 'Producto de panadería / bebidas / otros.');
                 }
-
-                if (empty($sucursales)) throw new Exception("Debe seleccionar al menos una sucursal.");
 
                 $imagen_url = $imageStorage->store(isset($_FILES['imagen']) && is_array($_FILES['imagen']) ? $_FILES['imagen'] : null);
 
@@ -354,7 +351,11 @@ class InventarioController {
                 }
 
                 $cantidad = \App\Http\Validator::positiveInt($_POST['cantidad_merma'] ?? null, 'cantidad');
-                $motivo = \App\Http\Validator::text($_POST['motivo_merma'] ?? '', 'motivo', 250);
+                $motivo = \App\Http\Validator::enum(
+                    $_POST['motivo_merma'] ?? '',
+                    ['Caducidad', 'Daño/Rotura', 'Extravío'],
+                    'motivo'
+                );
                 $id_usuario = (int)$_SESSION['id_usuario'];
 
                 $this->db->beginTransaction();
@@ -393,7 +394,7 @@ class InventarioController {
             if (ob_get_length()) ob_clean();
             header('Content-Type: application/json');
             try {
-                $id_inventario = (int)$_POST['id_inventario'];
+                $id_inventario = \App\Http\Validator::positiveInt($_POST['id_inventario'] ?? null, 'inventario');
                 $id_usuario = \App\Http\Validator::positiveInt($_SESSION['id_usuario'] ?? null, 'usuario');
 
                 $this->db->beginTransaction();
@@ -450,15 +451,22 @@ if ($action !== null) {
         \App\Http\Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
     }
     Csrf::validateRequest();
+    $action = \App\Http\Validator::enum(
+        $action,
+        ['registrar', 'abastecer', 'abastecer_producto', 'abastecer_insumos', 'registrarMerma', 'registrar_merma'],
+        'accion'
+    );
     if ($action === 'registrar') {
         Auth::requirePermission('products.manage');
-        foreach ((array) ($_POST['id_sucursal'] ?? []) as $branchId) Auth::requirePermission('products.manage', (int) $branchId);
+        foreach (\App\Http\Validator::idList($_POST['id_sucursal'] ?? [], 'sucursales') as $branchId) {
+            Auth::requirePermission('products.manage', $branchId);
+        }
     } elseif (in_array($action, ['abastecer', 'abastecer_producto', 'abastecer_insumos'], true)) {
-        Auth::requirePermission('inventory.adjust', (int) ($_POST['id_sucursal'] ?? 0));
+        Auth::requirePermission('inventory.adjust', \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal'));
     } elseif ($action === 'registrarMerma' && !empty($_POST['id_sucursal_merma'])) {
-        Auth::requirePermission('inventory.waste', (int) $_POST['id_sucursal_merma']);
+        Auth::requirePermission('inventory.waste', \App\Http\Validator::positiveInt($_POST['id_sucursal_merma'], 'sucursal'));
     } elseif ($action === 'registrar_merma') {
-        $inventoryId = (int) ($_POST['id_inventario'] ?? 0);
+        $inventoryId = \App\Http\Validator::positiveInt($_POST['id_inventario'] ?? null, 'inventario');
         $accessDb = (new Database())->getConnection();
         $accessStmt = $accessDb->prepare('SELECT id_sucursal FROM inventario WHERE id_inventario = ?');
         $accessStmt->execute([$inventoryId]);

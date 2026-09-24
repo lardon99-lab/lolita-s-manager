@@ -48,7 +48,7 @@ ob_end_flush();
                 <label class="form-label small fw-bold text-uppercase">Usuario</label>
                 <div class="input-group">
                     <span class="input-group-text bg-transparent"><i class="fa-solid fa-user"></i></span>
-                    <input type="text" name="username" class="form-control shadow-none" placeholder="Ingresa tu usuario" required autocomplete="username">
+                    <input type="text" name="username" class="form-control shadow-none" placeholder="Ingresa tu usuario" minlength="3" maxlength="50" required autocomplete="username">
                 </div>
             </div>
 
@@ -56,7 +56,7 @@ ob_end_flush();
                 <label class="form-label small fw-bold text-uppercase">Contraseña</label>
                 <div class="input-group">
                     <span class="input-group-text bg-transparent"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" name="password" class="form-control shadow-none" placeholder="••••••••" required autocomplete="current-password">
+                    <input type="password" name="password" class="form-control shadow-none" placeholder="••••••••" maxlength="4096" required autocomplete="current-password">
                 </div>
             </div>
 

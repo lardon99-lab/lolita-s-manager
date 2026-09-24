@@ -290,7 +290,7 @@
 
                     <div class="form-section-card mb-3">
                         <div class="form-floating mb-3">
-                            <input type="text" name="nombre_producto" id="nombreProducto" class="form-control border-0 bg-light rounded-3" placeholder="Nombre del producto" required>
+                            <input type="text" name="nombre_producto" id="nombreProducto" class="form-control border-0 bg-light rounded-3" placeholder="Nombre del producto" minlength="2" maxlength="150" required>
                             <label for="nombreProducto" class="text-muted">Nombre del producto</label>
                         </div>
 
@@ -315,12 +315,12 @@
                                 <label class="small text-muted fw-bold mb-1 ms-1">Precio (L.)</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0 rounded-start-3 text-muted">L.</span>
-                                    <input type="number" step="0.01" name="precio_base" class="form-control border-0 bg-light rounded-end-3" required>
+                                    <input type="number" step="0.01" min="0.01" max="1000000" name="precio_base" class="form-control border-0 bg-light rounded-end-3" required>
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Stock inicial</label>
-                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0" data-product-stock-input>
+                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0" min="0" max="100000" step="1" data-product-stock-input>
                             </div>
                         </div>
 
@@ -328,7 +328,7 @@
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Vida útil</label>
                                 <div class="input-group">
-                                    <input type="number" min="0" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0" data-product-stock-input>
+                                    <input type="number" min="0" max="3650" step="1" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0" data-product-stock-input>
                                     <span class="input-group-text border-0 bg-light rounded-end-3 text-muted">días</span>
                                 </div>
                             </div>
@@ -348,7 +348,7 @@
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Cantidad de tortas</label>
-                                <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1">
+                                <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1" max="100" step="1">
                             </div>
                         </div>
                         <div class="mt-4 mb-3">

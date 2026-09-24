@@ -30,4 +30,11 @@ final class OrderStatusPolicyTest extends TestCase
         self::assertTrue(OrderStatusPolicy::roleCanTransition(\App\Security\Auth::EMPLOYEE, 'Terminado', 'Entregado'));
         self::assertFalse(OrderStatusPolicy::roleCanTransition(\App\Security\Auth::ADMIN, 'Terminado', 'Entregado'));
     }
+
+    public function testDefaultFilterFollowsOrderResponsibility(): void
+    {
+        self::assertSame('Pendiente', OrderStatusPolicy::defaultFilterState(\App\Security\Auth::ADMIN));
+        self::assertSame('Terminado', OrderStatusPolicy::defaultFilterState(\App\Security\Auth::EMPLOYEE));
+        self::assertSame('Pendiente', OrderStatusPolicy::defaultFilterState(\App\Security\Auth::SUPERUSER));
+    }
 }

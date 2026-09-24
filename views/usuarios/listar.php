@@ -73,7 +73,11 @@ if (!empty($usuarios)) {
         </div>
     </div>
 
-    <div class="card app-panel overflow-hidden">
+    <div class="app-toolbar d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+        <div class="app-search-field"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="form-control" data-list-search="#usersPanel" data-search-status="#usersSearchStatus" placeholder="Buscar usuario, nombre, rol o sucursal" aria-label="Buscar usuarios"></div>
+        <small class="text-muted" id="usersSearchStatus"><?= $totalUsuarios ?> resultados</small>
+    </div>
+    <div class="card app-panel overflow-hidden" id="usersPanel">
         <div class="card-body p-3 p-md-4 bg-light">
             <div class="d-none d-md-block table-responsive">
                 <table class="table table-hover align-middle mb-0" style="min-width: 720px;">
@@ -88,7 +92,7 @@ if (!empty($usuarios)) {
                     </thead>
                     <tbody style="font-size: 0.85rem;">
                         <?php foreach($usuarios as $u): ?>
-                        <tr>
+                        <tr data-search-item>
                             <td class="ps-4 py-3" data-label="Usuario">
                                 <div class="d-flex align-items-center">
                                     <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 38px; height: 38px; font-weight: bold;">
@@ -140,7 +144,7 @@ if (!empty($usuarios)) {
 
             <div class="d-md-none">
                 <?php foreach($usuarios as $u): ?>
-                <div class="user-card-card rounded-4 p-3 mb-3 shadow-sm border bg-white">
+                <div class="user-card-card rounded-4 p-3 mb-3 shadow-sm border bg-white" data-search-item>
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <div class="d-flex align-items-center">
                             <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; font-weight: bold;">
@@ -194,21 +198,21 @@ if (!empty($usuarios)) {
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Nombre completo</label>
-                        <input type="text" name="nombre_real" class="form-control bg-light border-0 py-2" required>
+                        <input type="text" name="nombre_real" class="form-control bg-light border-0 py-2" maxlength="100" required autocomplete="name">
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-sm-6">
                             <label class="small fw-bold text-muted text-uppercase mb-1">Usuario</label>
-                            <input type="text" name="nombre_usuario" class="form-control bg-light border-0 py-2" required>
+                            <input type="text" name="nombre_usuario" class="form-control bg-light border-0 py-2" minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]{3,50}" required autocomplete="username">
                         </div>
                         <div class="col-12 col-sm-6">
                             <label class="small fw-bold text-muted text-uppercase mb-1">Password</label>
-                            <input type="password" name="password" class="form-control bg-light border-0 py-2" required>
+                            <input type="password" name="password" class="form-control bg-light border-0 py-2" required minlength="10" maxlength="4096" autocomplete="new-password">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Rol</label>
-                        <select name="id_rol" id="select_rol" class="form-select bg-light border-0 py-2">
+                        <select name="id_rol" id="select_rol" class="form-select bg-light border-0 py-2" required>
                             <?php foreach ($roles as $role): ?>
                                 <option value="<?= (int) $role['id_rol'] ?>"><?= e($role['nombre_rol']) ?></option>
                             <?php endforeach; ?>
@@ -216,7 +220,7 @@ if (!empty($usuarios)) {
                     </div>
                     <div id="div_suc">
                         <label id="lbl_suc" class="small fw-bold text-muted text-uppercase mb-1">Sucursal</label>
-                        <select name="id_sucursal[]" id="select_suc" class="form-select bg-light border-0 py-2">
+                        <select name="id_sucursal[]" id="select_suc" class="form-select bg-light border-0 py-2" required data-app-multiselect data-native-select="true">
                             <?php foreach($sucursales as $s): ?>
                                 <option value="<?= (int) $s['id_sucursal'] ?>"><?= e($s['nombre_sucursal']) ?></option>
                             <?php endforeach; ?>
@@ -247,12 +251,12 @@ if (!empty($usuarios)) {
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Nombre completo</label>
-                        <input type="text" name="nombre_real" id="edit_nombre_real" class="form-control bg-light border-0 py-2" required>
+                        <input type="text" name="nombre_real" id="edit_nombre_real" class="form-control bg-light border-0 py-2" maxlength="100" required autocomplete="name">
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col">
                             <label class="small fw-bold text-muted text-uppercase mb-1">Usuario</label>
-                            <input type="text" name="nombre_usuario" id="edit_nombre_usuario" class="form-control bg-light border-0 py-2" required>
+                            <input type="text" name="nombre_usuario" id="edit_nombre_usuario" class="form-control bg-light border-0 py-2" minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]{3,50}" required autocomplete="username">
                         </div>
                         <div class="col">
                             <label class="small fw-bold text-muted text-uppercase mb-1">Estado</label>
@@ -264,7 +268,7 @@ if (!empty($usuarios)) {
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold text-muted text-uppercase mb-1">Rol</label>
-                        <select name="id_rol" id="edit_select_rol" class="form-select bg-light border-0 py-2">
+                        <select name="id_rol" id="edit_select_rol" class="form-select bg-light border-0 py-2" required>
                             <?php foreach ($roles as $role): ?>
                                 <option value="<?= (int) $role['id_rol'] ?>"><?= e($role['nombre_rol']) ?></option>
                             <?php endforeach; ?>
@@ -272,7 +276,7 @@ if (!empty($usuarios)) {
                     </div>
                     <div id="edit_div_suc">
                         <label id="lbl_suc_edit" class="small fw-bold text-muted text-uppercase mb-1">Sucursal</label>
-                        <select name="id_sucursal[]" id="edit_select_suc" class="form-select bg-light border-0 py-2">
+                        <select name="id_sucursal[]" id="edit_select_suc" class="form-select bg-light border-0 py-2" required data-app-multiselect data-native-select="true">
                             <?php foreach($sucursales as $s): ?>
                                 <option value="<?= (int) $s['id_sucursal'] ?>"><?= e($s['nombre_sucursal']) ?></option>
                             <?php endforeach; ?>
@@ -302,7 +306,7 @@ if (!empty($usuarios)) {
                 </div>
                 <div class="modal-body p-4 text-center">
                     <p class="small text-muted mb-2">Usuario: <strong id="pass_nombre_usuario"></strong></p>
-                    <input type="password" name="nueva_password" class="form-control text-center shadow-sm border-0 bg-light py-2" placeholder="Escriba la nueva clave" required minlength="10">
+                    <input type="password" name="nueva_password" class="form-control text-center shadow-sm border-0 bg-light py-2" placeholder="Escriba la nueva clave" required minlength="10" maxlength="4096" autocomplete="new-password">
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
                     <button type="submit" class="btn btn-warning w-100 rounded-pill fw-bold shadow-sm">Guardar</button>

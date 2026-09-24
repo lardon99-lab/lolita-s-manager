@@ -209,12 +209,9 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <link rel="stylesheet" href="css/views/pedidos-nuevo.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-nuevo.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
 <script src="js/components/client-combobox.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/client-combobox.js') ?>"></script>
 <script src="js/components/product-combobox.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/product-combobox.js') ?>"></script>
 <script src="js/components/order-cake-customizer.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/order-cake-customizer.js') ?>"></script>

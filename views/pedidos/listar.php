@@ -39,7 +39,9 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-9">
-                    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-md-end">
+                    <div class="d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-md-end">
+                        <div class="app-search-field"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="form-control" data-table-search="#ordersTable" data-search-status="#ordersSearchStatus" placeholder="Buscar pedido, cliente o telefono" aria-label="Buscar pedidos"></div>
+                        <small class="text-muted text-nowrap" id="ordersSearchStatus"><?= count($listado) ?> resultados</small>
                         <span class="chip-pill"><i class="fa-solid fa-filter"></i> Vista actual: <strong class="ms-1"><?= htmlspecialchars($filtro_estado) ?></strong></span>
                     </div>
                 </div>
@@ -48,7 +50,7 @@
 
     <div class="card app-panel overflow-hidden mb-4">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 mobile-card-table orders-main-table">
+            <table id="ordersTable" class="table table-hover align-middle mb-0 mobile-card-table orders-main-table">
                 <thead class="bg-light">
                     <tr class="text-muted small text-uppercase tracking-wide">
                         <th class="ps-4 py-3">ID</th>

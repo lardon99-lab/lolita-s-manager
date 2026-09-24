@@ -152,9 +152,12 @@ trait CajaReporteTrait
         Auth::requirePermission('cash.adjust');
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             try {
-                $monto = \App\Http\Validator::money($_POST['monto_merma'] ?? null, 'monto', 1000000);
-                if ($monto <= 0) throw new InvalidArgumentException('El monto debe ser mayor a cero.');
-                $motivo = \App\Http\Validator::text($_POST['motivo_merma'] ?? '', 'motivo', 100);
+                $monto = \App\Http\Validator::positiveMoney($_POST['monto_merma'] ?? null, 'monto', 1000000);
+                $motivo = \App\Http\Validator::enum(
+                    $_POST['motivo_merma'] ?? '',
+                    ['Pago a Proveedores', 'Gastos de Insumos', 'Pagos a Terceros'],
+                    'motivo'
+                );
                 $descripcion = \App\Http\Validator::text($_POST['descripcion_merma'] ?? '', 'descripcion', 500, false);
                 
                 // MANEJO SEGURO: Busca en POST primero (Admin), si no, en SESSION (Empleado)

@@ -42,4 +42,34 @@ final class ValidatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         Validator::dateTimeLocal('2026-02-30T10:00', 'fecha');
     }
+
+    public function testIntegerRangeRejectsPartiallyNumericValues(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Validator::intRange('12abc', 'cantidad', 0, 100);
+    }
+
+    public function testIdListIsStrictAndRemovesDuplicates(): void
+    {
+        self::assertSame([2, 3], Validator::idList(['2', '3', '2'], 'sucursales'));
+    }
+
+    public function testPhoneAndEmailNormalizeOptionalValues(): void
+    {
+        self::assertNull(Validator::phone(''));
+        self::assertSame('+504 9999-9999', Validator::phone('+504 9999-9999'));
+        self::assertSame('persona@example.com', Validator::email(' Persona@Example.COM '));
+    }
+
+    public function testDateRangeRejectsReverseOrder(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Validator::dateRange('2026-09-24', '2026-09-23');
+    }
+
+    public function testPositiveMoneyRejectsZero(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Validator::positiveMoney('0', 'monto');
+    }
 }

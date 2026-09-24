@@ -17,4 +17,22 @@ $resource = (string) ($_GET['resource'] ?? '');
 if (!isset($resources[$resource])) {
     \App\Http\Response::json(['status' => 'error', 'message' => 'Recurso no encontrado.'], 404);
 }
-require $resources[$resource];
+try {
+    require $resources[$resource];
+} catch (InvalidArgumentException $error) {
+    \App\Http\Response::json([
+        'status' => 'error',
+        'message' => $error->getMessage(),
+        'errors' => ['_form' => $error->getMessage()],
+    ], 422);
+} catch (PDOException $error) {
+    \App\Support\Logger::error($error);
+    $conflict = $error->getCode() === '23000';
+    \App\Http\Response::json([
+        'status' => 'error',
+        'message' => $conflict ? 'Ya existe un registro con esos datos.' : 'No fue posible guardar los cambios.',
+    ], $conflict ? 409 : 500);
+} catch (Throwable $error) {
+    \App\Support\Logger::error($error);
+    \App\Http\Response::json(['status' => 'error', 'message' => 'Ocurrio un error interno.'], 500);
+}

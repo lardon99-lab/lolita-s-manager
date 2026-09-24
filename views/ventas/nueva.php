@@ -4,7 +4,7 @@ require_once '../app/controllers/InventarioController.php';
 $invCtrl = new InventarioController();
 
 $id_sucursal_user = (int) ($_SESSION['id_sucursal'] ?? 0) ?: null;
-$requestedBranch = !empty($_GET['sucursal_id']) ? (int) $_GET['sucursal_id'] : null;
+$requestedBranch = !empty($_GET['sucursal_id']) ? \App\Http\Validator::positiveInt($_GET['sucursal_id'], 'sucursal') : null;
 if ($requestedBranch && \App\Security\Auth::canAccessBranch($requestedBranch, 'sales.create')) $id_sucursal_user = $requestedBranch;
 $allowedBranches = \App\Security\Auth::allowedBranches('sales.create');
 $db = (new Database())->getConnection();
@@ -105,7 +105,7 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
                     <div class="sales-add-row">
                         <div>
                             <label class="sales-field-label" for="cantidad">Cantidad</label>
-                            <input type="number" id="cantidad" min="1" class="form-control" value="1" inputmode="numeric">
+                            <input type="number" id="cantidad" min="1" max="1000" step="1" class="form-control" value="1" inputmode="numeric">
                         </div>
                         <div>
                             <span class="sales-field-label">Precio unitario</span>

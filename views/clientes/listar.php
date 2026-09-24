@@ -10,8 +10,12 @@
         <div class="app-page-header__actions"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#clientModal"><i class="fa-solid fa-user-plus me-2"></i>Nuevo cliente</button></div>
     </header>
 
+    <div class="app-toolbar d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+        <div class="app-search-field"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="form-control" data-table-search="#clientsTable" data-search-status="#clientsSearchStatus" placeholder="Buscar por nombre, telefono o correo" aria-label="Buscar clientes"></div>
+        <small class="text-muted" id="clientsSearchStatus"><?= count($clientes) ?> resultados</small>
+    </div>
     <div class="table-responsive app-panel">
-        <table class="table table-hover align-middle mb-0 management-table">
+        <table id="clientsTable" class="table table-hover align-middle mb-0 management-table">
             <thead><tr><th>Nombre</th><th>Telefono</th><th>Correo</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
             <tbody>
             <?php foreach ($clientes as $cliente): ?>
@@ -46,7 +50,7 @@
             <div class="modal-body">
                 <input type="hidden" name="id_cliente" id="clientId">
                 <div class="mb-3"><label class="form-label" for="clientName">Nombre completo</label><input class="form-control" id="clientName" name="nombre" maxlength="150" required></div>
-                <div class="mb-3"><label class="form-label" for="clientPhone">Telefono</label><input class="form-control" id="clientPhone" name="telefono" maxlength="20" inputmode="tel"></div>
+                <div class="mb-3"><label class="form-label" for="clientPhone">Telefono</label><input class="form-control" id="clientPhone" name="telefono" maxlength="20" minlength="7" inputmode="tel" type="tel" pattern="[0-9+() -]{7,20}"></div>
                 <div><label class="form-label" for="clientEmail">Correo</label><input class="form-control" id="clientEmail" name="email" maxlength="100" type="email"></div>
             </div>
             <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar</button></div>

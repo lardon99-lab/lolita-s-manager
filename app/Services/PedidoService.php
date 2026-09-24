@@ -42,8 +42,14 @@ final class PedidoService
             $pricing = (new OrderPricingService($this->db))->price($branchId, $input);
             $items = $pricing['items'];
             $total = $pricing['total'];
-            $paid = $paymentType === 'Pagado' ? $total : ($paymentType === 'Abonado' ? Validator::money($input['monto_abono'] ?? 0, 'abono', $total) : 0.0);
-            if ($paid > $total) throw new InvalidArgumentException('El abono no puede superar el total.');
+            $paid = $paymentType === 'Pagado'
+                ? $total
+                : ($paymentType === 'Abonado'
+                    ? Validator::positiveMoney($input['monto_abono'] ?? null, 'abono', $total)
+                    : 0.0);
+            if ($paymentType === 'Abonado' && $paid >= $total) {
+                throw new InvalidArgumentException('Para liquidar el total selecciona la opcion Pagado.');
+            }
             $balance = round($total - $paid, 2);
             $paymentStatus = $balance <= 0 ? 'Pagado' : ($paid > 0 ? 'Abonado' : 'Pendiente');
 

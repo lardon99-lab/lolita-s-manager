@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use App\Http\Response;
 use App\Http\Validator;
+use App\Http\Input\UserInput;
 use App\Security\Auth;
 use App\Security\Csrf;
 use App\Security\UserPolicy;
@@ -76,14 +77,13 @@ final class UsuarioController
     public function registrarAjax(): void
     {
         try {
-            $name = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 50);
-            if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $name)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
-            $realName = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 100);
-            $password = Validator::text($_POST['password'] ?? '', 'contrasena', 4096);
-            if (mb_strlen($password) < 10) throw new InvalidArgumentException('La contrasena debe tener al menos 10 caracteres.');
-            $roleId = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
+            $input = UserInput::create($_POST);
+            $name = $input['username'];
+            $realName = $input['real_name'];
+            $password = $input['password'];
+            $roleId = $input['role_id'];
             UserPolicy::requireAssignableRole($roleId);
-            $branches = UserPolicy::validateAssignments($roleId, (array) ($_POST['id_sucursal'] ?? []));
+            $branches = UserPolicy::validateAssignments($roleId, $input['branch_ids']);
 
             $this->db->beginTransaction();
             $stmt = $this->db->prepare(
@@ -135,15 +135,15 @@ final class UsuarioController
     public function editarAjax(): void
     {
         try {
-            $id = Validator::positiveInt($_POST['id_usuario'] ?? null, 'usuario');
+            $input = UserInput::update($_POST);
+            $id = $input['id'];
             $target = UserPolicy::requireManageTarget($this->db, $id);
-            $name = Validator::text($_POST['nombre_usuario'] ?? '', 'usuario', 50);
-            if (!preg_match('/^[A-Za-z0-9._-]{3,50}$/', $name)) throw new InvalidArgumentException('El usuario contiene caracteres no permitidos.');
-            $realName = Validator::text($_POST['nombre_real'] ?? '', 'nombre real', 100);
-            $status = Validator::enum($_POST['estado_usuario'] ?? '', ['Activo', 'Inactivo'], 'estado');
-            $roleId = Validator::positiveInt($_POST['id_rol'] ?? null, 'rol');
+            $name = $input['username'];
+            $realName = $input['real_name'];
+            $status = $input['status'];
+            $roleId = $input['role_id'];
             UserPolicy::requireAssignableRole($roleId);
-            $branches = UserPolicy::validateAssignments($roleId, (array) ($_POST['id_sucursal'] ?? []));
+            $branches = UserPolicy::validateAssignments($roleId, $input['branch_ids']);
             if ($id === (int) ($_SESSION['id_usuario'] ?? 0) && $status !== 'Activo') {
                 throw new InvalidArgumentException('No puedes desactivar tu propia cuenta.');
             }
@@ -174,8 +174,7 @@ final class UsuarioController
         try {
             $id = Validator::positiveInt($_POST['id_usuario'] ?? null, 'usuario');
             UserPolicy::requireManageTarget($this->db, $id);
-            $password = Validator::text($_POST['nueva_password'] ?? '', 'contrasena', 4096);
-            if (mb_strlen($password) < 10) throw new InvalidArgumentException('La contrasena debe tener al menos 10 caracteres.');
+            $password = Validator::password($_POST['nueva_password'] ?? '');
             $stmt = $this->db->prepare('UPDATE usuarios SET password_hash = ? WHERE id_usuario = ?');
             $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
             (new AuditService($this->db))->record('password_reset', 'usuario', $id);

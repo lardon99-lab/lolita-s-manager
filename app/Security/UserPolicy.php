@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Http\Response;
+use App\Http\Validator;
 use PDO;
 
 final class UserPolicy
@@ -50,7 +51,7 @@ final class UserPolicy
 
     public static function validateAssignments(int $roleId, array $branchIds): array
     {
-        $branchIds = array_values(array_unique(array_filter(array_map('intval', $branchIds), static fn (int $id): bool => $id > 0)));
+        $branchIds = Validator::idList($branchIds, 'sucursales', false);
         if ($roleId === Auth::SUPERUSER) return [];
         if ($branchIds === []) Response::json(['status' => 'error', 'message' => 'Debes asignar al menos una sucursal.'], 422);
         if ($roleId === Auth::EMPLOYEE && count($branchIds) !== 1) {

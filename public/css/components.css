@@ -790,3 +790,129 @@
         width: 100%;
     }
 }
+
+.app-search-field {
+    position: relative;
+    width: min(100%, 360px);
+}
+
+.app-search-field > i {
+    color: #b72e53;
+    left: 0.9rem;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+.app-search-field .form-control {
+    min-height: 44px;
+    padding-left: 2.6rem;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.18rem rgba(220, 53, 69, 0.12) !important;
+}
+
+.invalid-feedback {
+    color: #b4233f;
+    font-size: 0.75rem;
+    margin-top: 0.35rem;
+}
+
+.flatpickr-calendar.app-date-calendar {
+    border: 1px solid #eadfe3;
+    border-radius: 8px;
+    box-shadow: 0 16px 38px rgba(58, 38, 47, 0.18);
+    font-family: 'Poppins', sans-serif;
+    overflow: hidden;
+}
+
+.app-date-calendar .flatpickr-months,
+.app-date-calendar .flatpickr-weekdays {
+    background: #fff8fa;
+}
+
+.app-date-calendar .flatpickr-day.selected,
+.app-date-calendar .flatpickr-day.startRange,
+.app-date-calendar .flatpickr-day.endRange {
+    background: #f7668a;
+    border-color: #f7668a;
+}
+
+.app-date-calendar .flatpickr-day.today {
+    border-color: #b72e53;
+}
+
+.app-date-input[readonly] {
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.app-multi-select {
+    position: relative;
+}
+
+.app-multi-select__native {
+    height: 1px !important;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 100%;
+    width: 1px !important;
+}
+
+.app-multi-select__trigger {
+    min-height: 44px;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-multi-select__trigger.is-placeholder {
+    color: #8d7a84;
+}
+
+.app-multi-select__panel {
+    background: #fff;
+    border: 1px solid #eadfe3;
+    border-radius: 8px;
+    box-shadow: 0 16px 34px rgba(58, 38, 47, 0.16);
+    left: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 0.35rem;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    z-index: 1080;
+}
+
+.app-multi-select__option {
+    align-items: center;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    gap: 0.65rem;
+    min-height: 42px;
+    padding: 0.6rem 0.7rem;
+}
+
+.app-multi-select__option:hover,
+.app-multi-select__option:has(input:checked) {
+    background: #fff0f4;
+    color: #b72e53;
+}
+
+tr[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 575.98px) {
+    .app-search-field { width: 100%; }
+}

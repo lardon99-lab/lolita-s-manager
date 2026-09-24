@@ -6,6 +6,7 @@ function toggleSucursales(idRol, idDiv, idSelect) {
     else {
         dSuc.style.display = 'block';
         sSuc.multiple = (idRol == "1" || idRol == "4");
+        window.AppMultiSelect?.sync(sSuc);
     }
 }
 
@@ -50,6 +51,7 @@ function editarUsuario(id) {
                 Array.from(selectSuc.options).forEach(opt => {
                     opt.selected = data.sucursales.includes(parseInt(opt.value));
                 });
+                window.AppMultiSelect?.sync(selectSuc);
 
                 new bootstrap.Modal(document.getElementById('modalEditarUsuario')).show();
             }
@@ -66,6 +68,8 @@ document.getElementById('formEditarUsuario').addEventListener('submit', function
         else Swal.fire('Error', data.message, 'error');
     });
 });
+
+toggleSucursales(document.getElementById('select_rol').value, 'div_suc', 'select_suc');
 
 // --- AJAX PASSWORD ---
 function abrirModalPassword(id, nombre) {

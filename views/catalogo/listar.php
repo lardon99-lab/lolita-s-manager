@@ -21,13 +21,17 @@
 
     <div class="tab-content">
         <section class="tab-pane fade show active" id="productsTab" role="tabpanel">
+            <div class="app-toolbar d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
+                <div class="app-search-field"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="form-control" data-list-search="#productsTab" data-search-status="#catalogSearchStatus" placeholder="Buscar producto, categoria o sucursal" aria-label="Buscar productos"></div>
+                <small class="text-muted" id="catalogSearchStatus"><?= count($productos) ?> resultados</small>
+            </div>
             <div class="table-responsive app-panel d-none d-md-block">
                 <table class="table table-hover align-middle mb-0 management-table">
                     <thead><tr><th>Producto</th><th>Categoria</th><th>Precio</th><th>Sucursales</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
                     <tbody>
                     <?php foreach ($productos as $producto): ?>
                         <?php $productJson = e(json_encode($producto, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP)); ?>
-                        <tr>
+                        <tr data-search-item>
                             <td><div class="fw-semibold"><?= e($producto['nombre_producto']) ?></div><?php if ((int) $producto['grupos_personalizacion'] > 0): ?><div class="small text-success mt-1"><i class="fa-solid fa-sliders me-1"></i><?= (int) $producto['grupos_personalizacion'] ?> grupos</div><?php endif; ?></td>
                             <td><?= e($producto['nombre_categoria']) ?></td>
                             <td class="text-nowrap">L. <?= number_format((float) $producto['precio_base'], 2) ?></td>
@@ -48,7 +52,7 @@
                 <?php if ($productos === []): ?><p class="catalog-empty">No hay productos disponibles.</p><?php endif; ?>
                 <?php foreach ($productos as $producto): ?>
                     <?php $productJson = e(json_encode($producto, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP)); ?>
-                    <article class="catalog-mobile-item">
+                    <article class="catalog-mobile-item" data-search-item>
                         <div class="catalog-mobile-item__header">
                             <h3><?= e($producto['nombre_producto']) ?></h3>
                             <span class="badge <?= $producto['estado'] === 'Activo' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($producto['estado']) ?></span>

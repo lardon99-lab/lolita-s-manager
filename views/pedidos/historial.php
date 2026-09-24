@@ -4,9 +4,7 @@ $pedidosCtrl = new PedidoController();
 
 // 1. Establecer la fecha de HOY por defecto para el control de caja diario
 $hoy = date('Y-m-d');
-$desde = !empty($_GET['desde']) ? \App\Http\Validator::date($_GET['desde'], 'fecha desde') : $hoy;
-$hasta = !empty($_GET['hasta']) ? \App\Http\Validator::date($_GET['hasta'], 'fecha hasta') : $hoy;
-$tipo = !empty($_GET['tipo']) ? \App\Http\Validator::enum($_GET['tipo'], ['Pedido', 'Venta'], 'tipo') : null;
+$filtros = \App\Http\Input\ReportFilters::from($_GET, $hoy);
 
 $database = new Database();
 $db = $database->getConnection();
@@ -24,13 +22,9 @@ if ($allowedBranches === null) {
 $esAdmin = count($listaSucursales) > 1;
 
 // 3. Configuramos los filtros asegurando la sucursal asignada para los empleados
-$filtros = [
-    'desde'    => $desde,
-    'hasta'    => $hasta,
-    'busqueda' => !empty($_GET['busqueda']) ? \App\Http\Validator::text($_GET['busqueda'], 'busqueda', 100) : null,
-    'sucursal' => !empty($_GET['sucursal']) ? (int) $_GET['sucursal'] : null,
-    'tipo'     => $tipo
-];
+if ($filtros['sucursal'] !== null && !\App\Security\Auth::canAccessBranch($filtros['sucursal'], 'reports.view')) {
+    throw new InvalidArgumentException('La sucursal seleccionada no esta disponible.');
+}
 
 // Obtención de datos filtrados para la vista general
 $ventas = $pedidosCtrl->obtenerHistorialVentas($filtros);
@@ -106,12 +100,12 @@ $totalCajaReal = $totalIngresos - $totalGastos;
 
                 <div class="col-6 col-md-6 col-xl">
                     <label class="small fw-bold mb-1 text-muted text-uppercase">Desde:</label>
-                    <input type="date" name="desde" class="form-control border-0 shadow-sm py-2" value="<?= e($filtros['desde']) ?>">
+                    <input id="historyDateFrom" type="date" name="desde" class="form-control border-0 shadow-sm py-2" value="<?= e($filtros['desde']) ?>" max="<?= e($filtros['hasta']) ?>" data-app-date data-date-peer="#historyDateTo" data-date-boundary="min" required>
                 </div>
 
                 <div class="col-6 col-md-6 col-xl">
                     <label class="small fw-bold mb-1 text-muted text-uppercase">Hasta:</label>
-                    <input type="date" name="hasta" class="form-control border-0 shadow-sm py-2" value="<?= e($filtros['hasta']) ?>">
+                    <input id="historyDateTo" type="date" name="hasta" class="form-control border-0 shadow-sm py-2" value="<?= e($filtros['hasta']) ?>" min="<?= e($filtros['desde']) ?>" data-app-date data-date-peer="#historyDateFrom" data-date-boundary="max" required>
                 </div>
 
                 <div class="col-12 col-xl-auto mt-3 mt-xl-0">

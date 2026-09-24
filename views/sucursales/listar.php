@@ -35,7 +35,7 @@
             <input type="hidden" name="id_sucursal" id="branchId">
             <div class="mb-3"><label class="form-label" for="branchName">Nombre</label><input class="form-control" id="branchName" name="nombre" maxlength="100" required></div>
             <div class="mb-3"><label class="form-label" for="branchAddress">Direccion</label><textarea class="form-control" id="branchAddress" name="direccion" maxlength="500" rows="3"></textarea></div>
-            <div><label class="form-label" for="branchPhone">Telefono</label><input class="form-control" id="branchPhone" name="telefono" maxlength="20" inputmode="tel"></div>
+            <div><label class="form-label" for="branchPhone">Telefono</label><input class="form-control" id="branchPhone" name="telefono" maxlength="20" minlength="7" inputmode="tel" type="tel" pattern="[0-9+() -]{7,20}"></div>
         </div>
         <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar</button></div>
     </form></div></div>

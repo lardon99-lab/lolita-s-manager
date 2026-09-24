@@ -135,6 +135,7 @@
                 expiry.min = formatLocalDate(new Date());
                 expiry.value = item.expiry;
                 expiry.required = true;
+                expiry.dataset.appDate = '';
                 expiry.dataset.restockExpiry = '';
                 expiryGroup.append(label, expiry);
                 controls.append(expiryGroup);
@@ -150,6 +151,7 @@
         function render() {
             lines.replaceChildren();
             state.forEach((item, key) => lines.append(renderLine(key, item)));
+            window.AppDatePicker?.scan(lines);
             const units = [...state.values()].reduce((total, item) => total + Number(item.quantity || 0), 0);
             const count = state.size;
             empty.hidden = count > 0;
