@@ -290,7 +290,7 @@
 
                     <div class="form-section-card mb-3">
                         <div class="form-floating mb-3">
-                            <input type="text" name="nombre_producto" id="nombreProducto" class="form-control border-0 bg-light rounded-3" placeholder="Nombre del producto" minlength="2" maxlength="150" required>
+                            <input type="text" name="nombre_producto" id="nombreProducto" class="form-control border-0 bg-light rounded-3" placeholder="Nombre del producto" minlength="2" maxlength="100" required>
                             <label for="nombreProducto" class="text-muted">Nombre del producto</label>
                         </div>
 

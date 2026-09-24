@@ -10,6 +10,7 @@ use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
 use App\Services\SupplyRestockService;
 use App\Http\Input\ProductInput;
+use App\Services\ProductNameGuard;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -196,6 +197,7 @@ class InventarioController {
                 $this->db->beginTransaction();
 
                 $input = ProductInput::create($_POST);
+                (new ProductNameGuard($this->db))->assertAvailable($input['name']);
                 $id_categoria = $input['category_id'];
                 if ($input['new_category'] !== null) {
                     $stmtCat = $this->db->prepare("INSERT INTO categorias (nombre_categoria) VALUES (:nom)");

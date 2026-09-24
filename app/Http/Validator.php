@@ -44,6 +44,13 @@ final class Validator
         return $text;
     }
 
+    public static function singleLineText(mixed $value, string $field, int $maxLength, bool $required = true): string
+    {
+        $text = preg_replace('/\s+/u', ' ', trim((string) $value));
+        if ($text === null) throw new InvalidArgumentException("El campo {$field} no es valido.");
+        return self::text($text, $field, $maxLength, $required);
+    }
+
     public static function enum(mixed $value, array $allowed, string $field): string
     {
         $value = (string) $value;

@@ -72,4 +72,9 @@ final class ValidatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         Validator::positiveMoney('0', 'monto');
     }
+
+    public function testSingleLineTextNormalizesRepeatedWhitespace(): void
+    {
+        self::assertSame('Pastel Tres Leches', Validator::singleLineText("  Pastel\n  Tres   Leches  ", 'producto', 100));
+    }
 }

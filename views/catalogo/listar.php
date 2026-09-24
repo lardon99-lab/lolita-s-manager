@@ -133,7 +133,7 @@
         <div class="modal-header"><h5 class="modal-title">Editar producto</h5><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
         <div class="modal-body">
             <input type="hidden" name="id_producto" id="productId">
-            <div class="mb-3"><label class="form-label" for="productName">Nombre</label><input class="form-control" name="nombre_producto" id="productName" maxlength="150" required></div>
+            <div class="mb-3"><label class="form-label" for="productName">Nombre</label><input class="form-control" name="nombre_producto" id="productName" maxlength="100" required></div>
             <div class="mb-3"><label class="form-label" for="productCategory">Categoria</label><select class="form-select" name="id_categoria" id="productCategory" required><?php foreach ($categorias as $categoria): if ($categoria['estado'] !== 'Activo') continue; ?><option value="<?= (int) $categoria['id_categoria'] ?>"><?= e($categoria['nombre_categoria']) ?></option><?php endforeach; ?></select></div>
             <div class="row g-3 mb-3"><div class="col-12 col-sm-6"><label class="form-label" for="productPrice">Precio</label><input class="form-control" name="precio_base" id="productPrice" type="number" min="0" max="1000000" step="0.01" required></div><div class="col-12 col-sm-6"><label class="form-label" for="productLife">Vida util (dias)</label><input class="form-control" name="dias_vida_util" id="productLife" type="number" min="0" max="3650" required></div></div>
             <div><label class="form-label" for="productDescription">Descripcion</label><textarea class="form-control" name="descripcion" id="productDescription" maxlength="2000" rows="4"></textarea></div>

@@ -39,7 +39,8 @@ final class CatalogService
         $id = Validator::positiveInt($input['id_producto'] ?? null, 'producto');
         $this->requireProductAccess($id);
         $categoryId = Validator::positiveInt($input['id_categoria'] ?? null, 'categoria');
-        $name = Validator::text($input['nombre_producto'] ?? '', 'producto', 150);
+        $name = Validator::singleLineText($input['nombre_producto'] ?? '', 'producto', 100);
+        (new ProductNameGuard($this->db))->assertAvailable($name, $id);
         $description = Validator::text($input['descripcion'] ?? '', 'descripcion', 2000, false);
         $price = Validator::money($input['precio_base'] ?? null, 'precio', 1000000);
         $shelfLife = filter_var($input['dias_vida_util'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 3650]]);

@@ -24,7 +24,7 @@ final class ProductInput
         return [
             'category_id' => $categoryId,
             'new_category' => $newCategory,
-            'name' => Validator::text($input['nombre_producto'] ?? '', 'producto', 150),
+            'name' => Validator::singleLineText($input['nombre_producto'] ?? '', 'producto', 100),
             'price' => Validator::positiveMoney($input['precio_base'] ?? null, 'precio'),
             'type' => $type,
             'uses_supplies' => in_array($type, ['bebida', 'batido'], true),
