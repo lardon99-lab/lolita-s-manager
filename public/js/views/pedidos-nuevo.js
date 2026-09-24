@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
         designPolicies
     );
     const productCombobox = ProductCombobox.create(productSelect);
+    const detailBody = document.querySelector('#tabla-detalles tbody');
+    const lineBuilder = document.querySelector('.order-line-builder');
     let rowIndex = 0;
 
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -73,8 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const basePrice = Number(selectedProduct.dataset.precio || 0);
         const subtotal = (basePrice + customization.surcharge) * quantity;
         const index = rowIndex++;
-        const row = document.getElementById('tabla-detalles').querySelector('tbody').insertRow();
+        const row = detailBody.insertRow();
         row.className = 'order-detail-row';
+        row.dataset.orderLine = 'true';
 
         const productCell = row.insertCell();
         productCell.className = 'ps-3 py-3';
@@ -139,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         productCombobox.clear();
         document.getElementById('cant-producto').value = '1';
         customizer.render('', '');
+        lineBuilder?.classList.remove('is-invalid');
         calculateTotal();
         return true;
     }
@@ -166,17 +170,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-order-line').addEventListener('click', addOrderLine);
     form.addEventListener('submit', (event) => {
         const clientId = document.getElementById('id_cliente_real').value;
-        let hasItems = document.querySelector('#tabla-detalles tbody tr') !== null;
-        if (!hasItems && productSelect.value) {
-            if (!addOrderLine()) {
-                event.preventDefault();
-                return;
-            }
-            hasItems = true;
-        }
-        if (!clientId || !hasItems) {
+        const hasItems = detailBody.querySelector('[data-order-line="true"]') !== null;
+        if (!hasItems) {
             event.preventDefault();
-            Swal.fire('Pedido incompleto', !clientId ? 'Selecciona un cliente valido.' : 'Agrega al menos un producto.', 'error');
+            lineBuilder?.classList.add('is-invalid');
+            Swal.fire('Pedido sin productos', 'Añade al menos un producto al detalle antes de confirmar.', 'warning')
+                .then(() => document.querySelector('.product-combobox__input')?.focus());
+            return;
+        }
+        if (!clientId) {
+            event.preventDefault();
+            Swal.fire('Pedido incompleto', 'Selecciona un cliente valido.', 'error');
         }
     });
 

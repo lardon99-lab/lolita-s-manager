@@ -20,6 +20,8 @@ if ($allowedBranches === null) {
 }
 if ($id_sucursal_user === null && count($sucursales) === 1) $id_sucursal_user = (int) $sucursales[0]['id_sucursal'];
 $productos = $id_sucursal_user ? $invCtrl->listarProductosDisponibles($id_sucursal_user) : [];
+$configuraciones = (new \App\Services\ProductCustomizationService($db))
+    ->configurationsForProducts(array_column($productos, 'id_producto'));
 ?>
 
 <div class="container-fluid app-page sales-page p-2 p-md-4">
@@ -87,7 +89,9 @@ $productos = $id_sucursal_user ? $invCtrl->listarProductosDisponibles($id_sucurs
                             <?php foreach($productos as $p): ?>
                                 <option value="<?= $p['id_producto'] ?>"
                                         data-precio="<?= $p['precio_base'] ?>"
-                                        data-stock="<?= $p['stock'] ?>">
+                                        data-stock="<?= $p['stock'] ?>"
+                                        data-stock-key="<?= e($p['stock_key'] ?? ('producto:' . $p['id_producto'])) ?>"
+                                        data-tipo="<?= e($p['tipo_producto'] ?? 'panaderia') ?>">
                                     <?= e($p['nombre_producto']) ?> — (Stock: <?= (int) $p['stock'] ?>)
                                 </option>
                             <?php endforeach; ?>
@@ -173,7 +177,30 @@ $productos = $id_sucursal_user ? $invCtrl->listarProductosDisponibles($id_sucurs
     <?php endif; ?>
 </div>
 
+<div class="modal fade sales-customization" id="salesCustomizationModal" tabindex="-1" aria-labelledby="salesCustomizationTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <header class="modal-header">
+                <div>
+                    <span class="sales-customization__eyebrow">Personalizar producto</span>
+                    <h2 class="modal-title" id="salesCustomizationTitle">Configurar</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </header>
+            <div class="modal-body">
+                <div id="salesCustomizationGroups" class="sales-customization__groups"></div>
+            </div>
+            <footer class="modal-footer">
+                <div class="sales-customization__price"><span>Precio unitario</span><strong id="salesCustomizationPrice">L. 0.00</strong></div>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="salesCustomizationAdd"><i class="fa-solid fa-plus" aria-hidden="true"></i>Añadir al carrito</button>
+            </footer>
+        </div>
+    </div>
+</div>
+
 <link rel="stylesheet" href="css/views/ventas-nueva.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/ventas-nueva.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
+<script id="sales-product-configurations" type="application/json"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
 <script src="js/views/ventas-nueva.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/ventas-nueva.js') ?>"></script>

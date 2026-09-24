@@ -1,9 +1,12 @@
 <?php
-// views/dashboard/index.php
-
+$inventoryCards = [
+    ['title' => 'Próximos a caducar', 'description' => 'Vencen durante los siguientes 7 días', 'icon' => 'fa-calendar-days', 'variant' => 'expiry', 'items' => $productos_por_caducar, 'modal' => 'expiringInventoryModal'],
+    ['title' => 'Inventario agotado', 'description' => 'Productos sin unidades disponibles', 'icon' => 'fa-circle-xmark', 'variant' => 'danger', 'items' => $inventario_agotado, 'modal' => 'emptyInventoryModal'],
+    ['title' => 'Stock bajo', 'description' => 'Existencias iguales o menores al mínimo', 'icon' => 'fa-arrow-trend-down', 'variant' => 'warning', 'items' => $inventario_stock_bajo, 'modal' => 'lowInventoryModal'],
+];
 ?>
 
-<div class="container-fluid app-page p-2 p-md-4">
+<div class="container-fluid app-page dashboard-page p-2 p-md-4">
     <header class="app-page-header">
         <div class="app-page-header__main">
             <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-chart-line"></i></span>
@@ -14,246 +17,106 @@
         </div>
     </header>
 
-    <!-- Mensajes de estado alternativos -->
-    <?php if (isset($_GET['status']) && $_GET['status'] == 'merma_registrada'): ?>
-        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
-            <i class="fa-solid fa-circle-check me-2"></i> ¡Merma registrada correctamente! El stock se redujo a cero.
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Tarjetas de Métricas -->
-    <div class="row g-3 g-md-4 mb-4">
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="app-stat-card">
-                <div class="app-stat-card__body">
-                        <div>
-                            <p class="app-stat-card__label">Pedidos pendientes</p>
-                            <p class="app-stat-card__value"><?= $metricas['pendientes'] ?></p>
-                        </div>
-                        <span class="app-stat-card__icon"><i class="fa-solid fa-clock"></i></span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="app-stat-card app-stat-card--warning">
-                <div class="app-stat-card__body">
-                        <div>
-                            <p class="app-stat-card__label">Entregas para hoy</p>
-                            <p class="app-stat-card__value"><?= $metricas['para_hoy'] ?></p>
-                        </div>
-                        <span class="app-stat-card__icon"><i class="fa-solid fa-calendar-day"></i></span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-4">
-            <div class="app-stat-card app-stat-card--success">
-                <div class="app-stat-card__body">
-                        <div>
-                            <p class="app-stat-card__label">Ventas completadas</p>
-                            <p class="app-stat-card__value">L. <?= number_format($metricas['ventas'], 2) ?></p>
-                        </div>
-                        <span class="app-stat-card__icon"><i class="fa-solid fa-money-bill-trend-up"></i></span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ALERTA 1: PRODUCTOS YA CADUCADOS (CRÍTICO) -->
-    <?php if (count($productos_caducados) > 0): ?>
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-danger shadow-sm border-danger border-start border-5 mb-0 rounded-4 p-4 d-flex flex-column flex-md-row align-items-md-center gap-3" role="alert">
-                <div class="bg-danger bg-opacity-15 rounded-circle p-3 d-inline-flex align-items-center justify-content-center text-danger" style="width: 60px; height: 60px; min-width: 60px;">
-                    <i class="fa-solid fa-circle-exclamation fa-2x"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h5 class="alert-heading fw-bold text-danger mb-1">Productos Caducados</h5>
-                    <p class="small text-secondary mb-2">Los siguientes lotes han vencido. Deben ser retirados y registrados como merma para inactivar su venta.</p>
-                    <ul class="mb-0 small ps-0 text-dark list-unstyled mt-2">
-                        <?php foreach ($productos_caducados as $cad): 
-                            $fecha_formateada = date('d/m/Y', strtotime($cad['fecha_caducidad']));
-                        ?>
-                            <li class="mb-2 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center border-bottom border-danger border-opacity-10 pb-2">
-                                <div class="mb-2 mb-sm-0">
-                                    <strong class="text-dark"><?= htmlspecialchars($cad['nombre_producto']) ?></strong> 
-                                    <span class="text-secondary small ms-1">
-                                        (<i class="fa-solid fa-store fa-xs"></i> <?= htmlspecialchars($cad['nombre_sucursal']) ?>)
-                                    </span>
-                                    <span class="badge bg-danger text-white mx-1"><?= $cad['stock_actual'] ?> unid.</span> 
-                                    <span class="text-muted">- Venció el: <span class="text-danger fw-bold"><?= $fecha_formateada ?></span></span>
-                                </div>
-                                
-                                <?php if (\App\Security\Auth::canAccessBranch((int) $cad['id_sucursal'], 'inventory.waste')): ?>
-                                <button type="button" 
-                                        class="btn btn-sm btn-danger rounded-pill fw-bold px-3 btn-mermar-caducado" 
-                                        data-id="<?= $cad['id_inventario'] ?>" 
-                                        data-nombre="<?= htmlspecialchars($cad['nombre_producto']) ?>">
-                                    <i class="fa-solid fa-trash-can me-1"></i> Registrar Merma
-                                </button>
-                                <?php endif; ?>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <?php if (($_GET['status'] ?? '') === 'merma_registrada'): ?>
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i>Merma registrada correctamente.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
     </div>
     <?php endif; ?>
 
-    <!-- ALERTA 2: PRÓXIMOS A CADUCAR -->
-    <?php if (count($productos_por_caducar) > 0): ?>
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning shadow-sm border-warning border-start border-5 mb-0 rounded-4 p-4 d-flex flex-column flex-md-row align-items-md-center gap-3" role="alert">
-                <div class="bg-warning bg-opacity-25 rounded-circle p-3 d-inline-flex align-items-center justify-content-center text-warning" style="width: 60px; height: 60px; min-width: 60px;">
-                    <i class="fa-solid fa-bell fa-2x"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h5 class="alert-heading fw-bold mb-1">Próximos a caducar (Siguientes 7 días)</h5>
-                    <ul class="mb-0 small ps-3 text-dark mt-2">
-                        <?php foreach ($productos_por_caducar as $alerta_cad): 
-                            $fecha_formateada = date('d/m/Y', strtotime($alerta_cad['fecha_caducidad']));
-                        ?>
-                            <li class="mb-1">
-                                <strong><?= htmlspecialchars($alerta_cad['nombre_producto']) ?></strong> 
-                                <span class="text-secondary small ms-1">
-                                    (<i class="fa-solid fa-store fa-xs"></i> <?= htmlspecialchars($alerta_cad['nombre_sucursal']) ?>)
-                                </span>
-                                <span class="badge bg-warning text-dark mx-1"><?= $alerta_cad['stock_actual'] ?> unid.</span> 
-                                <span class="text-muted">- Vence: <span class="text-danger fw-bold"><?= $fecha_formateada ?></span></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-4"><div class="app-stat-card"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Pedidos pendientes</p><p class="app-stat-card__value"><?= (int) $metricas['pendientes'] ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-clock"></i></span></div></div></div>
+        <div class="col-12 col-sm-6 col-lg-4"><div class="app-stat-card app-stat-card--warning"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Entregas para hoy</p><p class="app-stat-card__value"><?= (int) $metricas['para_hoy'] ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-calendar-day"></i></span></div></div></div>
+        <div class="col-12 col-lg-4"><div class="app-stat-card app-stat-card--success"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Ventas completadas</p><p class="app-stat-card__value">L. <?= number_format((float) $metricas['ventas'], 2) ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-money-bill-trend-up"></i></span></div></div></div>
     </div>
+
+    <?php if ($productos_caducados !== []): ?>
+    <section class="expired-strip mb-4" aria-labelledby="expiredTitle">
+        <span class="expired-strip__icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <div><h5 id="expiredTitle">Hay <?= count($productos_caducados) ?> lote(s) caducado(s)</h5><p>Retíralos del inventario para evitar su venta.</p></div>
+        <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#expiredInventoryModal">Revisar lotes</button>
+    </section>
     <?php endif; ?>
 
-    <!-- Inventario crítico -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <section class="critical-inventory" aria-labelledby="criticalInventoryTitle">
-                <header class="critical-inventory__header">
-                    <div>
-                        <h5 id="criticalInventoryTitle" class="fw-bold mb-1">
-                            <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>Inventario crítico
-                        </h5>
-                        <p class="mb-0">Revisa y abastece los productos que requieren atención.</p>
-                    </div>
-                    <span class="critical-inventory__total">
-                        <?= count($inventario_agotado) + count($inventario_stock_bajo) ?> productos
-                    </span>
-                </header>
-
-                <?php
-                $inventoryMenus = [
-                    ['title' => 'Inventario agotado', 'description' => 'Productos sin unidades disponibles', 'icon' => 'fa-circle-xmark', 'variant' => 'danger', 'items' => $inventario_agotado],
-                    ['title' => 'Stock bajo', 'description' => 'Productos por debajo del mínimo definido', 'icon' => 'fa-arrow-trend-down', 'variant' => 'warning', 'items' => $inventario_stock_bajo],
-                ];
-                ?>
-
-                <div class="critical-accordion accordion" id="criticalInventoryAccordion">
-                    <?php foreach ($inventoryMenus as $menuIndex => $menu): ?>
-                        <?php $collapseId = 'criticalInventoryPanel' . $menuIndex; ?>
-                        <div class="accordion-item critical-panel critical-panel--<?= $menu['variant'] ?>">
-                            <h6 class="accordion-header">
-                                <button class="accordion-button critical-panel__toggle <?= $menuIndex === 0 ? '' : 'collapsed' ?>"
-                                        type="button"
-                                        data-bs-toggle="collapse"
-                                        data-bs-target="#<?= $collapseId ?>"
-                                        aria-expanded="<?= $menuIndex === 0 ? 'true' : 'false' ?>"
-                                        aria-controls="<?= $collapseId ?>">
-                                    <span class="critical-panel__icon" aria-hidden="true"><i class="fa-solid <?= $menu['icon'] ?>"></i></span>
-                                    <span class="critical-panel__heading">
-                                        <strong><?= e($menu['title']) ?></strong>
-                                        <small><?= e($menu['description']) ?></small>
-                                    </span>
-                                    <span class="critical-panel__count"><?= count($menu['items']) ?></span>
-                                </button>
-                            </h6>
-
-                            <div id="<?= $collapseId ?>" class="accordion-collapse collapse <?= $menuIndex === 0 ? 'show' : '' ?>">
-                                <div class="accordion-body critical-panel__body">
-                                    <?php if ($menu['items'] === []): ?>
-                                        <p class="critical-panel__empty mb-0"><i class="fa-solid fa-circle-check me-2"></i>No hay productos en esta categoría.</p>
-                                    <?php else: ?>
-                                        <div class="d-none d-md-block table-responsive">
-                                            <table class="table critical-table mb-0">
-                                                <thead>
-                                                    <tr><th scope="col">Producto</th><th scope="col">Sucursal</th><th scope="col">Stock</th><th scope="col" class="text-end">Acción</th></tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($menu['items'] as $item): ?>
-                                                        <tr>
-                                                            <th scope="row"><?= e($item['nombre_producto']) ?></th>
-                                                            <td><i class="fa-solid fa-store me-2 text-muted" aria-hidden="true"></i><?= e($item['nombre_sucursal']) ?></td>
-                                                            <td>
-                                                                <span class="stock-chip stock-chip--<?= (int) $item['stock_actual'] <= 0 ? 'danger' : 'warning' ?>">
-                                                                    <?= (int) $item['stock_actual'] <= 0 ? 'Agotado' : (int) $item['stock_actual'] . ' unid.' ?>
-                                                                </span>
-                                                            </td>
-                                                            <td class="text-end"><?php include __DIR__ . '/partials/critical-stock-button.php'; ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <table class="table critical-mobile-table d-md-none mb-0">
-                                            <thead><tr><th scope="col">Producto</th><th scope="col" class="text-center">Acción</th></tr></thead>
-                                            <tbody>
-                                                <?php foreach ($menu['items'] as $item): ?>
-                                                    <tr>
-                                                        <th scope="row">
-                                                            <span class="critical-mobile-table__name"><?= e($item['nombre_producto']) ?></span>
-                                                            <span class="critical-mobile-table__meta"><i class="fa-solid fa-store" aria-hidden="true"></i><?= e($item['nombre_sucursal']) ?></span>
-                                                            <span class="stock-chip stock-chip--<?= (int) $item['stock_actual'] <= 0 ? 'danger' : 'warning' ?>">
-                                                                <?= (int) $item['stock_actual'] <= 0 ? 'Agotado' : (int) $item['stock_actual'] . ' unid.' ?>
-                                                            </span>
-                                                        </th>
-                                                        <td class="text-center"><?php include __DIR__ . '/partials/critical-stock-button.php'; ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </section>
+    <section class="inventory-alerts mb-4" aria-labelledby="inventoryAlertsTitle">
+        <header class="inventory-alerts__heading">
+            <div><h5 id="inventoryAlertsTitle">Estado del inventario</h5><p>Selecciona una categoría para revisar el detalle.</p></div>
+        </header>
+        <div class="inventory-alert-grid">
+            <?php foreach ($inventoryCards as $card): ?>
+            <button type="button" class="inventory-alert-card inventory-alert-card--<?= $card['variant'] ?>" data-bs-toggle="modal" data-bs-target="#<?= $card['modal'] ?>">
+                <span class="inventory-alert-card__icon"><i class="fa-solid <?= $card['icon'] ?>"></i></span>
+                <span class="inventory-alert-card__body"><strong><?= e($card['title']) ?></strong><small><?= e($card['description']) ?></small></span>
+                <span class="inventory-alert-card__count"><?= count($card['items']) ?></span>
+                <span class="inventory-alert-card__action">Ver detalle <i class="fa-solid fa-arrow-right"></i></span>
+            </button>
+            <?php endforeach; ?>
         </div>
-    </div>
+    </section>
 
-    <!-- Acciones Rápidas -->
-    <div>
-        <h6 class="fw-bold mb-3 text-uppercase text-muted small">Acciones Rápidas</h6>
-        <div class="d-flex flex-wrap gap-3">
-            <a href="index.php?view=pedidos-nuevo" class="btn btn-white shadow-sm border rounded-pill px-4 py-2 flex-grow-1 flex-md-grow-0 text-start fw-semibold hover-lift">
-                <i class="fa-solid fa-plus text-primary border border-primary border-2 rounded-circle p-1 me-2" style="font-size: 0.7rem;"></i> Nuevo Pedido
-            </a>
-            <a href="index.php?view=inventario" class="btn btn-white shadow-sm border rounded-pill px-4 py-2 flex-grow-1 flex-md-grow-0 text-start fw-semibold hover-lift">
-                <i class="fa-solid fa-boxes-stacked text-primary me-2"></i> Ver Inventario
-            </a>
+    <div class="quick-actions">
+        <h6>Acciones rápidas</h6>
+        <div>
+            <a href="index.php?view=pedidos-nuevo" class="btn btn-white shadow-sm border fw-semibold"><i class="fa-solid fa-plus text-primary me-2"></i>Nuevo pedido</a>
+            <a href="index.php?view=inventario" class="btn btn-white shadow-sm border fw-semibold"><i class="fa-solid fa-boxes-stacked text-primary me-2"></i>Ver inventario</a>
         </div>
     </div>
 </div>
 
+<?php foreach ($inventoryCards as $card): ?>
+<div class="modal fade inventory-detail-modal inventory-detail-modal--<?= $card['variant'] ?>" id="<?= $card['modal'] ?>" tabindex="-1" aria-labelledby="<?= $card['modal'] ?>Title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <header class="modal-header">
+                <div class="inventory-detail-modal__title"><span class="inventory-alert-card__icon"><i class="fa-solid <?= $card['icon'] ?>"></i></span><div><small>Inventario</small><h5 class="modal-title" id="<?= $card['modal'] ?>Title"><?= e($card['title']) ?></h5></div></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </header>
+            <div class="modal-body">
+                <?php if ($card['items'] === []): ?>
+                <div class="inventory-detail-empty"><i class="fa-solid fa-circle-check"></i><strong>Todo en orden</strong><span>No hay productos en esta categoría.</span></div>
+                <?php else: ?>
+                <div class="inventory-detail-list">
+                    <?php foreach ($card['items'] as $item): ?>
+                    <article class="inventory-detail-item">
+                        <div class="inventory-detail-item__main"><strong><?= e($item['nombre_producto']) ?></strong><span><i class="fa-solid fa-store"></i><?= e($item['nombre_sucursal']) ?></span></div>
+                        <?php if ($card['variant'] === 'expiry'): ?>
+                            <div class="inventory-detail-item__metric"><small>Existencia</small><strong><?= (int) $item['stock_actual'] ?> unid.</strong></div>
+                            <div class="inventory-detail-item__metric"><small>Vence</small><strong><?= e(date('d/m/Y', strtotime($item['fecha_caducidad']))) ?></strong></div>
+                        <?php else: ?>
+                            <div class="inventory-detail-item__metric"><small>Existencia</small><strong><?= (int) $item['stock_actual'] <= 0 ? 'Agotado' : (int) $item['stock_actual'] . ' unid.' ?></strong></div>
+                            <div class="inventory-detail-item__action"><?php include __DIR__ . '/partials/critical-stock-button.php'; ?></div>
+                        <?php endif; ?>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <footer class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button><a class="btn btn-primary" href="index.php?view=inventario"><i class="fa-solid fa-boxes-stacked me-2"></i>Ir a inventario</a></footer>
+        </div>
+    </div>
+</div>
+<?php endforeach; ?>
+
+<?php if ($productos_caducados !== []): ?>
+<div class="modal fade inventory-detail-modal inventory-detail-modal--danger" id="expiredInventoryModal" tabindex="-1" aria-labelledby="expiredInventoryModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
+        <header class="modal-header"><div class="inventory-detail-modal__title"><span class="inventory-alert-card__icon"><i class="fa-solid fa-triangle-exclamation"></i></span><div><small>Acción requerida</small><h5 class="modal-title" id="expiredInventoryModalTitle">Lotes caducados</h5></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></header>
+        <div class="modal-body"><div class="inventory-detail-list">
+            <?php foreach ($productos_caducados as $item): ?>
+            <article class="inventory-detail-item"><div class="inventory-detail-item__main"><strong><?= e($item['nombre_producto']) ?></strong><span><i class="fa-solid fa-store"></i><?= e($item['nombre_sucursal']) ?></span></div><div class="inventory-detail-item__metric"><small>Venció</small><strong><?= e(date('d/m/Y', strtotime($item['fecha_caducidad']))) ?></strong></div><?php if (\App\Security\Auth::canAccessBranch((int) $item['id_sucursal'], 'inventory.waste')): ?><button type="button" class="btn btn-sm btn-danger btn-mermar-caducado" data-id="<?= (int) $item['id_inventario'] ?>" data-nombre="<?= e($item['nombre_producto']) ?>"><i class="fa-solid fa-trash-can me-1"></i>Registrar merma</button><?php endif; ?></article>
+            <?php endforeach; ?>
+        </div></div>
+        <footer class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></footer>
+    </div></div>
+</div>
+<?php endif; ?>
+
 <?php
 $restockProducts = array_merge($inventario_agotado, $inventario_stock_bajo);
 $restockDefaultBranch = 0;
-if (\App\Security\Auth::hasPermission('inventory.adjust')) {
-    include __DIR__ . '/../inventario/partials/restock-panel.php';
-}
+if (\App\Security\Auth::hasPermission('inventory.adjust')) include __DIR__ . '/../inventario/partials/restock-panel.php';
 ?>
 
 <link rel="stylesheet" href="css/views/dashboard.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/dashboard.css') ?>">
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-
-<script src="js/views/dashboard.js"></script>
+<script src="js/views/dashboard.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/dashboard.js') ?>"></script>

@@ -193,7 +193,13 @@
                 const productId = Number(openButton.dataset.producto || 0);
                 if (productId > 0) addProduct(`${branchId}:${productId}`);
                 else render();
-                modal.show();
+                const parentModal = openButton.closest('.modal.show');
+                if (parentModal && parentModal !== modalElement) {
+                    parentModal.addEventListener('hidden.bs.modal', () => modal.show(), { once: true });
+                    bootstrap.Modal.getInstance(parentModal)?.hide();
+                } else {
+                    modal.show();
+                }
                 return;
             }
 

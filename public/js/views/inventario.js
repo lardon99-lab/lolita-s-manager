@@ -1,7 +1,10 @@
 const pastelRadio = document.getElementById('tipoPastel');
 const panaderiaRadio = document.getElementById('tipoPanaderia');
+const typeRadios = Array.from(document.querySelectorAll('input[name="tipo_producto"]'));
 const camposPastel = document.getElementById('camposPastel');
 const camposPanaderia = document.getElementById('camposPanaderia');
+const camposBebida = document.getElementById('camposBebida');
+const camposBatido = document.getElementById('camposBatido');
 const newProductCustomizationContainer = document.getElementById('newProductCustomizationGroups');
 const newProductCustomizationEditor = newProductCustomizationContainer
     ? CakeConfigurationEditor.create(newProductCustomizationContainer)
@@ -10,17 +13,25 @@ const allowCakeDesign = document.getElementById('allowCakeDesign');
 const cakeDesignPolicyFields = document.getElementById('cakeDesignPolicyFields');
 
 function actualizarVistaTipoProducto() {
-    const isPastel = pastelRadio && pastelRadio.checked;
-    if (camposPastel) camposPastel.style.display = isPastel ? 'block' : 'none';
-    if (camposPanaderia) camposPanaderia.style.display = isPastel ? 'none' : 'block';
-    camposPastel?.querySelectorAll('input, button').forEach((control) => { control.disabled = !isPastel; });
-    camposPanaderia?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = isPastel; });
+    const type = typeRadios.find((radio) => radio.checked)?.value || 'pastel';
+    const sections = { pastel: camposPastel, panaderia: camposPanaderia, bebida: camposBebida, batido: camposBatido };
+    Object.entries(sections).forEach(([sectionType, section]) => {
+        if (!section) return;
+        const active = type === sectionType;
+        section.hidden = !active;
+        section.style.display = active ? 'block' : 'none';
+        section.querySelectorAll('input, select, textarea, button').forEach((control) => {
+            control.disabled = !active;
+            if (control instanceof HTMLSelectElement) control.dispatchEvent(new CustomEvent('app-select-sync'));
+        });
+    });
+    document.querySelectorAll('[data-product-stock-input]').forEach((input) => {
+        input.disabled = type === 'bebida' || type === 'batido';
+        input.closest('.col-12')?.classList.toggle('opacity-50', input.disabled);
+    });
 }
 
-if (pastelRadio && panaderiaRadio) {
-    pastelRadio.addEventListener('change', actualizarVistaTipoProducto);
-    panaderiaRadio.addEventListener('change', actualizarVistaTipoProducto);
-}
+typeRadios.forEach((radio) => radio.addEventListener('change', actualizarVistaTipoProducto));
 
 actualizarVistaTipoProducto();
 

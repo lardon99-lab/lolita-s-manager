@@ -44,6 +44,70 @@
         border-top: 1px solid var(--border-color) !important;
         padding-top: 0.85rem !important;
     }
+
+    .supply-inventory {
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 8px 26px rgba(64, 53, 61, 0.06);
+    }
+
+    .supply-inventory__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .supply-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #fffafb;
+    }
+
+    .supply-card {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 0.7rem;
+        align-items: center;
+        min-width: 0;
+        padding: 0.85rem;
+        border: 1px solid #eadfe3;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .supply-card__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        color: #168954;
+        background: #e5f5ec;
+    }
+
+    .supply-card--danger .supply-card__icon { color: #cf3343; background: #fde9ed; }
+    .supply-card--warning .supply-card__icon { color: #8b6400; background: #fff2c8; }
+    .supply-card__content { min-width: 0; }
+    .supply-card__content h6 { margin: 0; font-size: 0.86rem; overflow-wrap: anywhere; }
+    .supply-card__content p { margin: 0.18rem 0 0; color: var(--muted-color); font-size: 0.75rem; }
+    .supply-card__status { grid-column: 1 / -1; color: #786970; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+
+    .supply-restock-modal .modal-content { border: 0; border-top: 4px solid #1a915a; border-radius: 8px; }
+    .supply-restock-modal__eyebrow { display: block; color: #168954; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; }
+    .supply-restock-list { display: grid; gap: 0.65rem; }
+    .supply-restock-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid #eadfe3; border-radius: 8px; }
+    .supply-restock-row strong, .supply-restock-row small { display: block; }
+    .supply-restock-row strong { font-size: 0.82rem; overflow-wrap: anywhere; }
+    .supply-restock-row small { margin-top: 0.15rem; color: var(--muted-color); font-size: 0.68rem; }
+    .supply-restock-row input { text-align: center; }
     
     /* Adaptaciones móviles */
     @media (max-width: 576px) {
@@ -71,4 +135,15 @@
         #modalNuevoProducto .modal-body { padding: 0.85rem !important; }
         #modalNuevoProducto .modal-footer { padding: 0.75rem 0.85rem !important; }
         #modalNuevoProducto .modal-footer .btn { min-height: 48px; }
+        .product-type-grid > div { width: 50%; }
+        .product-type-grid .form-check { height: 100%; padding: 0.75rem !important; }
+        .product-type-grid .form-check-label { display: block; margin: 0.35rem 0 0 !important; font-size: 0.78rem; line-height: 1.25; }
+        .supply-inventory__header { align-items: flex-start; flex-direction: column; padding: 0.85rem; }
+        .supply-grid { grid-template-columns: minmax(0, 1fr); padding: 0.75rem; }
+        .supply-restock-modal .modal-content { border-radius: 0; }
+        .supply-restock-row { grid-template-columns: minmax(0, 1fr) 92px; }
+    }
+
+    @media (min-width: 577px) and (max-width: 991.98px) {
+        .supply-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }

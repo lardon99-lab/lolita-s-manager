@@ -19,6 +19,11 @@
                     <button type="button" class="btn btn-success px-4 shadow-sm fw-bold" data-restock-open data-restock-branch="<?= (int) $id_sucursal_filtro ?>">
                         <i class="fa-solid fa-boxes-packing me-2" aria-hidden="true"></i>Abastecer inventario
                     </button>
+                    <?php if ($insumos !== []): ?>
+                    <button type="button" class="btn btn-outline-success px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAbastecerInsumos">
+                        <i class="fa-solid fa-glass-water me-2" aria-hidden="true"></i>Abastecer vasos
+                    </button>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
                     <button class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
@@ -211,6 +216,34 @@
             </table>
         </div>
     </div>
+
+    <?php if ($id_sucursal_filtro && $insumos !== []): ?>
+    <section class="supply-inventory mt-4" aria-labelledby="supplyInventoryTitle">
+        <header class="supply-inventory__header">
+            <div>
+                <h5 id="supplyInventoryTitle" class="fw-bold mb-1">Vasos e insumos compartidos</h5>
+                <p class="text-muted small mb-0">Una sola existencia alimenta todas las bebidas que utilizan el mismo vaso.</p>
+            </div>
+            <span class="chip-pill"><i class="fa-solid fa-link"></i> Stock compartido</span>
+        </header>
+        <div class="supply-grid">
+            <?php foreach ($insumos as $insumo):
+                $supplyStock = (float) $insumo['stock_actual'];
+                $supplyMinimum = (float) $insumo['stock_minimo'];
+                $supplyStatus = $supplyStock <= 0 ? 'danger' : ($supplyStock <= $supplyMinimum ? 'warning' : 'success');
+            ?>
+            <article class="supply-card supply-card--<?= $supplyStatus ?>">
+                <span class="supply-card__icon"><i class="fa-solid fa-glass-water" aria-hidden="true"></i></span>
+                <div class="supply-card__content">
+                    <h6><?= e($insumo['nombre']) ?></h6>
+                    <p><?= rtrim(rtrim(number_format($supplyStock, 3, '.', ''), '0'), '.') ?> <?= e($insumo['unidad_medida']) ?>(s)</p>
+                </div>
+                <span class="supply-card__status"><?= $supplyStock <= 0 ? 'Agotado' : ($supplyStock <= $supplyMinimum ? 'Stock bajo' : 'Disponible') ?></span>
+            </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 </div>
 
 <div class="modal fade" id="modalNuevoProducto" tabindex="-1" aria-hidden="true">
@@ -227,7 +260,7 @@
                 <div class="modal-body px-3 px-md-4 py-3">
                     <div class="form-section-card mb-3">
                         <label class="small text-muted fw-bold mb-2 ms-1">Tipo de producto</label>
-                        <div class="row g-2">
+                        <div class="row g-2 product-type-grid">
                             <div class="col-12 col-sm-6">
                                 <div class="form-check border rounded-4 p-3 bg-white">
                                     <input class="form-check-input" type="radio" name="tipo_producto" id="tipoPastel" value="pastel" checked>
@@ -238,6 +271,18 @@
                                 <div class="form-check border rounded-4 p-3 bg-white">
                                     <input class="form-check-input" type="radio" name="tipo_producto" id="tipoPanaderia" value="panaderia">
                                     <label class="form-check-label ms-2 fw-bold" for="tipoPanaderia"><i class="fa-solid fa-bread-slice me-2 text-primary"></i>Panadería / Otros</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="form-check border rounded-4 p-3 bg-white">
+                                    <input class="form-check-input" type="radio" name="tipo_producto" id="tipoBebida" value="bebida">
+                                    <label class="form-check-label ms-2 fw-bold" for="tipoBebida"><i class="fa-solid fa-mug-hot me-2 text-primary"></i>Bebida</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="form-check border rounded-4 p-3 bg-white">
+                                    <input class="form-check-input" type="radio" name="tipo_producto" id="tipoBatido" value="batido">
+                                    <label class="form-check-label ms-2 fw-bold" for="tipoBatido"><i class="fa-solid fa-blender me-2 text-primary"></i>Batido / licuado</label>
                                 </div>
                             </div>
                         </div>
@@ -275,7 +320,7 @@
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Stock inicial</label>
-                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0">
+                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0" data-product-stock-input>
                             </div>
                         </div>
 
@@ -283,7 +328,7 @@
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Vida útil</label>
                                 <div class="input-group">
-                                    <input type="number" min="0" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0">
+                                    <input type="number" min="0" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0" data-product-stock-input>
                                     <span class="input-group-text border-0 bg-light rounded-end-3 text-muted">días</span>
                                 </div>
                             </div>
@@ -341,6 +386,54 @@
                         </div>
                     </div>
 
+                    <div class="form-section-card mb-3" id="camposBebida" hidden>
+                        <h6 class="fw-bold mb-1"><i class="fa-solid fa-mug-hot me-2 text-primary"></i>Control de bebida</h6>
+                        <p class="text-muted small">Todas las bebidas del mismo tamaño descontarán del mismo inventario de vasos.</p>
+                        <label class="small text-muted fw-bold mb-1" for="beverageSupply">Tamaño de vaso</label>
+                        <select id="beverageSupply" name="id_insumo" class="form-select" required disabled>
+                            <option value="">Seleccionar vaso...</option>
+                            <?php foreach ($insumos_catalogo as $supply): ?>
+                                <?php if (in_array($supply['codigo'], ['cup_8oz', 'cup_12oz'], true)): ?>
+                                <option value="<?= (int) $supply['id_insumo'] ?>"><?= e($supply['nombre']) ?></option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-section-card mb-3" id="camposBatido" hidden>
+                        <h6 class="fw-bold mb-1"><i class="fa-solid fa-blender me-2 text-primary"></i>Opciones del batido</h6>
+                        <p class="text-muted small">La primera fruta está incluida. La fruta adicional y la leche deslactosada aplican el recargo indicado.</p>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1" for="shakeSupply">Vaso estándar</label>
+                                <select id="shakeSupply" name="id_insumo" class="form-select" required disabled>
+                                    <?php foreach ($insumos_catalogo as $supply): ?>
+                                        <?php if ($supply['codigo'] === 'cup_shake'): ?>
+                                        <option value="<?= (int) $supply['id_insumo'] ?>" selected><?= e($supply['nombre']) ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="small text-muted fw-bold mb-1" for="shakeFruits">Frutas disponibles</label>
+                                <textarea id="shakeFruits" name="frutas" class="form-control" rows="4" placeholder="Fresa&#10;Banano&#10;Mango" required disabled></textarea>
+                                <small class="text-muted">Escribe una fruta por línea.</small>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="small text-muted fw-bold mb-1" for="shakeMaxFruits">Máximo de frutas</label>
+                                <input id="shakeMaxFruits" name="maximo_frutas" type="number" class="form-control" min="1" max="10" value="3" required disabled>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="small text-muted fw-bold mb-1" for="shakeFruitSurcharge">Fruta adicional</label>
+                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeFruitSurcharge" name="recargo_fruta_extra" type="number" class="form-control" min="0" step="0.01" value="15.00" required disabled></div>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="small text-muted fw-bold mb-1" for="shakeMilkSurcharge">Leche deslactosada</label>
+                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeMilkSurcharge" name="recargo_deslactosada" type="number" class="form-control" min="0" step="0.01" value="15.00" required disabled></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="small text-muted fw-bold mb-2 ms-1">Sucursales disponibles</label>
                         <div class="p-3 border-0 bg-light rounded-4 shadow-sm" style="max-height: 170px; overflow-y: auto;">
@@ -365,6 +458,37 @@
     </div>
 </div>
 
+<?php if ($id_sucursal_filtro && $insumos !== [] && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.adjust')): ?>
+<div class="modal fade supply-restock-modal" id="modalAbastecerInsumos" tabindex="-1" aria-labelledby="supplyRestockTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <form class="modal-content" id="formAbastecerInsumos">
+            <header class="modal-header">
+                <div><span class="supply-restock-modal__eyebrow">Entrada de inventario</span><h5 class="modal-title" id="supplyRestockTitle">Abastecer vasos</h5></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </header>
+            <div class="modal-body">
+                <input type="hidden" name="id_sucursal" value="<?= (int) $id_sucursal_filtro ?>">
+                <input type="hidden" name="idempotency_key" value="">
+                <div class="supply-restock-list">
+                    <?php foreach ($insumos as $insumo): ?>
+                    <label class="supply-restock-row">
+                        <span><strong><?= e($insumo['nombre']) ?></strong><small>Actual: <?= (float) $insumo['stock_actual'] ?></small></span>
+                        <input type="number" class="form-control" min="0" max="100000" step="1" value="0" data-supply-id="<?= (int) $insumo['id_insumo'] ?>" aria-label="Cantidad de <?= e($insumo['nombre']) ?>">
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <label class="small fw-bold text-muted mt-3" for="supplyRestockNotes">Observaciones</label>
+                <textarea id="supplyRestockNotes" name="observaciones" class="form-control" rows="2" maxlength="500"></textarea>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk me-2"></i>Registrar entrada</button>
+            </footer>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php
 $restockProducts = $productos;
 $restockDefaultBranch = (int) ($id_sucursal_filtro ?? 0);
@@ -378,3 +502,4 @@ if (\App\Security\Auth::hasPermission('inventory.adjust')) {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
 <script src="js/components/cake-configuration-editor.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/cake-configuration-editor.js') ?>"></script>
 <script src="js/views/inventario.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/inventario.js') ?>"></script>
+<script src="js/components/supply-restock.js?v=<?= filemtime(__DIR__ . '/../../public/js/components/supply-restock.js') ?>"></script>

@@ -20,6 +20,11 @@ final class PedidoService
         $storedDesignFiles = [];
         $designStorage = new OrderDesignStorage(dirname(__DIR__, 2) . '/storage/order-designs');
         try {
+            $submittedLines = is_array($input['lineas'] ?? null) ? $input['lineas'] : [];
+            $legacyProducts = is_array($input['productos'] ?? null) ? $input['productos'] : [];
+            if ($submittedLines === [] && $legacyProducts === []) {
+                throw new InvalidArgumentException('Añade al menos un producto al pedido.');
+            }
             $clientId = Validator::positiveInt($input['id_cliente'] ?? null, 'cliente');
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
             Auth::requirePermission('orders.create', $branchId);

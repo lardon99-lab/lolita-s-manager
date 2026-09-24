@@ -9,6 +9,14 @@ final class OrderPricingServiceTest extends TestCase
     private PDO $db;
     private OrderPricingService $service;
 
+    public function testRejectsOrderWithoutProducts(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('El pedido no contiene productos validos.');
+
+        $this->service->price(2, ['lineas' => []]);
+    }
+
     protected function setUp(): void
     {
         $this->db = new PDO('sqlite::memory:');

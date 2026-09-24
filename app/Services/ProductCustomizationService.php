@@ -22,7 +22,8 @@ final class ProductCustomizationService
         }
 
         $groups = $this->db->prepare(
-            "SELECT g.id_grupo, g.codigo, g.nombre, pg.minimo_selecciones, pg.maximo_selecciones
+            "SELECT g.id_grupo, g.codigo, g.nombre, pg.minimo_selecciones, pg.maximo_selecciones,
+                    pg.selecciones_incluidas, pg.recargo_seleccion_extra
              FROM producto_personalizacion_grupos pg
              JOIN personalizacion_grupos g ON g.id_grupo = pg.id_grupo
              WHERE pg.id_producto = ? AND g.estado = 'Activo'
@@ -86,7 +87,9 @@ final class ProductCustomizationService
                  ON DUPLICATE KEY UPDATE id_opcion = LAST_INSERT_ID(id_opcion), estado = 'Activo'"
             );
             $productGroup = $this->db->prepare(
-                'INSERT INTO producto_personalizacion_grupos (id_producto, id_grupo, minimo_selecciones, maximo_selecciones, orden) VALUES (?, ?, ?, ?, ?)'
+                'INSERT INTO producto_personalizacion_grupos
+                 (id_producto, id_grupo, minimo_selecciones, maximo_selecciones, selecciones_incluidas, recargo_seleccion_extra, orden)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
             $productOption = $this->db->prepare(
                 "INSERT INTO producto_personalizacion_opciones (id_producto, id_opcion, recargo, predeterminada, estado, orden) VALUES (?, ?, ?, ?, 'Activo', ?)"
@@ -95,7 +98,10 @@ final class ProductCustomizationService
             foreach ($configuration as $groupOrder => $group) {
                 $groupUpsert->execute([$group['codigo'], $group['nombre']]);
                 $groupId = (int) $this->db->lastInsertId();
-                $productGroup->execute([$productId, $groupId, $group['minimo'], $group['maximo'], $groupOrder]);
+                $productGroup->execute([
+                    $productId, $groupId, $group['minimo'], $group['maximo'],
+                    $group['incluidas'], $group['recargo_extra'], $groupOrder,
+                ]);
                 foreach ($group['opciones'] as $optionOrder => $option) {
                     $optionUpsert->execute([$groupId, $option['nombre']]);
                     $optionId = (int) $this->db->lastInsertId();
@@ -120,7 +126,7 @@ final class ProductCustomizationService
             if (!is_array($group)) throw new InvalidArgumentException('Uno de los grupos no es valido.');
             $name = Validator::text($group['nombre'] ?? '', 'grupo', 50);
             $code = trim((string) ($group['codigo'] ?? ''));
-            if ($code !== '' && !in_array($code, ['cake_flavor', 'cake_filling', 'cake_covering'], true)) {
+            if ($code !== '' && !in_array($code, ['cake_flavor', 'cake_filling', 'cake_covering', 'shake_fruit', 'shake_milk'], true)) {
                 throw new InvalidArgumentException('El tipo de grupo no es valido.');
             }
             $nameKey = mb_strtolower($name);
@@ -135,6 +141,9 @@ final class ProductCustomizationService
             $maximum = filter_var($group['maximo'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => count($options)]]);
             if ($maximum === false) throw new InvalidArgumentException("El maximo de selecciones de {$name} no es valido.");
             $minimum = !empty($group['obligatorio']) ? 1 : 0;
+            $included = filter_var($group['selecciones_incluidas'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximum]]);
+            if ($included === false) throw new InvalidArgumentException("Las selecciones incluidas de {$name} no son validas.");
+            $extraSurcharge = Validator::money($group['recargo_seleccion_extra'] ?? 0, 'recargo por seleccion adicional', 1000000);
             $optionNames = [];
             $validatedOptions = [];
             $defaultCount = 0;
@@ -158,6 +167,8 @@ final class ProductCustomizationService
                 'nombre' => $name,
                 'minimo' => $minimum,
                 'maximo' => $maximum,
+                'incluidas' => $included,
+                'recargo_extra' => $extraSurcharge,
                 'opciones' => $validatedOptions,
             ];
         }
@@ -166,7 +177,7 @@ final class ProductCustomizationService
 
     private function requireProductAccess(int $productId): void
     {
-        $stmt = $this->db->prepare('SELECT DISTINCT id_sucursal FROM inventario WHERE id_producto = ?');
+        $stmt = $this->db->prepare("SELECT id_sucursal FROM producto_sucursales WHERE id_producto = ? AND estado = 'Activo'");
         $stmt->execute([$productId]);
         $branches = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
         $allowed = Auth::allowedBranches('products.manage');

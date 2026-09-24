@@ -28,11 +28,22 @@ final class SucursalController
     {
         Auth::requirePermission('branches.manage');
         [$name, $address, $phone] = $this->validatedInput($_POST);
-        $stmt = $this->db->prepare('INSERT INTO sucursales (nombre_sucursal, direccion, telefono) VALUES (?, ?, ?)');
-        $stmt->execute([$name, $address, $phone]);
-        $id = (int) $this->db->lastInsertId();
-        (new AuditService($this->db))->record('branch.created', 'sucursales', $id, $id, ['nombre' => $name]);
-        Response::json(['status' => 'success', 'message' => 'Sucursal creada.']);
+        try {
+            $this->db->beginTransaction();
+            $stmt = $this->db->prepare('INSERT INTO sucursales (nombre_sucursal, direccion, telefono) VALUES (?, ?, ?)');
+            $stmt->execute([$name, $address, $phone]);
+            $id = (int) $this->db->lastInsertId();
+            $this->db->prepare(
+                'INSERT INTO inventario_insumos (id_sucursal, id_insumo, stock_actual, stock_minimo)
+                 SELECT ?, id_insumo, 0, 10 FROM insumos WHERE estado = ?'
+            )->execute([$id, 'Activo']);
+            (new AuditService($this->db))->record('branch.created', 'sucursales', $id, $id, ['nombre' => $name]);
+            $this->db->commit();
+            Response::json(['status' => 'success', 'message' => 'Sucursal creada.']);
+        } catch (Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $error;
+        }
     }
 
     public function actualizar(): void

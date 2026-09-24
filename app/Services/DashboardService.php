@@ -36,6 +36,21 @@ final class DashboardService
         $stockStmt = $this->db->prepare($stockSql);
         $stockStmt->execute($inventoryParams);
         $criticalStock = $stockStmt->fetchAll();
+        foreach ($criticalStock as &$stockItem) $stockItem['tipo_item'] = 'producto';
+        unset($stockItem);
+
+        [$supplyScope, $supplyParams] = $this->scope('ii.id_sucursal', 'inventory.view');
+        $supplyStmt = $this->db->prepare(
+            "SELECT 0 AS id_producto, 0 AS id_inventario, ii.id_sucursal, i.nombre AS nombre_producto,
+                    ii.stock_actual, ii.stock_minimo, s.nombre_sucursal, 'insumo' AS tipo_item
+             FROM inventario_insumos ii
+             JOIN insumos i ON i.id_insumo = ii.id_insumo
+             JOIN sucursales s ON s.id_sucursal = ii.id_sucursal
+             WHERE i.estado = 'Activo' AND ii.stock_actual <= ii.stock_minimo{$supplyScope}
+             ORDER BY ii.stock_actual, i.nombre"
+        );
+        $supplyStmt->execute($supplyParams);
+        array_push($criticalStock, ...$supplyStmt->fetchAll());
         $outOfStock = [];
         $lowStock = [];
         foreach ($criticalStock as $item) {

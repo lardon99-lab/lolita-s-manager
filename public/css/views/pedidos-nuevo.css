@@ -25,6 +25,10 @@
     .product-combobox__native { display: none !important; }
     .order-line-builder { padding-bottom: 2rem !important; }
     .order-line-builder__action .btn { min-height: 42px; }
+    .order-line-builder.is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.12) !important;
+    }
 
     .order-customization-groups { display: grid; gap: 1rem; }
     .order-customization-group { min-width: 0; padding: 0; border: 0; }
@@ -75,11 +79,136 @@
     .order-delivery-field > i { position: absolute; z-index: 3; top: 50%; left: 0.9rem; color: #b62f55; pointer-events: none; transform: translateY(-50%); }
     .order-delivery-input { min-height: 48px; padding-left: 2.65rem; background: #f9f7f8; border: 1px solid #eadce3; border-radius: 8px; box-shadow: none; }
     .order-delivery-input:focus { background: #fff; border-color: #ff85a2; box-shadow: 0 0 0 0.2rem rgba(255, 133, 162, 0.14); }
-    .flatpickr-calendar { border: 1px solid #eadce3; border-radius: 8px; box-shadow: 0 14px 30px rgba(64, 53, 61, 0.16); font-family: inherit; }
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #f7668a; border-color: #f7668a; }
-    .flatpickr-day.today { border-color: #b62f55; }
-    .flatpickr-day:hover { background: #fff1f5; border-color: #ffe0e9; }
-    .flatpickr-time input:hover, .flatpickr-time input:focus, .flatpickr-time .flatpickr-am-pm:hover, .flatpickr-time .flatpickr-am-pm:focus { background: #fff1f5; }
+    .flatpickr-calendar.order-delivery-calendar {
+        width: 307.875px;
+        max-width: calc(100vw - 0.75rem);
+        overflow: hidden;
+        border: 1px solid #eadce3;
+        border-radius: 8px;
+        box-shadow: 0 14px 30px rgba(64, 53, 61, 0.16);
+        font-family: inherit;
+    }
+    .order-delivery-calendar .flatpickr-months {
+        display: flex;
+        align-items: stretch;
+        height: 48px;
+        border-bottom: 1px solid #f1e4e9;
+    }
+    .order-delivery-calendar .flatpickr-months .flatpickr-month {
+        height: 48px;
+        overflow: visible;
+    }
+    .order-delivery-calendar .flatpickr-current-month {
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        height: 48px;
+        padding: 0;
+        font-size: 1rem;
+    }
+    .order-delivery-calendar .flatpickr-current-month .flatpickr-monthDropdown-months {
+        width: auto;
+        max-width: 8rem;
+        height: 36px;
+        padding: 0 1.4rem 0 0.35rem;
+        border: 0;
+        border-radius: 6px !important;
+        background-color: transparent;
+        font: inherit;
+    }
+    .order-delivery-calendar .flatpickr-current-month .numInputWrapper {
+        flex: 0 0 5.5rem;
+        width: 5.5rem;
+        height: 36px;
+    }
+    .order-delivery-calendar .flatpickr-current-month input.cur-year {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 0;
+        height: 36px;
+        padding: 0 1.5rem 0 0.45rem;
+        font: inherit;
+        line-height: 36px;
+    }
+    .order-delivery-calendar .flatpickr-current-month .numInputWrapper span {
+        right: 0;
+        width: 1.35rem;
+        padding: 0;
+    }
+    .order-delivery-calendar .flatpickr-prev-month,
+    .order-delivery-calendar .flatpickr-next-month {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+        height: 48px;
+        padding: 0 0.8rem;
+    }
+    .order-delivery-calendar .flatpickr-weekdays,
+    .order-delivery-calendar .flatpickr-weekdaycontainer {
+        width: 100%;
+        height: 34px;
+    }
+    .order-delivery-calendar span.flatpickr-weekday {
+        height: 34px;
+        line-height: 34px;
+    }
+    .order-delivery-calendar .flatpickr-rContainer,
+    .order-delivery-calendar .flatpickr-days,
+    .order-delivery-calendar .dayContainer {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+    }
+    .order-delivery-calendar .flatpickr-day {
+        flex-basis: 14.2857%;
+        max-width: none;
+    }
+    .order-delivery-calendar .flatpickr-day.selected,
+    .order-delivery-calendar .flatpickr-day.startRange,
+    .order-delivery-calendar .flatpickr-day.endRange { background: #f7668a; border-color: #f7668a; }
+    .order-delivery-calendar .flatpickr-day.today { border-color: #b62f55; }
+    .order-delivery-calendar .flatpickr-day:hover { background: #fff1f5; border-color: #ffe0e9; }
+    .order-delivery-calendar .flatpickr-time {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 1rem minmax(0, 1fr) 3.5rem;
+        align-items: center;
+        height: 52px;
+        max-height: 52px;
+        border-top-color: #f1e4e9;
+    }
+    .order-delivery-calendar .flatpickr-time .numInputWrapper {
+        width: 100%;
+        height: 52px;
+    }
+    .order-delivery-calendar .flatpickr-time .numInputWrapper span {
+        display: none;
+    }
+    .order-delivery-calendar .flatpickr-time input,
+    .order-delivery-calendar .flatpickr-time .flatpickr-am-pm {
+        width: 100%;
+        min-height: 0 !important;
+        height: 52px;
+        padding: 0;
+        font-size: 0.95rem !important;
+        line-height: 52px;
+        text-align: center;
+    }
+    .order-delivery-calendar .flatpickr-time .flatpickr-time-separator {
+        width: 1rem;
+        height: 52px;
+        line-height: 52px;
+        text-align: center;
+    }
+    .order-delivery-calendar .flatpickr-time .flatpickr-am-pm {
+        flex: none;
+    }
+    .order-delivery-calendar .flatpickr-time input:hover,
+    .order-delivery-calendar .flatpickr-time input:focus,
+    .order-delivery-calendar .flatpickr-time .flatpickr-am-pm:hover,
+    .order-delivery-calendar .flatpickr-time .flatpickr-am-pm:focus { background: #fff1f5; }
 
     @media (max-width: 767px) {
         #formNuevoPedido .card { padding: 1rem !important; }

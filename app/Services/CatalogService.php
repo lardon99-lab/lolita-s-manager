@@ -18,13 +18,13 @@ final class CatalogService
         $products = $this->db->query(
             "SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_base, p.dias_vida_util, p.estado,
                     p.id_categoria, c.nombre_categoria,
-                    GROUP_CONCAT(DISTINCT i.id_sucursal ORDER BY i.id_sucursal) AS branch_ids,
+                    GROUP_CONCAT(DISTINCT ps.id_sucursal ORDER BY ps.id_sucursal) AS branch_ids,
                     GROUP_CONCAT(DISTINCT s.nombre_sucursal ORDER BY s.nombre_sucursal SEPARATOR ', ') AS sucursales,
                     (SELECT COUNT(*) FROM producto_personalizacion_grupos ppg WHERE ppg.id_producto = p.id_producto) AS grupos_personalizacion
              FROM productos p
              JOIN categorias c ON c.id_categoria = p.id_categoria
-             LEFT JOIN inventario i ON i.id_producto = p.id_producto
-             LEFT JOIN sucursales s ON s.id_sucursal = i.id_sucursal
+             LEFT JOIN producto_sucursales ps ON ps.id_producto = p.id_producto AND ps.estado = 'Activo'
+             LEFT JOIN sucursales s ON s.id_sucursal = ps.id_sucursal
              GROUP BY p.id_producto, c.nombre_categoria
              ORDER BY p.nombre_producto"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -91,7 +91,7 @@ final class CatalogService
 
     private function requireProductAccess(int $productId): void
     {
-        $stmt = $this->db->prepare('SELECT DISTINCT id_sucursal FROM inventario WHERE id_producto = ?');
+        $stmt = $this->db->prepare("SELECT id_sucursal FROM producto_sucursales WHERE id_producto = ? AND estado = 'Activo'");
         $stmt->execute([$productId]);
         $branches = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
         if ($branches === [] || !$this->canManageBranches($branches)) throw new InvalidArgumentException('No puedes modificar este producto.');

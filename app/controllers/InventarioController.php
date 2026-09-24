@@ -8,6 +8,7 @@ use App\Services\ProductCustomizationService;
 use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
+use App\Services\SupplyRestockService;
 
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../models/Producto.php';
@@ -98,6 +99,29 @@ class InventarioController {
         }
     }
 
+    public function abastecerInsumos(): void
+    {
+        try {
+            $branchId = \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal');
+            $userId = \App\Http\Validator::positiveInt($_SESSION['id_usuario'] ?? null, 'usuario');
+            $notes = \App\Http\Validator::text($_POST['observaciones'] ?? '', 'observaciones', 500, false);
+            $key = \App\Http\Validator::text($_POST['idempotency_key'] ?? '', 'identificador de recepcion', 120);
+            $items = json_decode((string) ($_POST['items'] ?? ''), true, 64, JSON_THROW_ON_ERROR);
+            if (!is_array($items)) throw new InvalidArgumentException('El detalle del abastecimiento no es valido.');
+            Auth::requirePermission('inventory.adjust', $branchId);
+            $result = (new SupplyRestockService($this->db))->restock($branchId, $userId, array_values($items), $key, $notes);
+            $message = $result['duplicate']
+                ? 'Esta recepcion ya habia sido registrada; no se duplico el stock.'
+                : "Se ingresaron {$result['units']} unidades en {$result['supplies']} insumos.";
+            \App\Http\Response::json(['status' => 'success', 'message' => $message, 'receipt' => $result]);
+        } catch (InvalidArgumentException | JsonException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        } catch (Throwable $error) {
+            \App\Support\Logger::error($error);
+            \App\Http\Response::json(['status' => 'error', 'message' => 'No fue posible registrar los insumos.'], 500);
+        }
+    }
+
     public function listarProductosDisponibles($id_sucursal_forzado = null) {
         Auth::requirePermission('sales.create');
         // 1. Detectar el contexto del usuario
@@ -108,27 +132,43 @@ class InventarioController {
         $id_s_final = $id_sucursal_forzado ?? $id_sucursal_session;
         if ($id_s_final && !Auth::canAccessBranch((int) $id_s_final, 'sales.create')) return [];
 
-        // La consulta base
-        $query = "SELECT p.id_producto, p.nombre_producto, p.precio_base,
-                         SUM(i.stock_actual) AS stock, MIN(i.id_inventario) AS id_inventario,
-                         s.nombre_sucursal, i.id_sucursal
-                FROM inventario i
-                INNER JOIN productos p ON i.id_producto = p.id_producto
-                INNER JOIN sucursales s ON i.id_sucursal = s.id_sucursal
-                WHERE i.stock_actual > 0
-                  AND (i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE)
-                  AND p.estado = 'Activo'";
+        $query = "SELECT p.id_producto, p.nombre_producto, p.precio_base, p.tipo_producto,
+                         p.control_inventario, s.nombre_sucursal, ps.id_sucursal,
+                         CASE p.control_inventario
+                           WHEN 'producto' THEN COALESCE((
+                               SELECT SUM(i.stock_actual) FROM inventario i
+                               WHERE i.id_producto = p.id_producto AND i.id_sucursal = ps.id_sucursal
+                                 AND (i.fecha_caducidad IS NULL OR i.fecha_caducidad >= CURRENT_DATE)
+                           ), 0)
+                           WHEN 'insumos' THEN COALESCE((
+                               SELECT MIN(FLOOR(ii.stock_actual / pi.cantidad))
+                               FROM producto_insumos pi
+                               JOIN inventario_insumos ii ON ii.id_insumo = pi.id_insumo
+                                  AND ii.id_sucursal = ps.id_sucursal
+                               WHERE pi.id_producto = p.id_producto
+                           ), 0)
+                           ELSE 999999
+                         END AS stock,
+                         CASE p.control_inventario
+                           WHEN 'insumos' THEN CONCAT('insumo:', COALESCE((
+                               SELECT MIN(pi.id_insumo) FROM producto_insumos pi WHERE pi.id_producto = p.id_producto
+                           ), 0))
+                           WHEN 'producto' THEN CONCAT('producto:', p.id_producto)
+                           ELSE CONCAT('sin_control:', p.id_producto)
+                         END AS stock_key
+                  FROM productos p
+                  JOIN producto_sucursales ps ON ps.id_producto = p.id_producto AND ps.estado = 'Activo'
+                  JOIN sucursales s ON s.id_sucursal = ps.id_sucursal
+                  WHERE p.estado = 'Activo' AND p.disponible_venta_directa = 1";
         
         // 3. Aplicar el filtro siempre que tengamos un ID de sucursal
         if ($id_s_final) {
-            $query .= " AND i.id_sucursal = :id_s";
+            $query .= " AND ps.id_sucursal = :id_s";
         } else {
             if ($id_rol !== 1 && $id_rol !== 3) return []; 
         }
 
-        $query .= " GROUP BY p.id_producto, p.nombre_producto, p.precio_base,
-                            s.nombre_sucursal, i.id_sucursal
-                    ORDER BY p.nombre_producto ASC";
+        $query .= " HAVING stock > 0 ORDER BY p.nombre_producto ASC";
 
         try {
             $stmt = $this->db->prepare($query);
@@ -166,7 +206,9 @@ class InventarioController {
 
                 $nombre = \App\Http\Validator::text($_POST['nombre_producto'] ?? '', 'producto', 150);
                 $precio = \App\Http\Validator::money($_POST['precio_base'] ?? null, 'precio', 1000000);
-                $tipo_producto = \App\Http\Validator::enum($_POST['tipo_producto'] ?? 'panaderia', ['pastel', 'panaderia'], 'tipo de producto');
+                $tipo_producto = \App\Http\Validator::enum($_POST['tipo_producto'] ?? 'panaderia', ['pastel', 'panaderia', 'bebida', 'batido'], 'tipo de producto');
+                $usesSupplies = in_array($tipo_producto, ['bebida', 'batido'], true);
+                $inventoryControl = $usesSupplies ? 'insumos' : 'producto';
                 $descripcion_base = \App\Http\Validator::text($_POST['descripcion'] ?? '', 'descripcion', 2000, false);
                 $sucursales = array_values(array_unique(array_map('intval', (array) ($_POST['id_sucursal'] ?? []))));
                 $stock_inicial = isset($_POST['stock_inicial']) && $_POST['stock_inicial'] !== '' ? (int) $_POST['stock_inicial'] : 0;
@@ -195,10 +237,17 @@ class InventarioController {
 
                 $imagen_url = $imageStorage->store(isset($_FILES['imagen']) && is_array($_FILES['imagen']) ? $_FILES['imagen'] : null);
 
-                $stmtProd = $this->db->prepare("INSERT INTO productos (id_categoria, tipo_producto, nombre_producto, descripcion, precio_base, imagen_url, dias_vida_util) VALUES (:id_cat, :tipo, :nom, :desc, :pre, :img, :dias)");
+                $stmtProd = $this->db->prepare(
+                    "INSERT INTO productos
+                     (id_categoria, tipo_producto, control_inventario, disponible_venta_directa, disponible_pedido,
+                      nombre_producto, descripcion, precio_base, imagen_url, dias_vida_util)
+                     VALUES (:id_cat, :tipo, :control, 1, :pedido, :nom, :desc, :pre, :img, :dias)"
+                );
                 $stmtProd->execute([
                     ':id_cat' => $id_categoria,
                     ':tipo'   => $tipo_producto,
+                    ':control' => $inventoryControl,
+                    ':pedido' => $usesSupplies ? 0 : 1,
                     ':nom'    => $nombre,
                     ':desc'   => $descripcion,
                     ':pre'    => $precio,
@@ -207,8 +256,11 @@ class InventarioController {
                 ]);
                 $id_nuevo_p = $this->db->lastInsertId();
 
+                $stmtBranch = $this->db->prepare("INSERT INTO producto_sucursales (id_producto, id_sucursal) VALUES (?, ?)");
                 $stmtInv = $this->db->prepare("INSERT INTO inventario (id_sucursal, id_producto, stock_actual, stock_minimo) VALUES (:id_s, :id_p, :stock, 5)");
                 foreach ($sucursales as $id_s) {
+                    $stmtBranch->execute([(int) $id_nuevo_p, $id_s]);
+                    if ($usesSupplies) continue;
                     $stmtInv->execute([
                         ':id_s' => $id_s,
                         ':id_p' => $id_nuevo_p,
@@ -219,9 +271,25 @@ class InventarioController {
                     $movement->execute([$inventoryId, (int) $_SESSION['id_usuario'], $stock_inicial, $stock_inicial, (int) $id_nuevo_p]);
                 }
 
+                if ($usesSupplies) {
+                    $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'insumo');
+                    $supply = $this->db->prepare("SELECT COUNT(*) FROM insumos WHERE id_insumo = ? AND estado = 'Activo'");
+                    $supply->execute([$supplyId]);
+                    if (!(bool) $supply->fetchColumn()) throw new InvalidArgumentException('El insumo seleccionado no esta activo.');
+                    $this->db->prepare('INSERT INTO producto_insumos (id_producto, id_insumo, cantidad) VALUES (?, ?, 1)')
+                        ->execute([(int) $id_nuevo_p, $supplyId]);
+                }
+
+                $configuration = [];
+                if ($tipo_producto === 'pastel') {
+                    $configuration = json_decode((string) ($_POST['configuracion'] ?? '[]'), true, 32, JSON_THROW_ON_ERROR);
+                } elseif ($tipo_producto === 'batido') {
+                    $configuration = $this->shakeConfiguration($_POST);
+                }
+
                 (new ProductCustomizationService($this->db))->save([
                     'id_producto' => $id_nuevo_p,
-                    'configuracion' => $tipo_producto === 'pastel' ? ($_POST['configuracion'] ?? '[]') : '[]',
+                    'configuracion' => json_encode($configuration, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 ]);
                 (new ProductDesignService($this->db))->save((int) $id_nuevo_p, [
                     'permite_diseno' => $tipo_producto === 'pastel' ? ($_POST['permite_diseno'] ?? false) : false,
@@ -242,6 +310,37 @@ class InventarioController {
             }
             exit;
         }
+    }
+
+    private function shakeConfiguration(array $input): array
+    {
+        $fruitLines = preg_split('/\R+/', (string) ($input['frutas'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $fruits = [];
+        foreach ($fruitLines as $fruit) {
+            $name = \App\Http\Validator::text(trim($fruit), 'fruta', 80);
+            $fruits[mb_strtolower($name)] = ['nombre' => $name, 'recargo' => 0, 'predeterminada' => $fruits === []];
+        }
+        if ($fruits === [] || count($fruits) > 20) throw new InvalidArgumentException('Agrega entre 1 y 20 frutas.');
+        $maximum = filter_var($input['maximo_frutas'] ?? 3, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => count($fruits)]]);
+        if ($maximum === false) throw new InvalidArgumentException('El maximo de frutas no es valido.');
+        $fruitExtra = \App\Http\Validator::money($input['recargo_fruta_extra'] ?? 15, 'recargo por fruta adicional', 1000000);
+        $lactoseFree = \App\Http\Validator::money($input['recargo_deslactosada'] ?? 15, 'recargo por leche deslactosada', 1000000);
+
+        return [
+            [
+                'codigo' => 'shake_fruit', 'nombre' => 'Frutas', 'obligatorio' => true,
+                'maximo' => $maximum, 'selecciones_incluidas' => 1,
+                'recargo_seleccion_extra' => $fruitExtra, 'opciones' => array_values($fruits),
+            ],
+            [
+                'codigo' => 'shake_milk', 'nombre' => 'Tipo de leche', 'obligatorio' => true,
+                'maximo' => 1, 'selecciones_incluidas' => 1, 'recargo_seleccion_extra' => 0,
+                'opciones' => [
+                    ['nombre' => 'Entera', 'recargo' => 0, 'predeterminada' => true],
+                    ['nombre' => 'Deslactosada', 'recargo' => $lactoseFree, 'predeterminada' => false],
+                ],
+            ],
+        ];
     }
 
     public function registrarMerma() {
@@ -354,7 +453,7 @@ if ($action !== null) {
     if ($action === 'registrar') {
         Auth::requirePermission('products.manage');
         foreach ((array) ($_POST['id_sucursal'] ?? []) as $branchId) Auth::requirePermission('products.manage', (int) $branchId);
-    } elseif (in_array($action, ['abastecer', 'abastecer_producto'], true)) {
+    } elseif (in_array($action, ['abastecer', 'abastecer_producto', 'abastecer_insumos'], true)) {
         Auth::requirePermission('inventory.adjust', (int) ($_POST['id_sucursal'] ?? 0));
     } elseif ($action === 'registrarMerma' && !empty($_POST['id_sucursal_merma'])) {
         Auth::requirePermission('inventory.waste', (int) $_POST['id_sucursal_merma']);
@@ -373,6 +472,8 @@ if ($action !== null) {
     
     if ($action == 'abastecer' || $action == 'abastecer_producto') {
         $controller->abastecer();
+    } elseif ($action === 'abastecer_insumos') {
+        $controller->abastecerInsumos();
     } elseif ($action == 'registrar') {
         $controller->registrarProducto();
     } elseif ($action == 'registrarMerma') {

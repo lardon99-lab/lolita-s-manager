@@ -36,11 +36,11 @@ final class PedidoController
         Auth::requirePermission('orders.create');
         $productos = $this->db->query(
             "SELECT p.id_producto, p.nombre_producto, p.precio_base, p.tipo_producto, c.nombre_categoria,
-                    GROUP_CONCAT(DISTINCT i.id_sucursal ORDER BY i.id_sucursal) AS branch_ids
+                    GROUP_CONCAT(DISTINCT ps.id_sucursal ORDER BY ps.id_sucursal) AS branch_ids
              FROM productos p
              JOIN categorias c ON c.id_categoria = p.id_categoria
-             JOIN inventario i ON i.id_producto = p.id_producto
-             WHERE p.estado = 'Activo' AND c.estado = 'Activo'
+             JOIN producto_sucursales ps ON ps.id_producto = p.id_producto AND ps.estado = 'Activo'
+             WHERE p.estado = 'Activo' AND c.estado = 'Activo' AND p.disponible_pedido = 1
              GROUP BY p.id_producto, p.nombre_producto, p.precio_base, p.tipo_producto, c.nombre_categoria
              ORDER BY p.nombre_producto"
         )->fetchAll(PDO::FETCH_ASSOC);

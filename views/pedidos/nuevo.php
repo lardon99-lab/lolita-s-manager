@@ -41,7 +41,7 @@
                         <label class="form-label small fw-bold text-danger"><i class="fa-regular fa-clock me-1"></i> Fecha y Hora de Entrega</label>
                         <div class="order-delivery-field">
                             <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-                            <input type="text" id="order-delivery-at" name="fecha_entrega" class="form-control order-delivery-input" placeholder="Selecciona fecha y hora" autocomplete="off" required>
+                            <input type="text" id="order-delivery-at" name="fecha_entrega" class="form-control order-delivery-input" placeholder="Selecciona fecha y hora" autocomplete="off" data-min-date="<?= e(date('Y-m-d')) ?>" data-timezone="<?= e(date_default_timezone_get()) ?>" required>
                         </div>
                     </div>
 
