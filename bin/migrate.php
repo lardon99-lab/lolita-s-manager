@@ -42,7 +42,7 @@ foreach ($pending as $file) {
         $statement = trim($statement);
         if ($statement !== '') $db->exec($statement);
     }
-    $record = $db->prepare('INSERT INTO schema_migrations (migration) VALUES (?)');
+    $record = $db->prepare('INSERT IGNORE INTO schema_migrations (migration) VALUES (?)');
     $record->execute([basename($file)]);
 }
 

@@ -112,11 +112,21 @@ trait CajaReporteTrait
                             s.nombre_sucursal as nombre_sucursal, 
                             v.total as total_pedido, 
                             'Venta Directa' as tipo,
-                            GROUP_CONCAT(CONCAT('• ', pr.nombre_producto, ' (', vi.cantidad, ')') SEPARATOR '<br>') as productos
+                            GROUP_CONCAT(CONCAT('• ', pr.nombre_producto, ' (', vi.cantidad, ')',
+                                IF(vio.opciones IS NOT NULL AND vio.opciones <> '',
+                                CONCAT(' [', vio.opciones, ']'), '')
+                            ) SEPARATOR '<br>') as productos
                         FROM ventas_directas v
                         INNER JOIN sucursales s ON v.id_sucursal = s.id_sucursal
                         INNER JOIN venta_items vi ON v.id_venta = vi.id_venta
                         INNER JOIN productos pr ON vi.id_producto = pr.id_producto
+                        LEFT JOIN (
+                            SELECT id_item,
+                                   GROUP_CONCAT(CONCAT(grupo_nombre, ': ', opcion_nombre)
+                                   ORDER BY id_item_opcion SEPARATOR ' | ') AS opciones
+                            FROM venta_item_opciones
+                            GROUP BY id_item
+                        ) vio ON vio.id_item = vi.id_item
                         $condicionVentas
                         GROUP BY v.id_venta";
 

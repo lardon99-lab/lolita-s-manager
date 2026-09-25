@@ -85,6 +85,28 @@
                     <i class="fa-solid fa-layer-group"></i> Control de inventario
                 </div>
             </div>
+            <?php if (!empty($productos)): ?>
+            <div class="inventory-product-search">
+                <label class="visually-hidden" for="inventoryProductSearch">Buscar productos en el inventario</label>
+                <div class="inventory-product-search__control">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input
+                        type="search"
+                        id="inventoryProductSearch"
+                        class="form-control"
+                        placeholder="Buscar por producto, categor&iacute;a o estado..."
+                        autocomplete="off"
+                        aria-describedby="inventoryProductSearchCount"
+                    >
+                    <button type="button" id="inventoryProductSearchClear" class="inventory-product-search__clear" aria-label="Limpiar b&uacute;squeda" title="Limpiar b&uacute;squeda" hidden>
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <span id="inventoryProductSearchCount" class="inventory-product-search__count" aria-live="polite">
+                    <?= count($productos) ?> <?= count($productos) === 1 ? 'producto' : 'productos' ?>
+                </span>
+            </div>
+            <?php endif; ?>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 mobile-card-table inventory-main-table">
@@ -110,9 +132,23 @@
                         </td>
                     </tr>
                     <?php else: ?>
-                    <?php foreach($productos as $p): ?>
+                    <?php foreach($productos as $p):
+                        $searchStatus = (float) $p['stock_actual'] <= 0
+                            ? 'agotado'
+                            : ((float) $p['stock_actual'] <= (float) $p['stock_minimo'] ? 'stock bajo' : 'en stock');
+                        $searchText = implode(' ', [
+                            $p['nombre_producto'],
+                            $p['nombre_categoria'],
+                            $p['nombre_sucursal'] ?? '',
+                            $searchStatus,
+                        ]);
+                        $usesSharedSupply = ($p['control_inventario'] ?? 'producto') === 'insumos';
+                        $canAdjustProduct = \App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust');
+                        $canWasteProduct = !$usesSharedSupply
+                            && \App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.waste');
+                    ?>
 
-                    <tr>
+                    <tr data-inventory-product data-search="<?= e($searchText) ?>">
                         <td class="ps-4 py-3" data-label="Producto">
                             <div class="fw-bold text-dark"><?= htmlspecialchars($p['nombre_producto']); ?></div>
                             <div class="d-flex flex-column d-lg-none mt-1">
@@ -127,7 +163,10 @@
                             </span>
                         </td>
                         <td class="py-3" data-label="Stock">
-                            <div class="fw-bold fs-6"><?= $p['stock_actual']; ?> <small class="text-muted fw-normal">unid.</small></div>
+                            <div class="fw-bold fs-6"><?= $p['stock_actual']; ?> <small class="text-muted fw-normal"><?= $usesSharedSupply ? 'disp.' : 'unid.' ?></small></div>
+                            <?php if ($usesSharedSupply): ?>
+                                <div class="small text-muted mt-1"><i class="fa-solid fa-glass-water me-1"></i>Seg&uacute;n vasos disponibles</div>
+                            <?php endif; ?>
                             <div class="d-md-none mt-1">
                                 <?php if($p['stock_actual'] <= 0): ?>
                                     <span class="badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.65rem;">AGOTADO</span>
@@ -148,7 +187,17 @@
                         </td>
                         <td class="text-end pe-4 py-3" data-label="Acciones">
                             <div class="d-flex justify-content-end gap-2">
-                                <?php if (\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust')): ?>
+                                <?php if ($usesSharedSupply && $canAdjustProduct && $insumos !== []): ?>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-success rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift"
+                                            style="width: 35px; height: 35px;"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalAbastecerInsumos"
+                                            title="Abastecer vasos para <?= e($p['nombre_producto']) ?>"
+                                            aria-label="Abastecer vasos para <?= e($p['nombre_producto']) ?>">
+                                        <i class="fa-solid fa-glass-water"></i>
+                                    </button>
+                                <?php elseif (!$usesSharedSupply && $canAdjustProduct): ?>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift btn-abastecer-directo"
                                             style="width: 35px; height: 35px;"
@@ -159,17 +208,18 @@
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
                                 <?php endif; ?>
-                                <?php if (\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.waste')): ?>
+                                <?php if ($canWasteProduct): ?>
                                     <button class="btn btn-sm btn-outline-danger rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalMerma<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" title="Merma">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
                                 <?php endif; ?>
-                                <?php if (!\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.adjust') && !\App\Security\Auth::canAccessBranch((int) $p['id_sucursal'], 'inventory.waste')): ?>
+                                <?php if (!$canAdjustProduct && !$canWasteProduct): ?>
                                     <span class="text-muted small"><i class="fa-solid fa-ban"></i></span>
                                 <?php endif; ?>
                             </div>
                         </td>
 
+                        <?php if ($canWasteProduct): ?>
                         <div class="modal fade" id="modalMerma<?= $p['id_producto'] ?>_<?= $p['id_sucursal'] ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-sm modal-dialog-centered modal-fullscreen-sm-down">
                                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -209,8 +259,16 @@
                                 </div>
                             </div>
                         </div>
+                        <?php endif; ?>
                     </tr>
                     <?php endforeach; ?>
+                    <tr id="inventoryProductSearchEmpty" hidden>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="mb-3 fs-2 opacity-50"><i class="fa-solid fa-magnifying-glass"></i></div>
+                            <h5 class="fw-bold mb-1">Sin coincidencias</h5>
+                            <p class="small mb-0">Prueba con otro nombre, categor&iacute;a o estado.</p>
+                        </td>
+                    </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -393,11 +451,64 @@
                         <select id="beverageSupply" name="id_insumo" class="form-select" required disabled>
                             <option value="">Seleccionar vaso...</option>
                             <?php foreach ($insumos_catalogo as $supply): ?>
-                                <?php if (in_array($supply['codigo'], ['cup_8oz', 'cup_12oz'], true)): ?>
+                                <?php if (in_array($supply['codigo'], ['cup_8oz', 'cup_12oz', 'cup_16oz'], true)): ?>
                                 <option value="<?= (int) $supply['id_insumo'] ?>"><?= e($supply['nombre']) ?></option>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                         </select>
+
+                        <div class="beverage-customization mt-3">
+                            <div class="beverage-customization__heading">
+                                <div>
+                                    <strong>Personalizaci&oacute;n de bebida</strong>
+                                    <small>Activa solamente las opciones disponibles para este producto.</small>
+                                </div>
+                                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                            </div>
+
+                            <section class="beverage-option-card">
+                                <div class="form-check form-switch beverage-option-card__switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="bebida_permite_leche" value="1" id="beverageAllowMilk" disabled>
+                                    <label class="form-check-label" for="beverageAllowMilk">
+                                        <strong>Cambio de leche</strong>
+                                        <small>Entera o deslactosada.</small>
+                                    </label>
+                                </div>
+                                <div id="beverageMilkFields" class="beverage-option-card__fields" hidden>
+                                    <div>
+                                        <label class="small text-muted fw-bold mb-1" for="beverageMilkSurcharge">Recargo por deslactosada</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">L.</span>
+                                            <input id="beverageMilkSurcharge" name="bebida_recargo_deslactosada" type="number" class="form-control" min="0" max="1000000" step="0.01" value="15.00" required disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="beverage-option-card">
+                                <div class="form-check form-switch beverage-option-card__switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="bebida_permite_saborizante" value="1" id="beverageAllowFlavoring" disabled>
+                                    <label class="form-check-label" for="beverageAllowFlavoring">
+                                        <strong>Agregar saborizante</strong>
+                                        <small>El cliente podr&aacute; elegir uno.</small>
+                                    </label>
+                                </div>
+                                <div id="beverageFlavoringFields" class="beverage-option-card__fields" hidden>
+                                    <div>
+                                        <label class="small text-muted fw-bold mb-1" for="beverageFlavorings">Saborizantes disponibles</label>
+                                        <textarea id="beverageFlavorings" name="bebida_saborizantes" class="form-control" rows="3" maxlength="1620" placeholder="Vainilla&#10;Caramelo&#10;Avellana" required disabled></textarea>
+                                        <small class="text-muted">Escribe un saborizante por l&iacute;nea.</small>
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted fw-bold mb-1" for="beverageFlavoringSurcharge">Recargo por saborizante</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">L.</span>
+                                            <input id="beverageFlavoringSurcharge" name="bebida_recargo_saborizante" type="number" class="form-control" min="0" max="1000000" step="0.01" value="10.00" required disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
 
                     <div class="form-section-card mb-3" id="camposBatido" hidden>

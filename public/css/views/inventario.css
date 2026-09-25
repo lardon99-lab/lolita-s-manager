@@ -36,6 +36,74 @@
         box-shadow: 0 5px 16px rgba(64, 53, 61, 0.06);
     }
 
+    .inventory-product-search {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .inventory-product-search__control {
+        position: relative;
+        flex: 1 1 380px;
+        max-width: 520px;
+    }
+
+    .inventory-product-search__control > i {
+        position: absolute;
+        top: 50%;
+        left: 0.95rem;
+        z-index: 1;
+        color: var(--primary-color);
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .inventory-product-search__control .form-control {
+        min-height: 46px;
+        padding: 0.7rem 2.8rem 0.7rem 2.65rem;
+        border: 1px solid #eadce1;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 5px 16px rgba(64, 53, 61, 0.05);
+    }
+
+    .inventory-product-search__control .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(255, 133, 162, 0.14);
+    }
+
+    .inventory-product-search__clear {
+        position: absolute;
+        top: 50%;
+        right: 0.55rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        color: #74666d;
+        background: transparent;
+        transform: translateY(-50%);
+    }
+
+    .inventory-product-search__clear:hover,
+    .inventory-product-search__clear:focus-visible {
+        color: var(--primary-color);
+        background: #fff0f4;
+    }
+
+    .inventory-product-search__clear[hidden] { display: none; }
+
+    .inventory-product-search__count {
+        flex: 0 0 auto;
+        color: var(--muted-color);
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
     #modalNuevoProducto .modal-body {
         scrollbar-gutter: stable;
     }
@@ -44,6 +112,72 @@
         border-top: 1px solid var(--border-color) !important;
         padding-top: 0.85rem !important;
     }
+
+    .beverage-customization {
+        display: grid;
+        gap: 0.75rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .beverage-customization__heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .beverage-customization__heading strong,
+    .beverage-customization__heading small,
+    .beverage-option-card__switch strong,
+    .beverage-option-card__switch small {
+        display: block;
+    }
+
+    .beverage-customization__heading small,
+    .beverage-option-card__switch small {
+        margin-top: 0.15rem;
+        color: var(--muted-color);
+        font-size: 0.75rem;
+        line-height: 1.35;
+    }
+
+    .beverage-customization__heading i { color: var(--primary-color); }
+
+    .beverage-option-card {
+        padding: 0.9rem;
+        border: 1px solid #eadfe3;
+        border-radius: 8px;
+        background: #fffafb;
+    }
+
+    .beverage-option-card__switch {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        min-height: 32px;
+        margin: 0;
+        padding-left: 0;
+    }
+
+    .beverage-option-card__switch .form-check-input {
+        flex: 0 0 auto;
+        float: none;
+        margin: 0.15rem 0 0;
+    }
+
+    .beverage-option-card__switch .form-check-label { min-width: 0; }
+
+    .beverage-option-card__fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(160px, 0.45fr);
+        gap: 0.75rem;
+        margin-top: 0.85rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid #eadfe3;
+    }
+
+    .beverage-option-card__fields[hidden] { display: none; }
 
     .supply-inventory {
         overflow: hidden;
@@ -115,6 +249,20 @@
             width: 100%;
         }
 
+        .inventory-product-search {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .inventory-product-search__control {
+            flex-basis: auto;
+            width: 100%;
+            max-width: none;
+        }
+
+        .inventory-product-search__count { padding-left: 0.15rem; }
+
         .table td, .table th { font-size: 0.85rem; }
         .inventory-main-table tbody td[data-label="Producto"],
         .inventory-main-table tbody td[data-label="Acciones"] { grid-column: 1 / -1; }
@@ -138,6 +286,8 @@
         .product-type-grid > div { width: 50%; }
         .product-type-grid .form-check { height: 100%; padding: 0.75rem !important; }
         .product-type-grid .form-check-label { display: block; margin: 0.35rem 0 0 !important; font-size: 0.78rem; line-height: 1.25; }
+        .beverage-option-card { padding: 0.75rem; }
+        .beverage-option-card__fields { grid-template-columns: minmax(0, 1fr); }
         .supply-inventory__header { align-items: flex-start; flex-direction: column; padding: 0.85rem; }
         .supply-grid { grid-template-columns: minmax(0, 1fr); padding: 0.75rem; }
         .supply-restock-modal .modal-content { border-radius: 0; }

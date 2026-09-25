@@ -126,7 +126,10 @@ final class ProductCustomizationService
             if (!is_array($group)) throw new InvalidArgumentException('Uno de los grupos no es valido.');
             $name = Validator::text($group['nombre'] ?? '', 'grupo', 50);
             $code = trim((string) ($group['codigo'] ?? ''));
-            if ($code !== '' && !in_array($code, ['cake_flavor', 'cake_filling', 'cake_covering', 'shake_fruit', 'shake_milk'], true)) {
+            if ($code !== '' && !in_array($code, [
+                'cake_flavor', 'cake_filling', 'cake_covering',
+                'shake_fruit', 'shake_milk', 'drink_milk', 'drink_flavoring',
+            ], true)) {
                 throw new InvalidArgumentException('El tipo de grupo no es valido.');
             }
             $nameKey = mb_strtolower($name);

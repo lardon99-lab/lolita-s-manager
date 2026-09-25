@@ -7,6 +7,9 @@
         function addGroup(data = {}) {
             const group = document.createElement('section');
             group.className = 'customization-group';
+            group.dataset.code = data.codigo || '';
+            group.dataset.included = data.selecciones_incluidas ?? data.incluidas ?? 0;
+            group.dataset.extraSurcharge = data.recargo_seleccion_extra ?? data.recargo_extra ?? 0;
             group.innerHTML = `
                 <div class="customization-group__header">
                     <div><label class="form-label small fw-semibold">Grupo</label><input class="form-control js-group-name" maxlength="50" placeholder="Ej. Relleno" required></div>
@@ -44,9 +47,12 @@
 
         function getGroups() {
             return [...container.querySelectorAll('.customization-group')].map((group) => ({
+                codigo: group.dataset.code || null,
                 nombre: group.querySelector('.js-group-name').value,
                 obligatorio: group.querySelector('.js-group-required').checked,
                 maximo: group.querySelector('.js-group-max').value,
+                selecciones_incluidas: group.dataset.included || 0,
+                recargo_seleccion_extra: group.dataset.extraSurcharge || 0,
                 opciones: [...group.querySelectorAll('.customization-option')].map((option) => ({
                     nombre: option.querySelector('.js-option-name').value,
                     recargo: option.querySelector('.js-option-price').value,

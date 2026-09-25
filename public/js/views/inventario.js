@@ -11,6 +11,63 @@ const newProductCustomizationEditor = newProductCustomizationContainer
     : null;
 const allowCakeDesign = document.getElementById('allowCakeDesign');
 const cakeDesignPolicyFields = document.getElementById('cakeDesignPolicyFields');
+const beverageAllowMilk = document.getElementById('beverageAllowMilk');
+const beverageMilkFields = document.getElementById('beverageMilkFields');
+const beverageAllowFlavoring = document.getElementById('beverageAllowFlavoring');
+const beverageFlavoringFields = document.getElementById('beverageFlavoringFields');
+const inventoryProductSearch = document.getElementById('inventoryProductSearch');
+const inventoryProductSearchClear = document.getElementById('inventoryProductSearchClear');
+const inventoryProductSearchCount = document.getElementById('inventoryProductSearchCount');
+const inventoryProductSearchEmpty = document.getElementById('inventoryProductSearchEmpty');
+const inventoryProductRows = Array.from(document.querySelectorAll('[data-inventory-product]'));
+
+function normalizeInventorySearch(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('es')
+        .trim();
+}
+
+function filterInventoryProducts() {
+    if (!inventoryProductSearch) return;
+    const term = normalizeInventorySearch(inventoryProductSearch.value);
+    let visible = 0;
+    inventoryProductRows.forEach((row) => {
+        const matches = !term || normalizeInventorySearch(row.dataset.search).includes(term);
+        row.hidden = !matches;
+        if (matches) visible += 1;
+    });
+    inventoryProductSearchClear.hidden = term === '';
+    inventoryProductSearchEmpty.hidden = visible !== 0;
+    inventoryProductSearchCount.textContent = `${visible} ${visible === 1 ? 'producto' : 'productos'}`;
+}
+
+inventoryProductSearch?.addEventListener('input', filterInventoryProducts);
+inventoryProductSearch?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || inventoryProductSearch.value === '') return;
+    inventoryProductSearch.value = '';
+    filterInventoryProducts();
+});
+inventoryProductSearchClear?.addEventListener('click', () => {
+    inventoryProductSearch.value = '';
+    filterInventoryProducts();
+    inventoryProductSearch.focus();
+});
+
+function syncBeverageOptions() {
+    const beverageActive = typeRadios.find((radio) => radio.checked)?.value === 'bebida';
+    [
+        [beverageAllowMilk, beverageMilkFields],
+        [beverageAllowFlavoring, beverageFlavoringFields],
+    ].forEach(([toggle, fields]) => {
+        if (!toggle || !fields) return;
+        toggle.disabled = !beverageActive;
+        const enabled = beverageActive && toggle.checked;
+        fields.hidden = !enabled;
+        fields.querySelectorAll('input, textarea, select').forEach((control) => { control.disabled = !enabled; });
+    });
+}
 
 function actualizarVistaTipoProducto() {
     const type = typeRadios.find((radio) => radio.checked)?.value || 'pastel';
@@ -29,6 +86,7 @@ function actualizarVistaTipoProducto() {
         input.disabled = type === 'bebida' || type === 'batido';
         input.closest('.col-12')?.classList.toggle('opacity-50', input.disabled);
     });
+    syncBeverageOptions();
 }
 
 typeRadios.forEach((radio) => radio.addEventListener('change', actualizarVistaTipoProducto));
@@ -38,6 +96,9 @@ actualizarVistaTipoProducto();
 allowCakeDesign?.addEventListener('change', () => {
     cakeDesignPolicyFields?.classList.toggle('d-none', !allowCakeDesign.checked);
 });
+
+beverageAllowMilk?.addEventListener('change', syncBeverageOptions);
+beverageAllowFlavoring?.addEventListener('change', syncBeverageOptions);
 
 // 1. MANEJO DEL FORMULARIO DE NUEVO PRODUCTO
 document.getElementById('formNuevoProducto').addEventListener('submit', function(e) {

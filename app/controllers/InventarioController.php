@@ -9,6 +9,8 @@ use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
 use App\Services\SupplyRestockService;
+use App\Services\ProductSupplyPolicy;
+use App\Services\BeverageCustomizationFactory;
 use App\Http\Input\ProductInput;
 use App\Services\ProductNameGuard;
 
@@ -272,9 +274,11 @@ class InventarioController {
 
                 if ($usesSupplies) {
                     $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'insumo');
-                    $supply = $this->db->prepare("SELECT COUNT(*) FROM insumos WHERE id_insumo = ? AND estado = 'Activo'");
+                    $supply = $this->db->prepare("SELECT codigo FROM insumos WHERE id_insumo = ? AND estado = 'Activo'");
                     $supply->execute([$supplyId]);
-                    if (!(bool) $supply->fetchColumn()) throw new InvalidArgumentException('El insumo seleccionado no esta activo.');
+                    $supplyCode = $supply->fetchColumn();
+                    if ($supplyCode === false) throw new InvalidArgumentException('El insumo seleccionado no esta activo.');
+                    ProductSupplyPolicy::assertCompatible($tipo_producto, (string) $supplyCode);
                     $this->db->prepare('INSERT INTO producto_insumos (id_producto, id_insumo, cantidad) VALUES (?, ?, 1)')
                         ->execute([(int) $id_nuevo_p, $supplyId]);
                 }
@@ -282,6 +286,8 @@ class InventarioController {
                 $configuration = [];
                 if ($tipo_producto === 'pastel') {
                     $configuration = json_decode((string) ($_POST['configuracion'] ?? '[]'), true, 32, JSON_THROW_ON_ERROR);
+                } elseif ($tipo_producto === 'bebida') {
+                    $configuration = BeverageCustomizationFactory::fromInput($_POST);
                 } elseif ($tipo_producto === 'batido') {
                     $configuration = $this->shakeConfiguration($_POST);
                 }
