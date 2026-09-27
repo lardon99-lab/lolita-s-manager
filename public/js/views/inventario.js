@@ -20,6 +20,11 @@ const inventoryProductSearchClear = document.getElementById('inventoryProductSea
 const inventoryProductSearchCount = document.getElementById('inventoryProductSearchCount');
 const inventoryProductSearchEmpty = document.getElementById('inventoryProductSearchEmpty');
 const inventoryProductRows = Array.from(document.querySelectorAll('[data-inventory-product]'));
+const supplyWasteForm = document.getElementById('formRegistrarMermaInsumo');
+const supplyWasteId = document.getElementById('supplyWasteId');
+const supplyWasteName = document.getElementById('supplyWasteName');
+const supplyWasteStock = document.getElementById('supplyWasteStock');
+const supplyWasteQuantity = document.getElementById('supplyWasteQuantity');
 
 function normalizeInventorySearch(value) {
     return String(value || '')
@@ -53,6 +58,42 @@ inventoryProductSearchClear?.addEventListener('click', () => {
     inventoryProductSearch.value = '';
     filterInventoryProducts();
     inventoryProductSearch.focus();
+});
+
+document.querySelectorAll('[data-supply-waste]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const stock = Math.max(0, Number(button.dataset.supplyStock) || 0);
+        supplyWasteForm?.reset();
+        supplyWasteId.value = button.dataset.supplyId || '';
+        supplyWasteName.textContent = button.dataset.supplyName || 'Vaso';
+        supplyWasteStock.textContent = button.dataset.supplyStock || '0';
+        supplyWasteQuantity.max = String(Math.max(1, Math.floor(stock)));
+        supplyWasteQuantity.value = '';
+        const reason = document.getElementById('supplyWasteReason');
+        if (reason instanceof HTMLSelectElement) reason.dispatchEvent(new CustomEvent('app-select-sync'));
+    });
+});
+
+supplyWasteForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!supplyWasteForm.reportValidity()) return;
+    const submit = supplyWasteForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+        const response = await fetch('api.php?resource=inventario&action=registrar_merma_insumo', {
+            method: 'POST',
+            body: new FormData(supplyWasteForm),
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            throw new Error(result.message || 'No fue posible registrar la merma.');
+        }
+        await Swal.fire('Merma registrada', result.message, 'success');
+        location.reload();
+    } catch (error) {
+        Swal.fire('Error', error.message || 'No fue posible conectar con el servidor.', 'error');
+        submit.disabled = false;
+    }
 });
 
 function syncBeverageOptions() {

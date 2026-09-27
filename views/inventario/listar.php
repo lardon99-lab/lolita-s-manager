@@ -276,6 +276,7 @@
     </div>
 
     <?php if ($id_sucursal_filtro && $insumos !== []): ?>
+    <?php $canWasteSupplies = \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.waste'); ?>
     <section class="supply-inventory mt-4" aria-labelledby="supplyInventoryTitle">
         <header class="supply-inventory__header">
             <div>
@@ -296,13 +297,75 @@
                     <h6><?= e($insumo['nombre']) ?></h6>
                     <p><?= rtrim(rtrim(number_format($supplyStock, 3, '.', ''), '0'), '.') ?> <?= e($insumo['unidad_medida']) ?>(s)</p>
                 </div>
-                <span class="supply-card__status"><?= $supplyStock <= 0 ? 'Agotado' : ($supplyStock <= $supplyMinimum ? 'Stock bajo' : 'Disponible') ?></span>
+                <footer class="supply-card__footer">
+                    <span class="supply-card__status"><?= $supplyStock <= 0 ? 'Agotado' : ($supplyStock <= $supplyMinimum ? 'Stock bajo' : 'Disponible') ?></span>
+                    <?php if ($canWasteSupplies && $supplyStock > 0): ?>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger supply-card__waste"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalMermaInsumo"
+                        data-supply-waste
+                        data-supply-id="<?= (int) $insumo['id_insumo'] ?>"
+                        data-supply-name="<?= e($insumo['nombre']) ?>"
+                        data-supply-stock="<?= e(rtrim(rtrim(number_format($supplyStock, 3, '.', ''), '0'), '.')) ?>"
+                        title="Registrar merma de <?= e($insumo['nombre']) ?>"
+                        aria-label="Registrar merma de <?= e($insumo['nombre']) ?>"
+                    >
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                    </button>
+                    <?php endif; ?>
+                </footer>
             </article>
             <?php endforeach; ?>
         </div>
     </section>
     <?php endif; ?>
 </div>
+
+<?php if ($id_sucursal_filtro && $insumos !== [] && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.waste')): ?>
+<div class="modal fade supply-waste-modal" id="modalMermaInsumo" tabindex="-1" aria-labelledby="supplyWasteTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+        <form class="modal-content" id="formRegistrarMermaInsumo">
+            <header class="modal-header">
+                <div>
+                    <span class="supply-waste-modal__eyebrow">Salida de inventario</span>
+                    <h5 class="modal-title" id="supplyWasteTitle">Registrar merma de vaso</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </header>
+            <div class="modal-body">
+                <input type="hidden" name="id_sucursal" value="<?= (int) $id_sucursal_filtro ?>">
+                <input type="hidden" name="id_insumo" id="supplyWasteId" value="">
+                <div class="supply-waste-modal__summary">
+                    <span class="supply-waste-modal__icon"><i class="fa-solid fa-glass-water" aria-hidden="true"></i></span>
+                    <div><strong id="supplyWasteName">Vaso</strong><small>Disponible: <span id="supplyWasteStock">0</span> unidades</small></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fw-semibold" for="supplyWasteQuantity">Cantidad</label>
+                        <input id="supplyWasteQuantity" name="cantidad" type="number" class="form-control" min="1" max="100000" step="1" inputmode="numeric" required>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fw-semibold" for="supplyWasteReason">Motivo</label>
+                        <select id="supplyWasteReason" name="motivo" class="form-select" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="Daño/Rotura">Da&ntilde;o o rotura</option>
+                            <option value="Extravío">Extrav&iacute;o</option>
+                            <option value="Defecto">Defecto</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger"><i class="fa-solid fa-arrow-trend-down me-2"></i>Registrar merma</button>
+            </footer>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="modal fade" id="modalNuevoProducto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down modal-lg">
@@ -451,7 +514,7 @@
                         <select id="beverageSupply" name="id_insumo" class="form-select" required disabled>
                             <option value="">Seleccionar vaso...</option>
                             <?php foreach ($insumos_catalogo as $supply): ?>
-                                <?php if (in_array($supply['codigo'], ['cup_8oz', 'cup_12oz', 'cup_16oz'], true)): ?>
+                                <?php if (in_array($supply['codigo'], ['cup_8oz', 'cup_12oz', 'cup_16oz', 'cup_granita'], true)): ?>
                                 <option value="<?= (int) $supply['id_insumo'] ?>"><?= e($supply['nombre']) ?></option>
                                 <?php endif; ?>
                             <?php endforeach; ?>

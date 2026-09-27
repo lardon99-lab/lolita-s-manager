@@ -6,7 +6,7 @@ use InvalidArgumentException;
 final class ProductSupplyPolicy
 {
     private const ALLOWED_CODES = [
-        'bebida' => ['cup_8oz', 'cup_12oz', 'cup_16oz'],
+        'bebida' => ['cup_8oz', 'cup_12oz', 'cup_16oz', 'cup_granita'],
         'batido' => ['cup_shake'],
     ];
 
@@ -18,4 +18,3 @@ final class ProductSupplyPolicy
         }
     }
 }
-

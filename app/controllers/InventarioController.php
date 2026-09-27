@@ -9,6 +9,7 @@ use App\Services\ProductDesignService;
 use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
 use App\Services\SupplyRestockService;
+use App\Services\SupplyWasteService;
 use App\Services\ProductSupplyPolicy;
 use App\Services\BeverageCustomizationFactory;
 use App\Http\Input\ProductInput;
@@ -123,6 +124,39 @@ class InventarioController {
         } catch (Throwable $error) {
             \App\Support\Logger::error($error);
             \App\Http\Response::json(['status' => 'error', 'message' => 'No fue posible registrar los insumos.'], 500);
+        }
+    }
+
+    public function registrarMermaInsumo(): void
+    {
+        try {
+            $branchId = \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal');
+            $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'insumo');
+            $userId = \App\Http\Validator::positiveInt($_SESSION['id_usuario'] ?? null, 'usuario');
+            $quantity = \App\Http\Validator::positiveInt($_POST['cantidad'] ?? null, 'cantidad');
+            $reason = \App\Http\Validator::enum(
+                $_POST['motivo'] ?? '',
+                ['Daño/Rotura', 'Extravío', 'Defecto', 'Otro'],
+                'motivo'
+            );
+            Auth::requirePermission('inventory.waste', $branchId);
+            $result = (new SupplyWasteService($this->db))->record(
+                $branchId,
+                $supplyId,
+                $userId,
+                $quantity,
+                $reason
+            );
+            \App\Http\Response::json([
+                'status' => 'success',
+                'message' => "Se registraron {$quantity} unidades de merma en {$result['supply_name']}.",
+                'stock_actual' => $result['stock_after'],
+            ]);
+        } catch (InvalidArgumentException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        } catch (Throwable $error) {
+            \App\Support\Logger::error($error);
+            \App\Http\Response::json(['status' => 'error', 'message' => 'No fue posible registrar la merma del vaso.'], 500);
         }
     }
 
@@ -461,7 +495,7 @@ if ($action !== null) {
     Csrf::validateRequest();
     $action = \App\Http\Validator::enum(
         $action,
-        ['registrar', 'abastecer', 'abastecer_producto', 'abastecer_insumos', 'registrarMerma', 'registrar_merma'],
+        ['registrar', 'abastecer', 'abastecer_producto', 'abastecer_insumos', 'registrarMerma', 'registrar_merma', 'registrar_merma_insumo'],
         'accion'
     );
     if ($action === 'registrar') {
@@ -473,6 +507,8 @@ if ($action !== null) {
         Auth::requirePermission('inventory.adjust', \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal'));
     } elseif ($action === 'registrarMerma' && !empty($_POST['id_sucursal_merma'])) {
         Auth::requirePermission('inventory.waste', \App\Http\Validator::positiveInt($_POST['id_sucursal_merma'], 'sucursal'));
+    } elseif ($action === 'registrar_merma_insumo') {
+        Auth::requirePermission('inventory.waste', \App\Http\Validator::positiveInt($_POST['id_sucursal'] ?? null, 'sucursal'));
     } elseif ($action === 'registrar_merma') {
         $inventoryId = \App\Http\Validator::positiveInt($_POST['id_inventario'] ?? null, 'inventario');
         $accessDb = (new Database())->getConnection();
@@ -494,6 +530,8 @@ if ($action !== null) {
         $controller->registrarProducto();
     } elseif ($action == 'registrarMerma') {
         $controller->registrarMerma();
+    } elseif ($action === 'registrar_merma_insumo') {
+        $controller->registrarMermaInsumo();
     } elseif ($action == 'registrar_merma') { 
         $controller->procesarMermaCaducado();
     } else {

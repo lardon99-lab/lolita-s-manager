@@ -232,7 +232,24 @@
     .supply-card__content { min-width: 0; }
     .supply-card__content h6 { margin: 0; font-size: 0.86rem; overflow-wrap: anywhere; }
     .supply-card__content p { margin: 0.18rem 0 0; color: var(--muted-color); font-size: 0.75rem; }
-    .supply-card__status { grid-column: 1 / -1; color: #786970; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+    .supply-card__footer {
+        display: flex;
+        grid-column: 1 / -1;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        min-height: 36px;
+    }
+    .supply-card__status { color: #786970; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+    .supply-card__waste {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 8px;
+    }
 
     .supply-restock-modal .modal-content { border: 0; border-top: 4px solid #1a915a; border-radius: 8px; }
     .supply-restock-modal__eyebrow { display: block; color: #168954; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; }
@@ -242,6 +259,44 @@
     .supply-restock-row strong { font-size: 0.82rem; overflow-wrap: anywhere; }
     .supply-restock-row small { margin-top: 0.15rem; color: var(--muted-color); font-size: 0.68rem; }
     .supply-restock-row input { text-align: center; }
+
+    .supply-waste-modal .modal-content {
+        overflow: hidden;
+        border: 0;
+        border-top: 4px solid #dc3545;
+        border-radius: 8px;
+    }
+    .supply-waste-modal__eyebrow {
+        display: block;
+        color: #c72f41;
+        font-size: 0.68rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .supply-waste-modal__summary {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.85rem;
+        border: 1px solid #f1dce1;
+        border-radius: 8px;
+        background: #fff8fa;
+    }
+    .supply-waste-modal__summary strong,
+    .supply-waste-modal__summary small { display: block; }
+    .supply-waste-modal__summary small { margin-top: 0.15rem; color: var(--muted-color); }
+    .supply-waste-modal__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        color: #c72f41;
+        background: #fde9ed;
+    }
     
     /* Adaptaciones móviles */
     @media (max-width: 576px) {
@@ -291,6 +346,7 @@
         .supply-inventory__header { align-items: flex-start; flex-direction: column; padding: 0.85rem; }
         .supply-grid { grid-template-columns: minmax(0, 1fr); padding: 0.75rem; }
         .supply-restock-modal .modal-content { border-radius: 0; }
+        .supply-waste-modal .modal-content { border-radius: 0; }
         .supply-restock-row { grid-template-columns: minmax(0, 1fr) 92px; }
     }
 

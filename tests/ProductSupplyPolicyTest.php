@@ -17,6 +17,7 @@ final class ProductSupplyPolicyTest extends TestCase
             'bebida de 8 oz' => ['bebida', 'cup_8oz'],
             'bebida de 12 oz' => ['bebida', 'cup_12oz'],
             'bebida de 16 oz' => ['bebida', 'cup_16oz'],
+            'granita' => ['bebida', 'cup_granita'],
             'batido estandar' => ['batido', 'cup_shake'],
         ];
     }
