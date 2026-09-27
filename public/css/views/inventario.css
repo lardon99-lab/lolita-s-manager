@@ -245,10 +245,17 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
-        padding: 0;
+        gap: 0.38rem;
+        min-height: 36px;
+        padding: 0.42rem 0.65rem;
         border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+
+    .supply-card__waste:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
     }
 
     .supply-restock-modal .modal-content { border: 0; border-top: 4px solid #1a915a; border-radius: 8px; }

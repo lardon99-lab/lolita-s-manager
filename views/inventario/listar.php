@@ -299,7 +299,7 @@
                 </div>
                 <footer class="supply-card__footer">
                     <span class="supply-card__status"><?= $supplyStock <= 0 ? 'Agotado' : ($supplyStock <= $supplyMinimum ? 'Stock bajo' : 'Disponible') ?></span>
-                    <?php if ($canWasteSupplies && $supplyStock > 0): ?>
+                    <?php if ($canWasteSupplies): ?>
                     <button
                         type="button"
                         class="btn btn-sm btn-outline-danger supply-card__waste"
@@ -309,10 +309,12 @@
                         data-supply-id="<?= (int) $insumo['id_insumo'] ?>"
                         data-supply-name="<?= e($insumo['nombre']) ?>"
                         data-supply-stock="<?= e(rtrim(rtrim(number_format($supplyStock, 3, '.', ''), '0'), '.')) ?>"
-                        title="Registrar merma de <?= e($insumo['nombre']) ?>"
-                        aria-label="Registrar merma de <?= e($insumo['nombre']) ?>"
+                        title="<?= $supplyStock > 0 ? 'Registrar merma de ' . e($insumo['nombre']) : 'Sin existencias disponibles para registrar merma' ?>"
+                        aria-label="<?= $supplyStock > 0 ? 'Registrar merma de ' . e($insumo['nombre']) : 'Merma no disponible: ' . e($insumo['nombre']) . ' no tiene existencias' ?>"
+                        <?= $supplyStock <= 0 ? 'disabled' : '' ?>
                     >
                         <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                        <span>Merma</span>
                     </button>
                     <?php endif; ?>
                 </footer>
