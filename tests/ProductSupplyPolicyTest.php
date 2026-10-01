@@ -5,20 +5,17 @@ use PHPUnit\Framework\TestCase;
 final class ProductSupplyPolicyTest extends TestCase
 {
     /** @dataProvider compatibleSupplies */
-    public function testAllowsCompatibleSupplies(string $productType, string $supplyCode): void
+    public function testAllowsCompatibleSupplies(string $productType, string $supplyUsage): void
     {
-        ProductSupplyPolicy::assertCompatible($productType, $supplyCode);
+        ProductSupplyPolicy::assertCompatible($productType, $supplyUsage);
         self::assertTrue(true);
     }
 
     public static function compatibleSupplies(): array
     {
         return [
-            'bebida de 8 oz' => ['bebida', 'cup_8oz'],
-            'bebida de 12 oz' => ['bebida', 'cup_12oz'],
-            'bebida de 16 oz' => ['bebida', 'cup_16oz'],
-            'granita' => ['bebida', 'cup_granita'],
-            'batido estandar' => ['batido', 'cup_shake'],
+            'vaso para bebida' => ['bebida', 'bebida'],
+            'vaso para batido' => ['batido', 'batido'],
         ];
     }
 
@@ -27,6 +24,6 @@ final class ProductSupplyPolicyTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('El vaso seleccionado no corresponde al tipo de producto.');
 
-        ProductSupplyPolicy::assertCompatible('bebida', 'cup_shake');
+        ProductSupplyPolicy::assertCompatible('bebida', 'batido');
     }
 }

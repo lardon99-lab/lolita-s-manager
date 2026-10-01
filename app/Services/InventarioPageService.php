@@ -37,7 +37,13 @@ final class InventarioPageService
             $supplyStmt->execute([$branchId]);
             $supplies = $supplyStmt->fetchAll();
         }
-        $supplyCatalog = $this->db->query("SELECT id_insumo, codigo, nombre FROM insumos WHERE estado = 'Activo' ORDER BY nombre")->fetchAll();
+        $supplyCatalog = $this->db->query("SELECT id_insumo, codigo, nombre, tipo_uso FROM insumos WHERE estado = 'Activo' ORDER BY nombre")->fetchAll();
+        $cupCatalog = $this->db->query(
+            "SELECT i.id_insumo, i.codigo, i.nombre, i.tipo_uso, i.stock_minimo, i.estado,
+                    COALESCE((SELECT SUM(ii.stock_actual) FROM inventario_insumos ii WHERE ii.id_insumo = i.id_insumo), 0) AS stock_total,
+                    (SELECT COUNT(*) FROM producto_insumos pi WHERE pi.id_insumo = i.id_insumo) AS productos_vinculados
+             FROM insumos i ORDER BY i.estado, i.nombre"
+        )->fetchAll();
 
         $categories = $this->db->query('SELECT id_categoria, nombre_categoria FROM categorias ORDER BY nombre_categoria')->fetchAll();
         $branchName = 'No asignada';
@@ -58,6 +64,7 @@ final class InventarioPageService
             'productos' => $products,
             'insumos' => $supplies,
             'insumos_catalogo' => $supplyCatalog,
+            'vasos_catalogo' => $cupCatalog,
         ];
     }
 

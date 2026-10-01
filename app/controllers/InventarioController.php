@@ -10,6 +10,7 @@ use App\Services\InventoryWasteService;
 use App\Services\InventoryRestockService;
 use App\Services\SupplyRestockService;
 use App\Services\SupplyWasteService;
+use App\Services\SupplyCatalogService;
 use App\Services\ProductSupplyPolicy;
 use App\Services\BeverageCustomizationFactory;
 use App\Http\Input\ProductInput;
@@ -157,6 +158,61 @@ class InventarioController {
         } catch (Throwable $error) {
             \App\Support\Logger::error($error);
             \App\Http\Response::json(['status' => 'error', 'message' => 'No fue posible registrar la merma del vaso.'], 500);
+        }
+    }
+
+    public function crearVaso(): void
+    {
+        try {
+            Auth::requirePermission('products.manage');
+            $supply = (new SupplyCatalogService($this->db))->create($_POST);
+            \App\Http\Response::json([
+                'status' => 'success',
+                'message' => 'Vaso creado y habilitado en todas las sucursales activas.',
+                'vaso' => $supply,
+            ]);
+        } catch (InvalidArgumentException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        }
+    }
+
+    public function actualizarVaso(): void
+    {
+        try {
+            Auth::requirePermission('products.manage');
+            $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'vaso');
+            $supply = (new SupplyCatalogService($this->db))->update($supplyId, $_POST);
+            \App\Http\Response::json([
+                'status' => 'success',
+                'message' => 'Vaso actualizado correctamente.',
+                'vaso' => $supply,
+            ]);
+        } catch (InvalidArgumentException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        }
+    }
+
+    public function cambiarEstadoVaso(): void
+    {
+        try {
+            Auth::requirePermission('products.manage');
+            $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'vaso');
+            (new SupplyCatalogService($this->db))->setStatus($supplyId, (string) ($_POST['estado'] ?? ''));
+            \App\Http\Response::json(['status' => 'success', 'message' => 'Estado del vaso actualizado.']);
+        } catch (InvalidArgumentException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
+        }
+    }
+
+    public function eliminarVaso(): void
+    {
+        try {
+            Auth::requirePermission('products.manage');
+            $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'vaso');
+            (new SupplyCatalogService($this->db))->delete($supplyId);
+            \App\Http\Response::json(['status' => 'success', 'message' => 'Vaso eliminado correctamente.']);
+        } catch (InvalidArgumentException $error) {
+            \App\Http\Response::json(['status' => 'error', 'message' => $error->getMessage()], 422);
         }
     }
 
@@ -308,11 +364,11 @@ class InventarioController {
 
                 if ($usesSupplies) {
                     $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'insumo');
-                    $supply = $this->db->prepare("SELECT codigo FROM insumos WHERE id_insumo = ? AND estado = 'Activo'");
+                    $supply = $this->db->prepare("SELECT tipo_uso FROM insumos WHERE id_insumo = ? AND estado = 'Activo'");
                     $supply->execute([$supplyId]);
-                    $supplyCode = $supply->fetchColumn();
-                    if ($supplyCode === false) throw new InvalidArgumentException('El insumo seleccionado no esta activo.');
-                    ProductSupplyPolicy::assertCompatible($tipo_producto, (string) $supplyCode);
+                    $supplyUsage = $supply->fetchColumn();
+                    if ($supplyUsage === false) throw new InvalidArgumentException('El insumo seleccionado no esta activo.');
+                    ProductSupplyPolicy::assertCompatible($tipo_producto, (string) $supplyUsage);
                     $this->db->prepare('INSERT INTO producto_insumos (id_producto, id_insumo, cantidad) VALUES (?, ?, 1)')
                         ->execute([(int) $id_nuevo_p, $supplyId]);
                 }
@@ -495,7 +551,11 @@ if ($action !== null) {
     Csrf::validateRequest();
     $action = \App\Http\Validator::enum(
         $action,
-        ['registrar', 'abastecer', 'abastecer_producto', 'abastecer_insumos', 'registrarMerma', 'registrar_merma', 'registrar_merma_insumo'],
+        [
+            'registrar', 'abastecer', 'abastecer_producto', 'abastecer_insumos',
+            'registrarMerma', 'registrar_merma', 'registrar_merma_insumo',
+            'crear_vaso', 'actualizar_vaso', 'cambiar_estado_vaso', 'eliminar_vaso',
+        ],
         'accion'
     );
     if ($action === 'registrar') {
@@ -515,6 +575,8 @@ if ($action !== null) {
         $accessStmt = $accessDb->prepare('SELECT id_sucursal FROM inventario WHERE id_inventario = ?');
         $accessStmt->execute([$inventoryId]);
         Auth::requirePermission('inventory.waste', (int) $accessStmt->fetchColumn());
+    } elseif (in_array($action, ['crear_vaso', 'actualizar_vaso', 'cambiar_estado_vaso', 'eliminar_vaso'], true)) {
+        Auth::requirePermission('products.manage');
     }
     // Si hay una acción, limpiamos el buffer para asegurar un JSON impecable
     if (ob_get_length()) ob_clean();
@@ -532,6 +594,14 @@ if ($action !== null) {
         $controller->registrarMerma();
     } elseif ($action === 'registrar_merma_insumo') {
         $controller->registrarMermaInsumo();
+    } elseif ($action === 'crear_vaso') {
+        $controller->crearVaso();
+    } elseif ($action === 'actualizar_vaso') {
+        $controller->actualizarVaso();
+    } elseif ($action === 'cambiar_estado_vaso') {
+        $controller->cambiarEstadoVaso();
+    } elseif ($action === 'eliminar_vaso') {
+        $controller->eliminarVaso();
     } elseif ($action == 'registrar_merma') { 
         $controller->procesarMermaCaducado();
     } else {

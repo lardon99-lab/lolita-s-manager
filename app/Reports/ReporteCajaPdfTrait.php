@@ -147,24 +147,20 @@ trait ReporteCajaPdfTrait
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
             <style>
-                /* Paleta y tipografía principal */
-                body { font-family: 'Helvetica', Arial, sans-serif; font-size: 11px; color: #333; margin: 0; padding: 0;}
-                
-                /* Encabezado Principal */
-                .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #D81B60; }
-                .titulo { font-size: 22px; font-weight: bold; color: #D81B60; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;}
+                @page { margin: 24px 28px 30px; }
+                body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10px; color: #333; margin: 0; padding: 0; }
+                .header { text-align: center; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 3px solid #D81B60; }
+                .titulo { font-size: 20px; font-weight: bold; color: #D81B60; text-transform: uppercase; margin-bottom: 5px; }
                 .subtitulo { font-size: 12px; color: #555; }
-                
-                /* Layout de 3 columnas (espaciado) */
-                .layout-table { width: 100%; border-collapse: separate; border-spacing: 12px 0; }
-                .layout-td { width: 33.33%; vertical-align: top; padding: 0; }
-                
-                /* Diseño de las tarjetas de datos (Tablas interiores) */
-                .card { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                .card { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 14px; page-break-inside: auto; }
+                .card col:first-child { width: 75%; }
+                .card col:last-child { width: 25%; }
+                .card thead { display: table-header-group; }
+                .card tr { page-break-inside: avoid; page-break-after: auto; }
                 .card thead th { 
-                    background-color: #FCE4EC; /* Rosa suave */
-                    color: #AD1457; /* Magenta oscuro */
-                    padding: 8px 10px; 
+                    background-color: #FCE4EC;
+                    color: #AD1457;
+                    padding: 7px 9px;
                     text-align: left; 
                     font-size: 11px; 
                     font-weight: bold; 
@@ -172,36 +168,24 @@ trait ReporteCajaPdfTrait
                     border-bottom: 2px solid #F48FB1; 
                 }
                 .card tbody td { 
-                    padding: 6px 10px; 
+                    padding: 5px 9px;
                     border-bottom: 1px solid #eeeeee; 
-                    font-size: 10px; 
-                    color: #444; 
+                    color: #444;
+                    overflow-wrap: break-word;
                 }
                 .card tbody tr:nth-child(even) { background-color: #fafafa; }
                 .card tbody tr:last-child td { border-bottom: 1px solid #cccccc; }
                 
-                /* Utilidades */
                 .text-right { text-align: right; font-weight: bold; color: #222; }
+                .card thead th.text-right,
+                .card tbody td.text-right { text-align: right; }
                 .text-muted { color: #888; font-style: italic; }
-                
-                /* Caja de Total Resaltada */
-                .total-card { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-top: 15px; 
-                    border: 2px solid #D81B60; 
-                    background-color: #FFF0F5; 
-                }
-                .total-card th { 
-                    padding: 8px; 
-                    text-align: center; 
-                    font-size: 11px; 
-                    color: #880E4F; 
-                    text-transform: uppercase; 
-                    border-bottom: 1px dashed #F48FB1; 
-                }
-                .total-card td { padding: 12px; text-align: center; }
-                .total-monto { font-size: 18px; font-weight: bold; color: #2E7D32; } /* Verde para dinero positivo */
+                .summary { width: 100%; margin-bottom: 16px; border-collapse: collapse; background: #FFF0F5; border: 2px solid #D81B60; }
+                .summary td { width: 33.33%; padding: 10px; text-align: center; border-right: 1px solid #F48FB1; }
+                .summary td:last-child { border-right: 0; }
+                .summary-label { display: block; margin-bottom: 3px; color: #880E4F; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+                .summary-value { font-size: 15px; font-weight: bold; color: #222; }
+                .summary-value.net { color: #2E7D32; }
             </style>
         </head>
         <body>
@@ -213,101 +197,56 @@ trait ReporteCajaPdfTrait
                 </div>
             </div>
 
-            <table class="layout-table">
+            <table class="summary">
                 <tr>
-                    <td class="layout-td">
-                        <table class="card">
-                            <thead>
-                                <tr><th colspan="2">Inventario Restante</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php if(empty($inventario_restante)): ?>
-                                    <tr><td colspan="2" class="text-muted">Sin datos de inventario...</td></tr>
-                                <?php else: ?>
-                                    <?php foreach($inventario_restante as $item): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($item['nombre']) ?></td>
-                                            <td class="text-right"><?= htmlspecialchars($item['valor']) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </td>
-
-                    <td class="layout-td">
-                        <table class="card">
-                            <thead>
-                                <tr><th colspan="2">Gastos Operativos / Salidas de Caja</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php if(empty($gastos)): ?>
-                                    <tr><td colspan="2" class="text-muted">Sin salidas de caja registradas...</td></tr>
-                                <?php else: ?>
-                                    <?php foreach($gastos as $gasto): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($gasto['nombre']) ?></td>
-                                            <td class="text-right"><?= htmlspecialchars($gasto['valor']) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-
-                        <table class="card">
-                            <thead>
-                                <tr><th colspan="2">Mermas de Producto</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php if(empty($mermas_producto)): ?>
-                                    <tr><td colspan="2" class="text-muted">Sin mermas de producto registradas...</td></tr>
-                                <?php else: ?>
-                                    <?php foreach($mermas_producto as $merma): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($merma['nombre']) ?></td>
-                                            <td class="text-right"><?= htmlspecialchars($merma['valor']) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </td>
-
-                    <td class="layout-td">
-                        <table class="card">
-                            <thead>
-                                <tr><th colspan="2">Resumen de Ventas</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php if(empty($ventas_agrupadas)): ?>
-                                    <tr><td colspan="2" class="text-muted">Sin ventas registradas...</td></tr>
-                                <?php else: ?>
-                                    <?php foreach($ventas_agrupadas as $venta): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($venta['nombre']) ?></td>
-                                            <td class="text-right">L. <?= number_format($venta['valor'], 2) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-
-                        <table class="total-card">
-                            <thead>
-                                <tr><th>Resumen de caja del dia</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        Cobrado: L. <?= number_format($totalIngresos, 2) ?><br>
-                                        Gastos: L. <?= number_format($totalGastos, 2) ?><br><br>
-                                        <span class="total-monto">Neto: L. <?= number_format($totalCajaReal, 2) ?></span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </td>
+                    <td><span class="summary-label">Cobrado</span><span class="summary-value">L. <?= number_format($totalIngresos, 2) ?></span></td>
+                    <td><span class="summary-label">Gastos</span><span class="summary-value">L. <?= number_format($totalGastos, 2) ?></span></td>
+                    <td><span class="summary-label">Neto</span><span class="summary-value net">L. <?= number_format($totalCajaReal, 2) ?></span></td>
                 </tr>
+            </table>
+
+            <table class="card">
+                <colgroup><col width="75%"><col width="25%"></colgroup>
+                <thead><tr><th>Resumen de ventas</th><th class="text-right">Total</th></tr></thead>
+                <tbody>
+                    <?php if (empty($ventas_agrupadas)): ?><tr><td colspan="2" class="text-muted">Sin ventas registradas.</td></tr>
+                    <?php else: foreach ($ventas_agrupadas as $venta): ?>
+                    <tr><td><?= htmlspecialchars($venta['nombre']) ?></td><td class="text-right">L. <?= number_format($venta['valor'], 2) ?></td></tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+
+            <table class="card">
+                <colgroup><col width="75%"><col width="25%"></colgroup>
+                <thead><tr><th>Gastos operativos / salidas de caja</th><th class="text-right">Monto</th></tr></thead>
+                <tbody>
+                    <?php if (empty($gastos)): ?><tr><td colspan="2" class="text-muted">Sin salidas de caja registradas.</td></tr>
+                    <?php else: foreach ($gastos as $gasto): ?>
+                    <tr><td><?= htmlspecialchars($gasto['nombre']) ?></td><td class="text-right"><?= htmlspecialchars($gasto['valor']) ?></td></tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+
+            <table class="card">
+                <colgroup><col width="75%"><col width="25%"></colgroup>
+                <thead><tr><th>Mermas de producto</th><th class="text-right">Cantidad</th></tr></thead>
+                <tbody>
+                    <?php if (empty($mermas_producto)): ?><tr><td colspan="2" class="text-muted">Sin mermas de producto registradas.</td></tr>
+                    <?php else: foreach ($mermas_producto as $merma): ?>
+                    <tr><td><?= htmlspecialchars($merma['nombre']) ?></td><td class="text-right"><?= htmlspecialchars($merma['valor']) ?></td></tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+
+            <table class="card">
+                <colgroup><col width="75%"><col width="25%"></colgroup>
+                <thead><tr><th>Inventario restante</th><th class="text-right">Unidades</th></tr></thead>
+                <tbody>
+                    <?php if (empty($inventario_restante)): ?><tr><td colspan="2" class="text-muted">Sin datos de inventario.</td></tr>
+                    <?php else: foreach ($inventario_restante as $item): ?>
+                    <tr><td><?= htmlspecialchars($item['nombre']) ?></td><td class="text-right"><?= htmlspecialchars($item['valor']) ?></td></tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
             </table>
         </body>
         </html>

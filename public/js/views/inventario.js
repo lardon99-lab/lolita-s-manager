@@ -25,6 +25,247 @@ const supplyWasteId = document.getElementById('supplyWasteId');
 const supplyWasteName = document.getElementById('supplyWasteName');
 const supplyWasteStock = document.getElementById('supplyWasteStock');
 const supplyWasteQuantity = document.getElementById('supplyWasteQuantity');
+const supplyCatalogForm = document.getElementById('formGestionVaso');
+const supplyEditForm = document.getElementById('formEditarVaso');
+const supplyCatalogModalElement = document.getElementById('modalGestionVasos');
+const supplyEditModalElement = document.getElementById('modalEditarVaso');
+let returnToSupplyCatalog = false;
+
+async function sendSupplyCatalogAction(action, data) {
+    const response = await fetch(`api.php?resource=inventario&action=${encodeURIComponent(action)}`, {
+        method: 'POST',
+        body: data,
+    });
+    const result = await response.json();
+    if (!response.ok || result.status !== 'success') {
+        throw new Error(result.message || 'No fue posible guardar el vaso.');
+    }
+    return result;
+}
+
+document.querySelectorAll('[data-quick-supply-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const panel = document.querySelector(`[data-quick-supply="${CSS.escape(button.dataset.quickSupplyToggle || '')}"]`);
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) panel.querySelector('[data-quick-supply-name]')?.focus();
+    });
+});
+
+document.querySelectorAll('[data-quick-supply-save]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const panel = button.closest('[data-quick-supply]');
+        const nameInput = panel?.querySelector('[data-quick-supply-name]');
+        const minimumInput = panel?.querySelector('[data-quick-supply-minimum]');
+        const usage = panel?.dataset.quickSupply || '';
+        if (!(nameInput instanceof HTMLInputElement) || !(minimumInput instanceof HTMLInputElement)) return;
+        if (!nameInput.value.trim()) {
+            Swal.fire('Nombre requerido', 'Escribe un nombre para el nuevo vaso.', 'warning');
+            nameInput.focus();
+            return;
+        }
+        if (!minimumInput.reportValidity()) return;
+        const data = new FormData();
+        data.set('nombre', nameInput.value);
+        data.set('tipo_uso', usage);
+        data.set('stock_minimo', minimumInput.value);
+        button.disabled = true;
+        try {
+            const result = await sendSupplyCatalogAction('crear_vaso', data);
+            const select = document.querySelector(`[data-supply-select="${CSS.escape(usage)}"]`);
+            if (select instanceof HTMLSelectElement) {
+                const option = new Option(result.vaso.nombre, String(result.vaso.id_insumo), true, true);
+                select.add(option);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                select.dispatchEvent(new CustomEvent('app-select-sync'));
+            }
+            panel.hidden = true;
+            nameInput.value = '';
+            minimumInput.value = '10';
+            await Swal.fire('Vaso agregado', result.message, 'success');
+        } catch (error) {
+            Swal.fire('Error', error.message || 'No fue posible guardar el vaso.', 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+});
+
+function resetSupplyCatalogForm() {
+    if (!supplyCatalogForm) return;
+    supplyCatalogForm.reset();
+    supplyCatalogForm.elements.stock_minimo.value = '10';
+    supplyCatalogForm.querySelector('select')?.dispatchEvent(new CustomEvent('app-select-sync'));
+}
+
+document.querySelectorAll('[data-supply-edit]').forEach((button) => {
+    button.addEventListener('click', () => {
+        if (!supplyEditForm || !supplyEditModalElement) return;
+        returnToSupplyCatalog = true;
+        supplyEditForm.elements.id_insumo.value = button.dataset.id || '';
+        supplyEditForm.elements.nombre.value = button.dataset.name || '';
+        supplyEditForm.elements.tipo_uso.value = button.dataset.usage || 'bebida';
+        supplyEditForm.elements.stock_minimo.value = button.dataset.minimum || '10';
+        supplyEditForm.elements.tipo_uso.dispatchEvent(new CustomEvent('app-select-sync'));
+
+        const showEditModal = () => {
+            bootstrap.Modal.getOrCreateInstance(supplyEditModalElement).show();
+            supplyEditModalElement.addEventListener('shown.bs.modal', () => supplyEditForm.elements.nombre.focus(), { once: true });
+        };
+        const catalogModal = supplyCatalogModalElement ? bootstrap.Modal.getInstance(supplyCatalogModalElement) : null;
+        if (catalogModal && supplyCatalogModalElement.classList.contains('show')) {
+            supplyCatalogModalElement.addEventListener('hidden.bs.modal', showEditModal, { once: true });
+            catalogModal.hide();
+        } else {
+            showEditModal();
+        }
+    });
+});
+
+supplyEditModalElement?.addEventListener('hidden.bs.modal', () => {
+    if (!returnToSupplyCatalog || !supplyCatalogModalElement) return;
+    returnToSupplyCatalog = false;
+    bootstrap.Modal.getOrCreateInstance(supplyCatalogModalElement).show();
+});
+
+function updateSupplyInPage(supply) {
+    const id = String(supply.id_insumo);
+    const usageLabel = supply.tipo_uso === 'batido' ? 'Batidos' : 'Bebidas';
+    const row = document.querySelector(`[data-supply-row="${CSS.escape(id)}"]`);
+    if (row) {
+        row.querySelector('[data-supply-visible-name]').textContent = supply.nombre;
+        row.querySelector('[data-supply-meta]').textContent = `${usageLabel} · ${supply.codigo}`;
+        const editButton = row.querySelector('[data-supply-edit]');
+        editButton.dataset.name = supply.nombre;
+        editButton.dataset.usage = supply.tipo_uso;
+        editButton.dataset.minimum = String(supply.stock_minimo);
+        editButton.setAttribute('aria-label', `Editar ${supply.nombre}`);
+        const statusButton = row.querySelector('[data-supply-status]');
+        if (statusButton) {
+            const action = statusButton.dataset.status === 'Activo' ? 'Activar' : 'Desactivar';
+            statusButton.setAttribute('aria-label', `${action} ${supply.nombre}`);
+            statusButton.title = `${action} vaso`;
+        }
+        const deleteButton = row.querySelector('[data-supply-delete]');
+        if (deleteButton) {
+            deleteButton.dataset.name = supply.nombre;
+            deleteButton.setAttribute('aria-label', `Eliminar ${supply.nombre}`);
+            deleteButton.title = 'Eliminar vaso';
+        }
+    }
+
+    document.querySelectorAll(`[data-supply-stock-card="${CSS.escape(id)}"], [data-supply-restock-row="${CSS.escape(id)}"]`).forEach((container) => {
+        const name = container.querySelector('[data-supply-visible-name]');
+        if (name) name.textContent = supply.nombre;
+        const wasteButton = container.querySelector('[data-supply-waste]');
+        if (wasteButton) {
+            wasteButton.dataset.supplyName = supply.nombre;
+            wasteButton.setAttribute('aria-label', `Registrar merma de ${supply.nombre}`);
+            wasteButton.title = `Registrar merma de ${supply.nombre}`;
+        }
+        const stockInput = container.querySelector('[data-supply-id]');
+        if (stockInput && stockInput.tagName === 'INPUT') {
+            stockInput.setAttribute('aria-label', `Cantidad de ${supply.nombre}`);
+        }
+    });
+
+    document.querySelectorAll('[data-supply-select]').forEach((select) => {
+        const existing = Array.from(select.options).find((option) => option.value === id);
+        if (select.dataset.supplySelect === supply.tipo_uso) {
+            if (existing) {
+                existing.textContent = supply.nombre;
+            } else {
+                select.add(new Option(supply.nombre, id));
+            }
+        } else if (existing) {
+            existing.remove();
+        }
+        select.dispatchEvent(new CustomEvent('app-select-sync'));
+    });
+}
+
+supplyCatalogForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!supplyCatalogForm.reportValidity()) return;
+    const submit = supplyCatalogForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+        const result = await sendSupplyCatalogAction('crear_vaso', new FormData(supplyCatalogForm));
+        await Swal.fire('Vaso creado', result.message, 'success');
+        location.reload();
+    } catch (error) {
+        Swal.fire('Error', error.message || 'No fue posible guardar el vaso.', 'error');
+    } finally {
+        submit.disabled = false;
+    }
+});
+
+supplyEditForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!supplyEditForm.reportValidity()) return;
+    const submit = supplyEditForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+        const result = await sendSupplyCatalogAction('actualizar_vaso', new FormData(supplyEditForm));
+        updateSupplyInPage(result.vaso);
+        returnToSupplyCatalog = false;
+        bootstrap.Modal.getInstance(supplyEditModalElement)?.hide();
+        await Swal.fire('Vaso actualizado', result.message, 'success');
+        if (supplyCatalogModalElement) bootstrap.Modal.getOrCreateInstance(supplyCatalogModalElement).show();
+    } catch (error) {
+        Swal.fire('Error', error.message || 'No fue posible actualizar el vaso.', 'error');
+    } finally {
+        submit.disabled = false;
+    }
+});
+
+document.querySelectorAll('[data-supply-status]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const nextStatus = button.dataset.status || '';
+        const confirmation = await Swal.fire({
+            icon: 'question',
+            title: `${nextStatus === 'Activo' ? 'Activar' : 'Desactivar'} vaso`,
+            text: nextStatus === 'Inactivo' ? 'Dejara de aparecer al registrar productos nuevos.' : 'Volvera a estar disponible para productos nuevos.',
+            showCancelButton: true,
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+        });
+        if (!confirmation.isConfirmed) return;
+        const data = new FormData();
+        data.set('id_insumo', button.dataset.id || '');
+        data.set('estado', nextStatus);
+        try {
+            const result = await sendSupplyCatalogAction('cambiar_estado_vaso', data);
+            await Swal.fire('Estado actualizado', result.message, 'success');
+            location.reload();
+        } catch (error) {
+            Swal.fire('No se pudo cambiar el estado', error.message, 'error');
+        }
+    });
+});
+
+document.querySelectorAll('[data-supply-delete]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const confirmation = await Swal.fire({
+            icon: 'warning',
+            title: 'Eliminar vaso',
+            text: `Se eliminara ${button.dataset.name || 'el vaso'} solamente si nunca ha sido utilizado.`,
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar',
+        });
+        if (!confirmation.isConfirmed) return;
+        const data = new FormData();
+        data.set('id_insumo', button.dataset.id || '');
+        try {
+            const result = await sendSupplyCatalogAction('eliminar_vaso', data);
+            await Swal.fire('Vaso eliminado', result.message, 'success');
+            location.reload();
+        } catch (error) {
+            Swal.fire('No se pudo eliminar', error.message, 'error');
+        }
+    });
+});
 
 function normalizeInventorySearch(value) {
     return String(value || '')

@@ -36,7 +36,7 @@ final class SucursalController
             $id = (int) $this->db->lastInsertId();
             $this->db->prepare(
                 'INSERT INTO inventario_insumos (id_sucursal, id_insumo, stock_actual, stock_minimo)
-                 SELECT ?, id_insumo, 0, 10 FROM insumos WHERE estado = ?'
+                 SELECT ?, id_insumo, 0, stock_minimo FROM insumos WHERE estado = ?'
             )->execute([$id, 'Activo']);
             (new AuditService($this->db))->record('branch.created', 'sucursales', $id, $id, ['nombre' => $input['name']]);
             $this->db->commit();
