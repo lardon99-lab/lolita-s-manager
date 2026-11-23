@@ -178,7 +178,7 @@ final class PedidoController
                 $updates[] = "estado_pago = 'Pagado'";
             }
             if ($newState === 'Entregado') {
-                $updates[] = 'fecha_registro = :delivered_at';
+                $updates[] = 'fecha_entregado = :delivered_at';
                 $params[':delivered_at'] = date('Y-m-d H:i:s');
             }
             $update = $this->db->prepare('UPDATE pedidos SET ' . implode(', ', $updates) . ' WHERE id_pedido = :id');

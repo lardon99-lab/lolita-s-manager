@@ -281,6 +281,7 @@ CREATE TABLE `pedidos` (
   `id_sucursal` int NOT NULL,
   `id_usuario` int NOT NULL,
   `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_entregado` datetime DEFAULT NULL,
   `fecha_entrega` datetime NOT NULL,
   `estado` enum('Pendiente','Terminado','Entregado','Cancelado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pendiente',
   `total_pedido` decimal(10,2) DEFAULT '0.00',
@@ -293,6 +294,7 @@ CREATE TABLE `pedidos` (
   KEY `id_usuario` (`id_usuario`),
   KEY `idx_pedidos_sucursal_estado_entrega` (`id_sucursal`,`estado`,`fecha_entrega`),
   KEY `idx_pedidos_sucursal_registro` (`id_sucursal`,`fecha_registro`),
+  KEY `idx_pedidos_estado_sucursal_entregado` (`estado`,`id_sucursal`,`fecha_entregado`),
   CONSTRAINT `pedidos_ibfk_1` FOREIGN KEY (`id_cliente`) REFERENCES `clientes` (`id_cliente`),
   CONSTRAINT `pedidos_ibfk_2` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id_sucursal`),
   CONSTRAINT `pedidos_ibfk_3` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`)

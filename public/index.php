@@ -15,7 +15,7 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
-$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'ventas-nueva', 'usuarios', 'clientes', 'sucursales', 'catalogo'];
+$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'reporte-productos', 'ventas-nueva', 'usuarios', 'clientes', 'sucursales', 'catalogo'];
 if (!in_array($view, $allowedViews, true)) {
     http_response_code(404);
     echo 'Vista no encontrada.';
@@ -26,6 +26,7 @@ $viewPermissions = [
     'pedidos-nuevo' => 'orders.create',
     'pedidos-lista' => 'orders.view',
     'ventas-historial' => 'reports.view',
+    'reporte-productos' => 'reports.view',
     'ventas-nueva' => 'sales.create',
     'usuarios' => 'users.manage',
     'clientes' => 'clients.manage',
@@ -114,6 +115,20 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
 
                     case 'ventas-historial':
                         include __DIR__ . '/../views/pedidos/historial.php';
+                        break;
+
+                    case 'reporte-productos':
+                        $today = date('Y-m-d');
+                        $reportFilters = \App\Http\Input\ProductSalesFilters::from($_GET, $today);
+                        if ($reportFilters['sucursal'] !== null && !Auth::canAccessBranch($reportFilters['sucursal'], 'reports.view')) {
+                            http_response_code(403);
+                            echo '<div class="container-fluid p-4"><div class="alert alert-danger">No tienes acceso a la sucursal seleccionada.</div></div>';
+                            break;
+                        }
+                        $reportDatabase = (new Database())->getConnection();
+                        $productSalesData = (new \App\Reports\ProductSalesReport($reportDatabase))->data($reportFilters);
+                        extract($productSalesData, EXTR_SKIP);
+                        include __DIR__ . '/../views/ventas/reporte-productos.php';
                         break;
 
                     case 'ventas-nueva':

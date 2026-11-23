@@ -19,28 +19,15 @@
                 $canAdjustSelectedBranch = $id_sucursal_filtro
                     && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.adjust');
                 $canManageProducts = \App\Security\Auth::hasPermission('products.manage');
+                $hasSharedSupply = (bool) $id_sucursal_filtro && $insumos !== [];
                 ?>
-                <?php if ($canAdjustSelectedBranch || $canManageProducts): ?>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary px-4 fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-sliders me-2" aria-hidden="true"></i>Acciones de inventario
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end inventory-actions-menu">
-                            <?php if ($canAdjustSelectedBranch): ?>
-                            <li><button type="button" class="dropdown-item" data-restock-open data-restock-branch="<?= (int) $id_sucursal_filtro ?>"><i class="fa-solid fa-boxes-packing" aria-hidden="true"></i>Abastecer productos</button></li>
-                            <?php if ($insumos !== []): ?>
-                            <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalAbastecerInsumos"><i class="fa-solid fa-glass-water" aria-hidden="true"></i>Abastecer vasos</button></li>
-                            <?php endif; ?>
-                            <?php endif; ?>
-                            <?php if ($canManageProducts): ?>
-                            <?php if ($canAdjustSelectedBranch): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
-                            <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalGestionVasos"><i class="fa-solid fa-glass-water" aria-hidden="true"></i>Administrar vasos</button></li>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
+                <?php if ($canManageProducts): ?>
+                    <a class="btn btn-outline-primary px-4 fw-bold" href="index.php?view=catalogo&nuevo_vaso=1#suppliesTab">
+                        <i class="fa-solid fa-glass-water me-2" aria-hidden="true"></i>Crear tipo de vaso
+                    </a>
                 <?php endif; ?>
                 <?php if ($canManageProducts): ?>
-                    <button class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
+                    <button type="button" class="btn btn-primary px-4 shadow-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
                         <i class="fa-solid fa-box-open me-2"></i>Registrar Producto
                     </button>
                 <?php endif; ?>
@@ -88,16 +75,36 @@
     <?php endif; ?>
 
 
+    <?php if ($hasSharedSupply): ?>
+    <nav class="inventory-tabs" aria-label="Secciones del inventario">
+        <div class="nav nav-pills" id="inventoryTabs" role="tablist">
+            <button class="nav-link active" id="inventoryProductsTab" data-bs-toggle="tab" data-bs-target="#inventoryProductsPane" type="button" role="tab" aria-controls="inventoryProductsPane" aria-selected="true">
+                <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
+                <span>Productos</span>
+                <span class="inventory-tabs__count"><?= count($productos) ?></span>
+            </button>
+            <button class="nav-link" id="inventorySuppliesTab" data-bs-toggle="tab" data-bs-target="#inventorySuppliesPane" type="button" role="tab" aria-controls="inventorySuppliesPane" aria-selected="false">
+                <i class="fa-solid fa-glass-water" aria-hidden="true"></i>
+                <span>Vasos e insumos</span>
+                <span class="inventory-tabs__count"><?= count($insumos) ?></span>
+            </button>
+        </div>
+    </nav>
+    <?php endif; ?>
+
+    <?php if ($hasSharedSupply): ?><div class="tab-content inventory-tab-content" id="inventoryTabContent"><section class="tab-pane fade show active" id="inventoryProductsPane" role="tabpanel" aria-labelledby="inventoryProductsTab" tabindex="0"><?php endif; ?>
     <div class="card app-panel overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+            <div class="inventory-section-heading mb-3">
                 <div>
                     <h5 class="fw-bold mb-1">Productos por sucursal</h5>
                     <p class="text-muted small mb-0">Vista resumida del stock actual y estado de cada producto.</p>
                 </div>
-                <div class="chip-pill">
-                    <i class="fa-solid fa-layer-group"></i> Control de inventario
-                </div>
+                <?php if ($canAdjustSelectedBranch): ?>
+                <button type="button" class="btn btn-success inventory-section-heading__action" data-restock-open data-restock-branch="<?= (int) $id_sucursal_filtro ?>">
+                    <i class="fa-solid fa-boxes-packing me-2" aria-hidden="true"></i>Abastecer productos
+                </button>
+                <?php endif; ?>
             </div>
             <?php if (!empty($productos)): ?>
             <div class="inventory-product-search">
@@ -201,17 +208,7 @@
                         </td>
                         <td class="text-end pe-4 py-3" data-label="Acciones">
                             <div class="d-flex justify-content-end gap-2">
-                                <?php if ($usesSharedSupply && $canAdjustProduct && $insumos !== []): ?>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-success rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift"
-                                            style="width: 35px; height: 35px;"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalAbastecerInsumos"
-                                            title="Abastecer vasos para <?= e($p['nombre_producto']) ?>"
-                                            aria-label="Abastecer vasos para <?= e($p['nombre_producto']) ?>">
-                                        <i class="fa-solid fa-glass-water"></i>
-                                    </button>
-                                <?php elseif (!$usesSharedSupply && $canAdjustProduct): ?>
+                                <?php if (!$usesSharedSupply && $canAdjustProduct): ?>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift btn-abastecer-directo"
                                             style="width: 35px; height: 35px;"
@@ -288,16 +285,24 @@
             </table>
         </div>
     </div>
+    <?php if ($hasSharedSupply): ?></section><?php endif; ?>
 
-    <?php if ($id_sucursal_filtro && $insumos !== []): ?>
+    <?php if ($hasSharedSupply): ?>
+    <section class="tab-pane fade" id="inventorySuppliesPane" role="tabpanel" aria-labelledby="inventorySuppliesTab" tabindex="0">
     <?php $canWasteSupplies = \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.waste'); ?>
-    <section class="supply-inventory mt-4" aria-labelledby="supplyInventoryTitle">
+    <section class="supply-inventory" aria-labelledby="supplyInventoryTitle">
         <header class="supply-inventory__header">
             <div>
                 <h5 id="supplyInventoryTitle" class="fw-bold mb-1">Vasos e insumos compartidos</h5>
                 <p class="text-muted small mb-0">Una sola existencia alimenta todas las bebidas que utilizan el mismo vaso.</p>
             </div>
-            <span class="chip-pill"><i class="fa-solid fa-link"></i> Stock compartido</span>
+            <div class="supply-inventory__actions">
+                <?php if ($canAdjustSelectedBranch): ?>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAbastecerInsumos">
+                    <i class="fa-solid fa-glass-water me-2" aria-hidden="true"></i>Abastecer vasos
+                </button>
+                <?php endif; ?>
+            </div>
         </header>
         <div class="supply-grid">
             <?php foreach ($insumos as $insumo):
@@ -313,6 +318,20 @@
                 </div>
                 <footer class="supply-card__footer">
                     <span class="supply-card__status"><?= $supplyStock <= 0 ? 'Agotado' : ($supplyStock <= $supplyMinimum ? 'Stock bajo' : 'Disponible') ?></span>
+                    <?php if ($canAdjustSelectedBranch): ?>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-success supply-card__restock"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalAbastecerInsumos"
+                        data-supply-restock
+                        data-supply-id="<?= (int) $insumo['id_insumo'] ?>"
+                        aria-label="Abastecer <?= e($insumo['nombre']) ?>"
+                    >
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        <span>Abastecer</span>
+                    </button>
+                    <?php endif; ?>
                     <?php if ($canWasteSupplies): ?>
                     <button
                         type="button"
@@ -336,7 +355,9 @@
             <?php endforeach; ?>
         </div>
     </section>
+    </section>
     <?php endif; ?>
+    <?php if ($hasSharedSupply): ?></div><?php endif; ?>
 </div>
 
 <?php if ($id_sucursal_filtro && $insumos !== [] && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.waste')): ?>
@@ -529,9 +550,6 @@
                         <div class="supply-picker">
                             <div class="supply-picker__heading">
                                 <label class="small text-muted fw-bold mb-1" for="beverageSupply">Tamaño de vaso</label>
-                                <button class="btn btn-sm btn-outline-primary" type="button" data-quick-supply-toggle="bebida">
-                                    <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>Nuevo vaso
-                                </button>
                             </div>
                             <select id="beverageSupply" name="id_insumo" class="form-select" required disabled data-supply-select="bebida">
                                 <option value="">Seleccionar vaso...</option>
@@ -541,15 +559,7 @@
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                             </select>
-                            <div class="quick-supply" data-quick-supply="bebida" hidden>
-                                <label class="small fw-bold" for="quickBeverageSupplyName">Nombre del nuevo vaso</label>
-                                <div class="quick-supply__fields">
-                                    <input id="quickBeverageSupplyName" type="text" class="form-control" maxlength="100" placeholder="Ej. Vaso para bebidas de 20 oz" data-quick-supply-name>
-                                    <input type="number" class="form-control" min="0" max="100000" step="1" value="10" aria-label="Stock mínimo" data-quick-supply-minimum>
-                                    <button type="button" class="btn btn-primary text-white" data-quick-supply-save><i class="fa-solid fa-floppy-disk me-1"></i>Agregar</button>
-                                </div>
-                                <small class="text-muted">Se creará con stock cero en todas las sucursales activas.</small>
-                            </div>
+                            <a class="small d-inline-block mt-2" href="index.php?view=catalogo#suppliesTab">¿Falta un vaso? Créalo desde Catálogo.</a>
                         </div>
 
                         <div class="beverage-customization mt-3">
@@ -613,9 +623,6 @@
                             <div class="col-12">
                                 <div class="supply-picker__heading">
                                     <label class="small text-muted fw-bold mb-1" for="shakeSupply">Vaso estándar</label>
-                                    <button class="btn btn-sm btn-outline-primary" type="button" data-quick-supply-toggle="batido">
-                                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>Nuevo vaso
-                                    </button>
                                 </div>
                                 <select id="shakeSupply" name="id_insumo" class="form-select" required disabled data-supply-select="batido">
                                     <?php foreach ($insumos_catalogo as $supply): ?>
@@ -624,15 +631,7 @@
                                         <?php endif; ?>
                                     <?php endforeach; ?>
                                 </select>
-                                <div class="quick-supply mt-2" data-quick-supply="batido" hidden>
-                                    <label class="small fw-bold" for="quickShakeSupplyName">Nombre del nuevo vaso</label>
-                                    <div class="quick-supply__fields">
-                                        <input id="quickShakeSupplyName" type="text" class="form-control" maxlength="100" placeholder="Ej. Vaso grande para batido" data-quick-supply-name>
-                                        <input type="number" class="form-control" min="0" max="100000" step="1" value="10" aria-label="Stock mínimo" data-quick-supply-minimum>
-                                        <button type="button" class="btn btn-primary text-white" data-quick-supply-save><i class="fa-solid fa-floppy-disk me-1"></i>Agregar</button>
-                                    </div>
-                                    <small class="text-muted">Se creará con stock cero en todas las sucursales activas.</small>
-                                </div>
+                                <a class="small d-inline-block mt-2" href="index.php?view=catalogo#suppliesTab">¿Falta un vaso? Créalo desde Catálogo.</a>
                             </div>
                             <div class="col-12">
                                 <label class="small text-muted fw-bold mb-1" for="shakeFruits">Frutas disponibles</label>
@@ -678,130 +677,6 @@
     </div>
 </div>
 
-<?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
-<div class="modal fade supply-catalog-modal" id="modalGestionVasos" tabindex="-1" aria-labelledby="supplyCatalogTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
-        <div class="modal-content">
-            <header class="modal-header">
-                <div>
-                    <span class="supply-catalog-modal__eyebrow">Cat&aacute;logo compartido</span>
-                    <h5 class="modal-title" id="supplyCatalogTitle">Administrar vasos</h5>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </header>
-            <div class="modal-body">
-                <form id="formGestionVaso" class="supply-catalog-form" novalidate>
-                    <div class="supply-catalog-form__title">
-                        <strong>Agregar vaso</strong>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12 col-md-5">
-                            <label class="form-label small fw-bold" for="supplyCatalogName">Nombre</label>
-                            <input id="supplyCatalogName" name="nombre" class="form-control" maxlength="100" placeholder="Ej. Vaso para bebidas de 20 oz" required>
-                        </div>
-                        <div class="col-7 col-md-3">
-                            <label class="form-label small fw-bold" for="supplyCatalogUsage">Uso</label>
-                            <select id="supplyCatalogUsage" name="tipo_uso" class="form-select" required>
-                                <option value="bebida">Bebidas</option>
-                                <option value="batido">Batidos</option>
-                            </select>
-                        </div>
-                        <div class="col-5 col-md-2">
-                            <label class="form-label small fw-bold" for="supplyCatalogMinimum">M&iacute;nimo</label>
-                            <input id="supplyCatalogMinimum" name="stock_minimo" type="number" class="form-control" min="0" max="100000" step="1" value="10" required>
-                        </div>
-                        <div class="col-12 col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary text-white w-100"><i class="fa-solid fa-floppy-disk me-1"></i>Guardar</button>
-                        </div>
-                    </div>
-                </form>
-
-                <div class="supply-catalog-list mt-3">
-                    <?php foreach ($vasos_catalogo as $supply): ?>
-                    <article class="supply-catalog-item <?= $supply['estado'] === 'Inactivo' ? 'is-inactive' : '' ?>" data-supply-row="<?= (int) $supply['id_insumo'] ?>">
-                        <div class="supply-catalog-item__main">
-                            <span class="supply-card__icon"><i class="fa-solid fa-glass-water" aria-hidden="true"></i></span>
-                            <div>
-                                <strong data-supply-visible-name><?= e($supply['nombre']) ?></strong>
-                                <small data-supply-meta><?= $supply['tipo_uso'] === 'batido' ? 'Batidos' : 'Bebidas' ?> &middot; <?= e($supply['codigo']) ?></small>
-                            </div>
-                        </div>
-                        <div class="supply-catalog-item__stats">
-                            <span><strong><?= rtrim(rtrim(number_format((float) $supply['stock_total'], 3, '.', ''), '0'), '.') ?></strong> existencias</span>
-                            <span><strong><?= (int) $supply['productos_vinculados'] ?></strong> productos</span>
-                            <span class="badge <?= $supply['estado'] === 'Activo' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($supply['estado']) ?></span>
-                        </div>
-                        <div class="supply-catalog-item__actions">
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-supply-edit
-                                data-id="<?= (int) $supply['id_insumo'] ?>" data-name="<?= e($supply['nombre']) ?>"
-                                data-usage="<?= e($supply['tipo_uso']) ?>" data-minimum="<?= (int) $supply['stock_minimo'] ?>"
-                                title="Editar vaso" aria-label="Editar <?= e($supply['nombre']) ?>">
-                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-supply-status
-                                data-id="<?= (int) $supply['id_insumo'] ?>" data-status="<?= $supply['estado'] === 'Activo' ? 'Inactivo' : 'Activo' ?>"
-                                title="<?= $supply['estado'] === 'Activo' ? 'Desactivar' : 'Activar' ?> vaso" aria-label="<?= $supply['estado'] === 'Activo' ? 'Desactivar' : 'Activar' ?> <?= e($supply['nombre']) ?>">
-                                <i class="fa-solid <?= $supply['estado'] === 'Activo' ? 'fa-power-off' : 'fa-rotate-left' ?>" aria-hidden="true"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-supply-delete
-                                data-id="<?= (int) $supply['id_insumo'] ?>" data-name="<?= e($supply['nombre']) ?>"
-                                title="Eliminar vaso" aria-label="Eliminar <?= e($supply['nombre']) ?>">
-                                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                    </article>
-                    <?php endforeach; ?>
-                    <?php if ($vasos_catalogo === []): ?>
-                    <div class="text-center text-muted py-4">No hay vasos registrados.</div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php if (\App\Security\Auth::hasPermission('products.manage')): ?>
-<div class="modal fade supply-edit-modal" id="modalEditarVaso" tabindex="-1" aria-labelledby="editSupplyTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-        <form class="modal-content" id="formEditarVaso" novalidate>
-            <header class="modal-header">
-                <div>
-                    <span class="supply-catalog-modal__eyebrow">Cat&aacute;logo compartido</span>
-                    <h5 class="modal-title" id="editSupplyTitle">Editar vaso</h5>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </header>
-            <div class="modal-body">
-                <input type="hidden" name="id_insumo" value="">
-                <div class="mb-3">
-                    <label class="form-label fw-bold" for="editSupplyName">Nombre</label>
-                    <input id="editSupplyName" name="nombre" class="form-control" maxlength="100" required>
-                </div>
-                <div class="row g-3">
-                    <div class="col-7">
-                        <label class="form-label fw-bold" for="editSupplyUsage">Uso</label>
-                        <select id="editSupplyUsage" name="tipo_uso" class="form-select" required>
-                            <option value="bebida">Bebidas</option>
-                            <option value="batido">Batidos</option>
-                        </select>
-                    </div>
-                    <div class="col-5">
-                        <label class="form-label fw-bold" for="editSupplyMinimum">Stock m&iacute;nimo</label>
-                        <input id="editSupplyMinimum" name="stock_minimo" type="number" class="form-control" min="0" max="100000" step="1" required>
-                    </div>
-                </div>
-                <p class="small text-muted mt-3 mb-0">El nuevo stock m&iacute;nimo se aplicar&aacute; a todas las sucursales.</p>
-            </div>
-            <footer class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary text-white"><i class="fa-solid fa-floppy-disk me-2" aria-hidden="true"></i>Guardar cambios</button>
-            </footer>
-        </form>
-    </div>
-</div>
-<?php endif; ?>
-
 <?php if ($id_sucursal_filtro && $insumos !== [] && \App\Security\Auth::canAccessBranch((int) $id_sucursal_filtro, 'inventory.adjust')): ?>
 <div class="modal fade supply-restock-modal" id="modalAbastecerInsumos" tabindex="-1" aria-labelledby="supplyRestockTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
@@ -813,6 +688,7 @@
             <div class="modal-body">
                 <input type="hidden" name="id_sucursal" value="<?= (int) $id_sucursal_filtro ?>">
                 <input type="hidden" name="idempotency_key" value="">
+                <p class="small text-muted" data-supply-restock-hint>Puedes registrar cantidades para varios tipos de vaso en una sola entrada.</p>
                 <div class="supply-restock-list">
                     <?php foreach ($insumos as $insumo): ?>
                     <label class="supply-restock-row" data-supply-restock-row="<?= (int) $insumo['id_insumo'] ?>">

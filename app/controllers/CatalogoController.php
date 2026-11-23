@@ -9,6 +9,7 @@ use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\CatalogService;
 use App\Services\ProductCustomizationService;
+use App\Services\SupplyCatalogService;
 
 final class CatalogoController
 {
@@ -28,6 +29,32 @@ final class CatalogoController
 
     public function ejecutar(string $action): void
     {
+        if (in_array($action, ['crear_vaso', 'actualizar_vaso', 'cambiar_estado_vaso', 'eliminar_vaso'], true)) {
+            Auth::requirePermission('products.manage');
+            $supplies = new SupplyCatalogService($this->db);
+            if ($action === 'crear_vaso') {
+                $supply = $supplies->create($_POST);
+                Response::json([
+                    'status' => 'success',
+                    'message' => 'Tipo de vaso creado y habilitado en las sucursales activas.',
+                    'vaso' => $supply,
+                ]);
+            }
+
+            $supplyId = \App\Http\Validator::positiveInt($_POST['id_insumo'] ?? null, 'vaso');
+            if ($action === 'actualizar_vaso') {
+                $supply = $supplies->update($supplyId, $_POST);
+                Response::json(['status' => 'success', 'message' => 'Tipo de vaso actualizado.', 'vaso' => $supply]);
+            }
+            if ($action === 'cambiar_estado_vaso') {
+                $supplies->setStatus($supplyId, (string) ($_POST['estado'] ?? ''));
+                Response::json(['status' => 'success', 'message' => 'Estado del tipo de vaso actualizado.']);
+            }
+
+            $supplies->delete($supplyId);
+            Response::json(['status' => 'success', 'message' => 'Tipo de vaso eliminado.']);
+        }
+
         $audit = new AuditService($this->db);
         $id = match ($action) {
             'actualizar_producto' => $this->service->updateProduct($_POST),

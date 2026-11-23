@@ -30,7 +30,15 @@ final class CatalogService
         )->fetchAll(PDO::FETCH_ASSOC);
         $products = array_values(array_filter($products, fn (array $product): bool => $this->canManageBranches($this->ids($product['branch_ids'] ?? ''))));
         $categories = $this->db->query('SELECT id_categoria, nombre_categoria, estado FROM categorias ORDER BY nombre_categoria')->fetchAll(PDO::FETCH_ASSOC);
-        return ['productos' => $products, 'categorias' => $categories];
+        $supplies = $this->db->query(
+            "SELECT i.id_insumo, i.codigo, i.nombre, i.tipo_uso,
+                    CAST(i.stock_minimo AS UNSIGNED) AS stock_minimo, i.estado,
+                    COALESCE((SELECT SUM(ii.stock_actual) FROM inventario_insumos ii WHERE ii.id_insumo = i.id_insumo), 0) AS stock_total,
+                    (SELECT COUNT(*) FROM producto_insumos pi WHERE pi.id_insumo = i.id_insumo) AS productos_vinculados
+             FROM insumos i
+             ORDER BY i.estado, i.nombre"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        return ['productos' => $products, 'categorias' => $categories, 'vasos_catalogo' => $supplies];
     }
 
     public function updateProduct(array $input): int

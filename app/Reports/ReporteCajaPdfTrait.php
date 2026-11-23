@@ -103,28 +103,30 @@ trait ReporteCajaPdfTrait
         }
 
         if (!empty($filtros['desde']) && !empty($filtros['hasta'])) {
-            $cond_p .= " AND DATE(p.fecha_registro) BETWEEN :d1 AND :h1";
+            $cond_p .= " AND DATE(COALESCE(p.fecha_entregado, p.fecha_registro)) BETWEEN :d1 AND :h1";
             $cond_v .= " AND DATE(v.fecha_venta) BETWEEN :d2 AND :h2";
             $params_agrup[':d1'] = $params_agrup[':d2'] = $filtros['desde'];
             $params_agrup[':h1'] = $params_agrup[':h2'] = $filtros['hasta'];
         }
 
         $sqlVentasAgrupadas = "
-            SELECT nombre_producto as nombre, SUM(total_producto) as valor FROM (
-                SELECT pr.nombre_producto, det.subtotal as total_producto
+            SELECT id_producto, nombre_producto AS nombre,
+                   SUM(unidades) AS unidades, SUM(total_producto) AS valor
+            FROM (
+                SELECT pr.id_producto, pr.nombre_producto, det.cantidad AS unidades, det.subtotal AS total_producto
                 FROM pedidos p
                 INNER JOIN pedido_detalles det ON p.id_pedido = det.id_pedido
                 INNER JOIN productos pr ON det.id_producto = pr.id_producto
                 WHERE $cond_p
                 UNION ALL
-                SELECT pr.nombre_producto, vi.subtotal as total_producto
+                SELECT pr.id_producto, pr.nombre_producto, vi.cantidad AS unidades, vi.subtotal AS total_producto
                 FROM ventas_directas v
                 INNER JOIN venta_items vi ON v.id_venta = vi.id_venta
                 INNER JOIN productos pr ON vi.id_producto = pr.id_producto
                 WHERE $cond_v
             ) as consolidados
-            GROUP BY nombre_producto
-            ORDER BY valor DESC
+            GROUP BY id_producto, nombre_producto
+            ORDER BY unidades DESC, valor DESC
         ";
         
         try {
@@ -155,6 +157,9 @@ trait ReporteCajaPdfTrait
                 .card { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 14px; page-break-inside: auto; }
                 .card col:first-child { width: 75%; }
                 .card col:last-child { width: 25%; }
+                .sales-summary col:nth-child(1) { width: 60%; }
+                .sales-summary col:nth-child(2) { width: 18%; }
+                .sales-summary col:nth-child(3) { width: 22%; }
                 .card thead { display: table-header-group; }
                 .card tr { page-break-inside: avoid; page-break-after: auto; }
                 .card thead th { 
@@ -205,13 +210,13 @@ trait ReporteCajaPdfTrait
                 </tr>
             </table>
 
-            <table class="card">
-                <colgroup><col width="75%"><col width="25%"></colgroup>
-                <thead><tr><th>Resumen de ventas</th><th class="text-right">Total</th></tr></thead>
+            <table class="card sales-summary">
+                <colgroup><col width="60%"><col width="18%"><col width="22%"></colgroup>
+                <thead><tr><th>Resumen de ventas</th><th class="text-right">Unidades</th><th class="text-right">Total</th></tr></thead>
                 <tbody>
-                    <?php if (empty($ventas_agrupadas)): ?><tr><td colspan="2" class="text-muted">Sin ventas registradas.</td></tr>
+                    <?php if (empty($ventas_agrupadas)): ?><tr><td colspan="3" class="text-muted">Sin ventas registradas.</td></tr>
                     <?php else: foreach ($ventas_agrupadas as $venta): ?>
-                    <tr><td><?= htmlspecialchars($venta['nombre']) ?></td><td class="text-right">L. <?= number_format($venta['valor'], 2) ?></td></tr>
+                    <tr><td><?= htmlspecialchars($venta['nombre']) ?></td><td class="text-right"><?= number_format((float) $venta['unidades'], 0) ?></td><td class="text-right">L. <?= number_format((float) $venta['valor'], 2) ?></td></tr>
                     <?php endforeach; endif; ?>
                 </tbody>
             </table>

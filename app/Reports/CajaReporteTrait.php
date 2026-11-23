@@ -71,7 +71,7 @@ trait CajaReporteTrait
 
         // Filtros de fecha (Comunes para todos)
         if (!empty($filtros['desde']) && !empty($filtros['hasta'])) {
-            $condicionPedidos .= " AND DATE(p.fecha_registro) BETWEEN :d1 AND :h1";
+            $condicionPedidos .= " AND DATE(COALESCE(p.fecha_entregado, p.fecha_registro)) BETWEEN :d1 AND :h1";
             $condicionVentas .= " AND DATE(v.fecha_venta) BETWEEN :d2 AND :h2";
             $params[':d1'] = $params[':d2'] = $filtros['desde'];
             $params[':h1'] = $params[':h2'] = $filtros['hasta'];
@@ -79,7 +79,7 @@ trait CajaReporteTrait
 
         // 2. PARTE A: Pedidos Especiales
         $sqlPedidos = "SELECT p.id_pedido as id_pedido, 
-                            p.fecha_registro as fecha_registro, 
+                            COALESCE(p.fecha_entregado, p.fecha_registro) as fecha_registro,
                             c.nombre_completo as cliente, 
                             s.nombre_sucursal as nombre_sucursal, 
                             p.total_pedido as total_pedido, 
