@@ -26,7 +26,7 @@ $viewPermissions = [
     'pedidos-nuevo' => 'orders.create',
     'pedidos-lista' => 'orders.view',
     'ventas-historial' => 'reports.view',
-    'reporte-productos' => 'reports.view',
+    'reporte-productos' => 'reports.product_sales',
     'ventas-nueva' => 'sales.create',
     'usuarios' => 'users.manage',
     'clientes' => 'clients.manage',
@@ -120,7 +120,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                     case 'reporte-productos':
                         $today = date('Y-m-d');
                         $reportFilters = \App\Http\Input\ProductSalesFilters::from($_GET, $today);
-                        if ($reportFilters['sucursal'] !== null && !Auth::canAccessBranch($reportFilters['sucursal'], 'reports.view')) {
+                        if ($reportFilters['sucursal'] !== null && !Auth::canAccessBranch($reportFilters['sucursal'], 'reports.product_sales')) {
                             http_response_code(403);
                             echo '<div class="container-fluid p-4"><div class="alert alert-danger">No tienes acceso a la sucursal seleccionada.</div></div>';
                             break;
@@ -177,6 +177,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/components/card-payment.js?v=<?= filemtime(__DIR__ . '/js/components/card-payment.js') ?>"></script>
     <script src="js/components/form-validation.js?v=<?= filemtime(__DIR__ . '/js/components/form-validation.js') ?>"></script>
     <script src="js/components/table-search.js?v=<?= filemtime(__DIR__ . '/js/components/table-search.js') ?>"></script>
     <script src="js/components/date-picker.js?v=<?= filemtime(__DIR__ . '/js/components/date-picker.js') ?>"></script>

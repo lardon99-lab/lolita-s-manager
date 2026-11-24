@@ -202,5 +202,6 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
 <link rel="stylesheet" href="css/views/ventas-nueva.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/ventas-nueva.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
+<template id="cardPaymentFields"><?php include __DIR__ . '/partials/card-payment-fields.php'; ?></template>
 <script id="sales-product-configurations" type="application/json"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
 <script src="js/views/ventas-nueva.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/ventas-nueva.js') ?>"></script>

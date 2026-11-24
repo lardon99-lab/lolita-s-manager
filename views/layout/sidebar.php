@@ -48,6 +48,8 @@
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'ventas-historial') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=ventas-historial">
                 <i class="fa-solid fa-file-invoice-dollar me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Historial Ventas</span>
             </a>
+            <?php endif; ?>
+            <?php if (\App\Security\Auth::hasPermission('reports.product_sales')): ?>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'reporte-productos') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=reporte-productos">
                 <i class="fa-solid fa-chart-column me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Reporte de ventas</span>
             </a>

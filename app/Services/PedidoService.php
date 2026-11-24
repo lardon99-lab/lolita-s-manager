@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Input\CardPaymentInput;
 use App\Http\Response;
 use App\Http\Validator;
 use App\Security\Auth;
@@ -15,7 +16,7 @@ final class PedidoService
 {
     public function __construct(private PDO $db) {}
 
-    public function crear(array $input, array $files = []): void
+    public function crear(array $input, array $files = [], bool $json = false): void
     {
         $storedDesignFiles = [];
         $designStorage = new OrderDesignStorage(dirname(__DIR__, 2) . '/storage/order-designs');
@@ -28,17 +29,33 @@ final class PedidoService
             $clientId = Validator::positiveInt($input['id_cliente'] ?? null, 'cliente');
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
             Auth::requirePermission('orders.create', $branchId);
+            $userId = (int) $_SESSION['id_usuario'];
+            $paymentType = Validator::enum($input['tipo_pago'] ?? '', ['Pendiente', 'Abonado', 'Pagado'], 'tipo de pago');
+            $paymentMethod = $paymentType === 'Pendiente' ? 'Efectivo'
+                : Validator::enum($input['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
+            $card = $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($input) : null;
             $deliveryDate = Validator::dateTimeLocal($input['fecha_entrega'] ?? null, 'fecha de entrega');
+            $notes = Validator::text($input['observaciones'] ?? '', 'observaciones', 1000, false);
+            $payload = [$clientId, $deliveryDate, $notes, $paymentType, $submittedLines, $legacyProducts];
+            if ($paymentType === 'Abonado') $payload[] = $input['monto_abono'] ?? null;
+            if ($card !== null) $payload[] = $this->designFingerprints($files);
+
+            $this->db->beginTransaction();
+            $payments = new PaymentRecorder($this->db);
+            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'pedido.nuevo', $payload) : null;
+            if (isset($receipt['id_pedido'])) {
+                $this->db->commit();
+                $this->created($receipt['id_pedido'], $json, true);
+                return;
+            }
+
             if (new \DateTimeImmutable($deliveryDate) < new \DateTimeImmutable('-5 minutes')) {
                 throw new InvalidArgumentException('La fecha de entrega no puede estar en el pasado.');
             }
-            $notes = Validator::text($input['observaciones'] ?? '', 'observaciones', 1000, false);
-            $paymentType = Validator::enum($input['tipo_pago'] ?? '', ['Pendiente', 'Abonado', 'Pagado'], 'tipo de pago');
             $clientQuery = $this->db->prepare("SELECT COUNT(*) FROM clientes WHERE id_cliente = ? AND estado = 'Activo'");
             $clientQuery->execute([$clientId]);
             if (!(bool) $clientQuery->fetchColumn()) throw new InvalidArgumentException('El cliente no existe o esta inactivo.');
 
-            $this->db->beginTransaction();
             $pricing = (new OrderPricingService($this->db))->price($branchId, $input);
             $items = $pricing['items'];
             $total = $pricing['total'];
@@ -50,11 +67,12 @@ final class PedidoService
             if ($paymentType === 'Abonado' && $paid >= $total) {
                 throw new InvalidArgumentException('Para liquidar el total selecciona la opcion Pagado.');
             }
+            $card?->assertAmount($paid);
             $balance = round($total - $paid, 2);
             $paymentStatus = $balance <= 0 ? 'Pagado' : ($paid > 0 ? 'Abonado' : 'Pendiente');
 
             $order = $this->db->prepare("INSERT INTO pedidos (id_cliente, id_sucursal, id_usuario, fecha_entrega, total_pedido, monto_abonado, saldo_pendiente, estado_pago, observaciones_generales, estado) VALUES (:cliente, :sucursal, :usuario, :fecha, :total, :abono, :saldo, :pago, :observaciones, 'Pendiente')");
-            $order->execute([':cliente' => $clientId, ':sucursal' => $branchId, ':usuario' => (int) $_SESSION['id_usuario'], ':fecha' => $deliveryDate, ':total' => $total, ':abono' => $paid, ':saldo' => $balance, ':pago' => $paymentStatus, ':observaciones' => $notes]);
+            $order->execute([':cliente' => $clientId, ':sucursal' => $branchId, ':usuario' => $userId, ':fecha' => $deliveryDate, ':total' => $total, ':abono' => $paid, ':saldo' => $balance, ':pago' => $paymentStatus, ':observaciones' => $notes]);
             $orderId = (int) $this->db->lastInsertId();
             $detail = $this->db->prepare('INSERT INTO pedido_detalles (id_pedido, id_producto, cantidad, precio_unitario, detalles_personalizacion, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
             $detailOption = $this->db->prepare('INSERT INTO pedido_detalle_opciones (id_detalle, id_opcion, grupo_nombre, opcion_nombre, recargo_unitario) VALUES (?, ?, ?, ?, ?)');
@@ -92,20 +110,47 @@ final class PedidoService
                 }
             }
             if ($paid > 0) {
-                $paymentMethod = Validator::enum($input['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
-                $payment = $this->db->prepare('INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago) VALUES (?, ?, ?, ?)');
-                $payment->execute([$orderId, (int) $_SESSION['id_usuario'], $paid, $paymentMethod]);
+                $payments->recordOrderPayment($orderId, $userId, $paid, $paymentMethod, $card, $receipt['id_comprobante'] ?? null);
             }
             (new AuditService($this->db))->record('create', 'pedido', $orderId, $branchId, ['total' => $total, 'paid' => $paid]);
             $this->db->commit();
-            Response::redirect('index.php?view=pedidos-lista&msg=pedido_ok');
+            $this->created($orderId, $json);
         } catch (Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             foreach ($storedDesignFiles as $filename) $designStorage->remove($filename);
-            Logger::error($error);
-            $_SESSION['flash_error'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No fue posible guardar el pedido.';
+            $invalid = $error instanceof InvalidArgumentException;
+            if (!$invalid) Logger::error($error);
+            $message = $invalid ? $error->getMessage() : 'No fue posible guardar el pedido.';
+            if ($json) Response::json(['status' => 'error', 'message' => $message], $invalid ? 422 : 500);
+            $_SESSION['flash_error'] = $message;
             Response::redirect('index.php?view=pedidos-nuevo&status=error');
         }
+    }
+
+    private function created(int $orderId, bool $json, bool $replayed = false): void
+    {
+        $url = 'index.php?view=pedidos-lista&msg=pedido_ok';
+        if ($json) {
+            Response::json([
+                'status' => 'success',
+                'message' => $replayed ? 'El pedido ya estaba registrado.' : 'Pedido registrado correctamente.',
+                'id_pedido' => $orderId,
+                'redirect' => $url,
+            ]);
+        }
+        Response::redirect($url);
+    }
+
+    private function designFingerprints(array $files): array
+    {
+        $fingerprints = [];
+        foreach ((array) ($files['design_files']['error'] ?? []) as $key => $error) {
+            if ((int) $error === UPLOAD_ERR_NO_FILE) continue;
+            $file = $this->designUpload($files, (string) $key);
+            $path = $file['tmp_name'] ?? '';
+            $fingerprints[$key] = [$error, $file['name'] ?? '', is_uploaded_file($path) ? hash_file('sha256', $path) : null];
+        }
+        return $fingerprints;
     }
 
     private function designUpload(array $files, string $key): ?array

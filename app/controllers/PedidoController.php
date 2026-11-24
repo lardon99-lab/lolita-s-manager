@@ -14,6 +14,8 @@ use App\Security\Csrf;
 use App\Security\OrderStatusPolicy;
 use App\Services\AuditService;
 use App\Services\PedidoService;
+use App\Http\Input\CardPaymentInput;
+use App\Services\PaymentRecorder;
 use App\Services\ProductCustomizationService;
 use App\Services\ProductDesignService;
 use App\Services\OrderDesignStorage;
@@ -55,7 +57,8 @@ final class PedidoController
 
     public function crear(): void
     {
-        (new PedidoService($this->db))->crear($_POST, $_FILES);
+        $json = str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+        (new PedidoService($this->db))->crear($_POST, $_FILES, $json);
     }
 
     public function obtenerDetalles(int|string $orderId): array
@@ -144,6 +147,10 @@ final class PedidoController
         $newState = Validator::enum($_POST['nuevo_estado'] ?? '', [OrderStatusPolicy::FINISHED, OrderStatusPolicy::DELIVERED], 'estado');
         $settle = filter_var($_POST['liquidar'] ?? false, FILTER_VALIDATE_BOOL);
         $paymentMethod = Validator::enum($_POST['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
+        if ($settle && $newState !== OrderStatusPolicy::DELIVERED) {
+            throw new InvalidArgumentException('Solo puedes liquidar el saldo al entregar el pedido.');
+        }
+        $card = $settle && $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($_POST) : null;
 
         try {
             $this->db->beginTransaction();
@@ -152,12 +159,25 @@ final class PedidoController
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$order) throw new InvalidArgumentException('El pedido no existe.');
             $currentState = (string) $order['estado'];
-            $requiredPermission = OrderStatusPolicy::requiredPermission($currentState, $newState);
+            $replaying = $card !== null && $currentState === OrderStatusPolicy::DELIVERED;
+            $transitionFrom = $replaying ? OrderStatusPolicy::FINISHED : $currentState;
+            $requiredPermission = OrderStatusPolicy::requiredPermission($transitionFrom, $newState);
             $role = (int) ($_SESSION['id_rol'] ?? 0);
-            if ($requiredPermission === null || !OrderStatusPolicy::roleCanTransition($role, $currentState, $newState)) {
+            if ($requiredPermission === null || !OrderStatusPolicy::roleCanTransition($role, $transitionFrom, $newState)) {
                 throw new InvalidArgumentException('La transicion de estado no es valida.');
             }
-            Auth::requirePermission($requiredPermission, (int) $order['id_sucursal']);
+            $branchId = (int) $order['id_sucursal'];
+            Auth::requirePermission($requiredPermission, $branchId);
+            $userId = (int) $_SESSION['id_usuario'];
+            $payments = new PaymentRecorder($this->db);
+            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'pedido.entrega.' . $id, [$id]) : null;
+            if ($replaying) {
+                if (!isset($receipt['id_pago']) || $receipt['id_pedido'] !== $id) {
+                    throw new InvalidArgumentException('El pedido ya fue entregado. Revisa el historial antes de intentar cobrar de nuevo.');
+                }
+                $this->db->commit();
+                Response::json(['status' => 'success', 'message' => 'El pedido ya estaba entregado y el pago registrado.']);
+            }
 
             $balance = (float) $order['saldo_pendiente'];
             if ($newState === 'Entregado' && $balance > 0 && !$settle) {
@@ -166,8 +186,8 @@ final class PedidoController
             if ($settle && $balance <= 0) throw new InvalidArgumentException('El pedido no tiene saldo pendiente.');
 
             if ($settle) {
-                $payment = $this->db->prepare('INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago) VALUES (?, ?, ?, ?)');
-                $payment->execute([$id, (int) $_SESSION['id_usuario'], $balance, $paymentMethod]);
+                $card?->assertAmount($balance);
+                $payments->recordOrderPayment($id, $userId, $balance, $paymentMethod, $card, $receipt['id_comprobante'] ?? null);
             }
 
             $updates = ['estado = :estado'];

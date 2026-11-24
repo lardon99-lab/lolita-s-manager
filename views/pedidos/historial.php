@@ -33,8 +33,13 @@ $mermas = $pedidosCtrl->obtenerMermas($filtros);
 // Cálculos de Caja Reales
 $resumenIngresos = $pedidosCtrl->obtenerResumenIngresosCaja($filtros);
 $totalIngresos = $resumenIngresos['total'];
+$ingresosPorMetodo = $resumenIngresos['by_method'];
 $totalGastos = array_sum(array_column($mermas, 'monto'));
-$totalCajaReal = $totalIngresos - $totalGastos;
+$totalCajaReal = round($ingresosPorMetodo['Efectivo'] - $totalGastos, 2);
+$cardPage = max(1, (int) filter_var($_GET['pagina_tarjeta'] ?? 1, FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 1, 'max_range' => 100000],
+]));
+$cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
 ?>
 
 <div class="container-fluid app-page p-2 p-md-4">
@@ -49,13 +54,13 @@ $totalCajaReal = $totalIngresos - $totalGastos;
             <div class="app-page-header__actions">
                 <div class="history-balance text-start">
                 <div class="d-flex justify-content-between align-items-center mb-1 gap-4">
-                    <span class="small fw-bold text-uppercase text-muted">Total en caja real</span>
+                    <span class="small fw-bold text-uppercase text-muted">Efectivo neto registrado</span>
                     <?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?><button type="button" class="btn btn-warning btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalMerma">
                         <i class="fa-solid fa-minus-circle me-1"></i> Registrar Gasto
                     </button><?php endif; ?>
                 </div>
                     <strong class="history-balance__value">L. <?= number_format($totalCajaReal, 2) ?></strong>
-                    <small class="text-muted mt-1 d-block">Cobrado: L. <?= number_format($totalIngresos, 2) ?></small>
+                    <small class="text-muted mt-1 d-block">Total cobrado en el periodo: L. <?= number_format($totalIngresos, 2) ?></small>
                     <?php if($totalGastos > 0): ?>
                         <small class="text-danger mt-1 d-block"><i class="fa-solid fa-arrow-trend-down me-1"></i> - L. <?= number_format($totalGastos, 2) ?> en gastos</small>
                     <?php endif; ?>
@@ -136,6 +141,17 @@ $totalCajaReal = $totalIngresos - $totalGastos;
             </form>
     </div>
 
+    <section class="row g-2 mb-3" aria-label="Cobros por medio de pago">
+        <?php foreach ($ingresosPorMetodo as $metodo => $monto): ?>
+        <div class="col-6 col-lg-3">
+            <div class="app-panel h-100 p-3">
+                <div class="small text-muted fw-semibold"><?= e($metodo) ?></div>
+                <strong class="text-dark text-break">L. <?= number_format($monto, 2) ?></strong>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </section>
+
     <div class="card app-panel overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 mobile-card-table history-main-table">
@@ -206,6 +222,7 @@ $totalCajaReal = $totalIngresos - $totalGastos;
             </table>
         </div>
     </div>
+    <?php include __DIR__ . '/partials/card-payment-history.php'; ?>
 </div>
 
 <?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?>

@@ -45,6 +45,10 @@ final class Auth
     public static function hasPermission(string $permission): bool
     {
         $role = (int) ($_SESSION['id_rol'] ?? 0);
+        if ($permission === 'reports.product_sales') {
+            return in_array($role, [self::ADMIN, self::SUPERUSER], true)
+                && self::hasPermission('reports.view');
+        }
         if ($role === self::EMPLOYEE && in_array($permission, ['inventory.adjust', 'orders.finish'], true)) return false;
 
         $permissions = isset($_SESSION['permissions']) && is_array($_SESSION['permissions'])

@@ -4,11 +4,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../core/Database.php';
 
 use App\Http\Response;
+use App\Http\Input\CardPaymentInput;
 use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\InventoryStockService;
+use App\Services\PaymentRecorder;
 use App\Services\ProductOptionPricingService;
 use App\Services\SupplyStockService;
 
@@ -30,6 +32,8 @@ final class VentaController
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
             Auth::requirePermission('sales.create', $branchId);
             $paymentMethod = Validator::enum($input['metodo_pago'] ?? '', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
+            $card = $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($input) : null;
+            $userId = (int) $_SESSION['id_usuario'];
             $cart = $input['productos'] ?? null;
             if (!is_array($cart) || $cart === [] || count($cart) > 100) {
                 throw new InvalidArgumentException('El carrito debe contener entre 1 y 100 productos.');
@@ -49,6 +53,12 @@ final class VentaController
             }
 
             $this->db->beginTransaction();
+            $payments = new PaymentRecorder($this->db);
+            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'venta', $normalized) : null;
+            if (isset($receipt['id_venta'])) {
+                $this->db->commit();
+                Response::json(['status' => 'success', 'message' => 'La venta ya estaba registrada.', 'id_venta' => $receipt['id_venta']]);
+            }
             $stockService = new InventoryStockService($this->db);
             $supplyStockService = new SupplyStockService($this->db);
             $optionPricing = new ProductOptionPricingService($this->db);
@@ -88,6 +98,7 @@ final class VentaController
                 }
             }
             if ($total <= 0 || $total > 99999999.99) throw new InvalidArgumentException('El total de la venta no es valido.');
+            $card?->assertAmount($total);
 
             $productAllocations = [];
             foreach ($productQuantities as $productId => $quantity) {
@@ -97,15 +108,15 @@ final class VentaController
             $supplyAllocations = $supplyStockService->lockForSale($supplyProductQuantities, $branchId);
 
             $sale = $this->db->prepare('INSERT INTO ventas_directas (id_usuario, id_sucursal, total, metodo_pago) VALUES (?, ?, ?, ?)');
-            $sale->execute([(int) $_SESSION['id_usuario'], $branchId, $total, $paymentMethod]);
+            $sale->execute([$userId, $branchId, $total, $paymentMethod]);
             $saleId = (int) $this->db->lastInsertId();
+            if ($receipt !== null) $payments->linkSale($receipt['id_comprobante'], $saleId);
 
             $insertItem = $this->db->prepare('INSERT INTO venta_items (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)');
             $insertOption = $this->db->prepare(
                 'INSERT INTO venta_item_opciones (id_item, id_opcion, grupo_nombre, opcion_nombre, recargo_unitario)
                  VALUES (?, ?, ?, ?, ?)'
             );
-            $userId = (int) $_SESSION['id_usuario'];
             foreach ($items as $item) {
                 $insertItem->execute([$saleId, $item['product_id'], $item['quantity'], $item['price'], $item['subtotal']]);
                 $itemId = (int) $this->db->lastInsertId();

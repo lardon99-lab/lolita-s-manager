@@ -22,6 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const money = new Intl.NumberFormat('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let cart = [];
     let pendingProduct = null;
+    let cardDraft = {};
+    let pendingCheckout = null;
+
+    function lockCheckoutInputs(locked) {
+        document.querySelectorAll('.sales-branch, .sales-catalog, .sales-cart-scroll, .sales-payment').forEach((section) => {
+            section.inert = locked;
+        });
+    }
 
     const selectedOption = () => productSelect.options[productSelect.selectedIndex];
     const productName = (option) => option.textContent.split('—')[0].trim();
@@ -222,30 +230,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     checkoutButton?.addEventListener('click', async () => {
-        if (!cart.length) return;
-        const paymentMethod = document.querySelector('input[name="metodo_pago"]:checked')?.value || 'Efectivo';
-        const confirmation = await Swal.fire({ title: 'Confirmar venta', text: `Total a cobrar: ${totalLabel.textContent}`, icon: 'question', showCancelButton: true, confirmButtonText: 'Cobrar', cancelButtonText: 'Revisar' });
-        if (!confirmation.isConfirmed) return;
+        if (!cart.length || checkoutButton.disabled) return;
         checkoutButton.disabled = true;
-        checkoutButton.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Procesando...';
         try {
-            const response = await fetch('api.php?resource=ventas&action=procesarVenta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({
+            let body = pendingCheckout;
+            if (!body) {
+                const paymentMethod = document.querySelector('input[name="metodo_pago"]:checked')?.value || 'Efectivo';
+                const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+                if (paymentMethod === 'Tarjeta') {
+                    const receipt = await CardPayment.confirm(total, totalLabel.textContent, cardDraft);
+                    if (!receipt) return;
+                    cardDraft = receipt;
+                } else {
+                    const confirmation = await Swal.fire({ title: 'Confirmar venta', text: `Total a cobrar: ${totalLabel.textContent}`, icon: 'question', showCancelButton: true, confirmButtonText: 'Cobrar', cancelButtonText: 'Revisar' });
+                    if (!confirmation.isConfirmed) return;
+                }
+                body = {
                     id_sucursal: document.getElementById('id_sucursal').value,
                     metodo_pago: paymentMethod,
                     productos: cart.map(({ id, cantidad, opciones }) => ({ id, cantidad, opciones })),
-                }),
-            });
-            const data = await response.json();
-            if (!response.ok || data.status !== 'success') throw new Error(data.message || 'No fue posible registrar la venta.');
+                    ...(paymentMethod === 'Tarjeta' ? cardDraft : {}),
+                };
+            }
+            checkoutButton.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Procesando...';
+            const url = 'api.php?resource=ventas&action=procesarVenta';
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify(body),
+            };
+            lockCheckoutInputs(true);
+            let data;
+            if (body.metodo_pago === 'Tarjeta') {
+                pendingCheckout = body;
+                data = await CardPayment.send(url, options);
+                if (!data) return;
+                pendingCheckout = null;
+            } else {
+                const response = await fetch(url, options);
+                data = await response.json();
+            }
+            if (data.status !== 'success') throw new Error(data.message || 'No fue posible registrar la venta.');
+            pendingCheckout = null;
+            cart = [];
+            renderCart();
             await Swal.fire({ title: 'Venta registrada', text: data.message, icon: 'success', timer: 1500, showConfirmButton: false });
             location.reload();
         } catch (error) {
             Swal.fire('Error', error.message || 'Fallo de conexión.', 'error');
-            checkoutButton.disabled = false;
-            checkoutButton.innerHTML = '<i class="fa-solid fa-cash-register" aria-hidden="true"></i>Finalizar cobro';
+        } finally {
+            lockCheckoutInputs(pendingCheckout !== null);
+            checkoutButton.disabled = cart.length === 0;
+            checkoutButton.innerHTML = pendingCheckout
+                ? '<i class="fa-solid fa-rotate-right" aria-hidden="true"></i>Reintentar registro'
+                : '<i class="fa-solid fa-cash-register" aria-hidden="true"></i>Finalizar cobro';
         }
     });
 

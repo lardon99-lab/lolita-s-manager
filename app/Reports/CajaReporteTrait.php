@@ -7,18 +7,22 @@ trait CajaReporteTrait
     public function obtenerResumenIngresosCaja(array $filtros = []): array
     {
         Auth::requirePermission('reports.view');
-
-        if (!empty($filtros['sucursal'])) {
-            $branchId = (int) $filtros['sucursal'];
-            if (!Auth::canAccessBranch($branchId, 'reports.view')) {
-                return ['order_payments' => 0.0, 'direct_sales' => 0.0, 'total' => 0.0];
-            }
-            $filtros['sucursal'] = $branchId;
-        }
+        // El saldo de caja abarca todos los cobros del periodo y la sucursal.
+        unset($filtros['tipo'], $filtros['busqueda']);
 
         return (new \App\Reports\CashIncomeReport($this->db))->summarize(
             $filtros,
             Auth::allowedBranches('reports.view')
+        );
+    }
+
+    public function obtenerComprobantesTarjeta(array $filtros, int $page): array
+    {
+        Auth::requirePermission('reports.view');
+        return (new \App\Reports\CashIncomeReport($this->db))->cardPayments(
+            $filtros,
+            Auth::allowedBranches('reports.view'),
+            $page
         );
     }
 

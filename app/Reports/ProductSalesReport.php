@@ -15,13 +15,13 @@ final class ProductSalesReport
     /** @param array{desde:string,hasta:string,sucursal:?int,id_producto:?int} $filters */
     public function data(array $filters): array
     {
-        Auth::requirePermission('reports.view');
-        $allowedBranches = Auth::allowedBranches('reports.view');
+        Auth::requirePermission('reports.product_sales');
+        $allowedBranches = Auth::allowedBranches('reports.product_sales');
 
         $branches = $this->branchOptions($allowedBranches);
         $products = $this->productOptions($allowedBranches);
         $hasAccess = $filters['sucursal'] === null
-            || Auth::canAccessBranch($filters['sucursal'], 'reports.view');
+            || Auth::canAccessBranch($filters['sucursal'], 'reports.product_sales');
 
         $rows = $hasAccess
             ? $this->salesRows($filters, $allowedBranches, $filters['id_producto'] !== null)

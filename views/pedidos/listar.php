@@ -308,4 +308,5 @@
 <link rel="stylesheet" href="css/views/pedidos-lista.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-lista.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
+<template id="cardPaymentFields"><?php include __DIR__ . '/../ventas/partials/card-payment-fields.php'; ?></template>
 <script src="js/views/pedidos-lista.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/pedidos-lista.js') ?>"></script>

@@ -5,7 +5,8 @@ use App\Security\Auth;
 trait ReporteCajaPdfTrait
 {
     public function descargarReportePDF($filtros = []) {
-        Auth::requirePermission('reports.view');
+        $branchId = !empty($filtros['sucursal']) ? \App\Http\Validator::positiveInt($filtros['sucursal'], 'sucursal') : null;
+        Auth::requirePermission('reports.view', $branchId);
         $today = date('Y-m-d');
         $filtros['desde'] = $today;
         $filtros['hasta'] = $today;
@@ -13,12 +14,13 @@ trait ReporteCajaPdfTrait
         // 1. Obtener exclusivamente los movimientos del dia actual.
         $resumenIngresos = $this->obtenerResumenIngresosCaja($filtros);
         $totalIngresos = $resumenIngresos['total'];
+        $ingresosPorMetodo = $resumenIngresos['by_method'];
 
         $mermasCaja = $this->obtenerMermas($filtros);
         $mermasInventario = $this->obtenerMermasInventario($filtros);
         $totalGastos = array_sum(array_column($mermasCaja, 'monto'));
 
-        $totalCajaReal = $totalIngresos - $totalGastos;
+        $totalCajaReal = round($ingresosPorMetodo['Efectivo'] - $totalGastos, 2);
 
         // ====================================================================
         // 2. LÓGICA: PREPARAR DATOS PARA LAS 3 COLUMNAS
@@ -185,8 +187,8 @@ trait ReporteCajaPdfTrait
                 .card thead th.text-right,
                 .card tbody td.text-right { text-align: right; }
                 .text-muted { color: #888; font-style: italic; }
-                .summary { width: 100%; margin-bottom: 16px; border-collapse: collapse; background: #FFF0F5; border: 2px solid #D81B60; }
-                .summary td { width: 33.33%; padding: 10px; text-align: center; border-right: 1px solid #F48FB1; }
+                .summary { width: 100%; margin-bottom: 16px; border-collapse: collapse; table-layout: fixed; background: #FFF0F5; border: 2px solid #D81B60; }
+                .summary td { padding: 8px 4px; text-align: center; border-right: 1px solid #F48FB1; }
                 .summary td:last-child { border-right: 0; }
                 .summary-label { display: block; margin-bottom: 3px; color: #880E4F; font-size: 9px; font-weight: bold; text-transform: uppercase; }
                 .summary-value { font-size: 15px; font-weight: bold; color: #222; }
@@ -205,8 +207,11 @@ trait ReporteCajaPdfTrait
             <table class="summary">
                 <tr>
                     <td><span class="summary-label">Cobrado</span><span class="summary-value">L. <?= number_format($totalIngresos, 2) ?></span></td>
-                    <td><span class="summary-label">Gastos</span><span class="summary-value">L. <?= number_format($totalGastos, 2) ?></span></td>
-                    <td><span class="summary-label">Neto</span><span class="summary-value net">L. <?= number_format($totalCajaReal, 2) ?></span></td>
+                    <?php foreach ($ingresosPorMetodo as $metodo => $monto): ?>
+                    <td><span class="summary-label"><?= e($metodo) ?></span><span class="summary-value">L. <?= number_format($monto, 2) ?></span></td>
+                    <?php endforeach; ?>
+                    <td><span class="summary-label">Salidas de caja</span><span class="summary-value">L. <?= number_format($totalGastos, 2) ?></span></td>
+                    <td><span class="summary-label">Efectivo neto</span><span class="summary-value net">L. <?= number_format($totalCajaReal, 2) ?></span></td>
                 </tr>
             </table>
 

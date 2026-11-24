@@ -15,17 +15,17 @@ final class CashIncomeReportTest extends TestCase
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->db->exec('CREATE TABLE clientes (id_cliente INTEGER PRIMARY KEY, nombre_completo TEXT)');
         $this->db->exec('CREATE TABLE pedidos (id_pedido INTEGER PRIMARY KEY, id_cliente INTEGER, id_sucursal INTEGER)');
-        $this->db->exec('CREATE TABLE pagos_pedido (id_pago INTEGER PRIMARY KEY, id_pedido INTEGER, monto NUMERIC, estado TEXT, fecha_registro TEXT)');
-        $this->db->exec('CREATE TABLE ventas_directas (id_venta INTEGER PRIMARY KEY, id_sucursal INTEGER, total NUMERIC, fecha_venta TEXT)');
+        $this->db->exec("CREATE TABLE pagos_pedido (id_pago INTEGER PRIMARY KEY, id_pedido INTEGER, monto NUMERIC, estado TEXT, fecha_registro TEXT, id_usuario INTEGER DEFAULT 1, metodo_pago TEXT DEFAULT 'Efectivo')");
+        $this->db->exec("CREATE TABLE ventas_directas (id_venta INTEGER PRIMARY KEY, id_sucursal INTEGER, total NUMERIC, fecha_venta TEXT, id_usuario INTEGER DEFAULT 1, metodo_pago TEXT DEFAULT 'Efectivo')");
 
         $this->db->exec("INSERT INTO clientes VALUES (1, 'Cliente Uno'), (2, 'Cliente Dos')");
         $this->db->exec('INSERT INTO pedidos VALUES (10, 1, 1), (20, 2, 2)');
-        $this->db->exec("INSERT INTO pagos_pedido VALUES
+        $this->db->exec("INSERT INTO pagos_pedido (id_pago, id_pedido, monto, estado, fecha_registro) VALUES
             (1, 10, 100, 'Aplicado', '2026-09-19 09:00:00'),
             (2, 10, 40, 'Aplicado', '2026-09-18 09:00:00'),
             (3, 10, 20, 'Anulado', '2026-09-19 10:00:00'),
             (4, 20, 80, 'Aplicado', '2026-09-19 11:00:00')");
-        $this->db->exec("INSERT INTO ventas_directas VALUES
+        $this->db->exec("INSERT INTO ventas_directas (id_venta, id_sucursal, total, fecha_venta) VALUES
             (100, 1, 50, '2026-09-19 12:00:00'),
             (101, 1, 25, '2026-09-18 12:00:00'),
             (102, 2, 70, '2026-09-19 13:00:00')");

@@ -14,7 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const productCombobox = ProductCombobox.create(productSelect);
     const detailBody = document.querySelector('#tabla-detalles tbody');
     const lineBuilder = document.querySelector('.order-line-builder');
+    const paymentMethod = document.getElementById('metodo_pago');
+    const deposit = document.getElementById('monto_abono');
+    const cardFields = document.getElementById('orderCardPayment');
+    const cardAmountLabel = document.getElementById('orderCardPaymentAmount');
+    const saveButton = document.getElementById('btnGuardarPedido');
+    const saveLabel = saveButton.innerHTML;
     let rowIndex = 0;
+    let pendingCardOrder = null;
+    let lockedFields = [];
+    let savingCard = false;
 
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -165,10 +174,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'Pagado') deposit.value = total.toFixed(2);
         if (type === 'Pendiente') deposit.value = '0';
         if (type === 'Abonado' && (Number(deposit.value) <= 0 || Number(deposit.value) > total)) deposit.value = (total * .5).toFixed(2);
+        updateCardPayment();
     };
+
+    function updateCardPayment() {
+        const type = document.getElementById('tipo_pago').value;
+        const enabled = type !== 'Pendiente' && paymentMethod.value === 'Tarjeta';
+        cardFields.hidden = !enabled;
+        cardFields.disabled = !enabled;
+        cardFields.elements.monto_tarjeta.setCustomValidity('');
+        if (enabled) cardAmountLabel.textContent = `Monto a registrar: L. ${money(deposit.value)}`;
+    }
+
+    async function sendCardOrder() {
+        savingCard = true;
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Guardando pedido...';
+        try {
+            const data = await CardPayment.send(form.action, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body: pendingCardOrder,
+            });
+            if (!data) return;
+            if (data.status !== 'success') {
+                pendingCardOrder = null;
+                lockedFields.forEach((field) => { field.disabled = false; });
+                lockedFields = [];
+                await Swal.fire('Pedido incompleto', data.message || 'No fue posible guardar el pedido.', 'error');
+                return;
+            }
+            location.assign(data.redirect);
+        } finally {
+            savingCard = false;
+            saveButton.disabled = false;
+            saveButton.innerHTML = pendingCardOrder
+                ? '<i class="fa-solid fa-rotate-right me-2" aria-hidden="true"></i>Reintentar registro'
+                : saveLabel;
+        }
+    }
+
+    paymentMethod.addEventListener('change', updateCardPayment);
+    deposit.addEventListener('input', updateCardPayment);
+    cardFields.elements.monto_tarjeta.addEventListener('input', (event) => event.target.setCustomValidity(''));
 
     document.getElementById('add-order-line').addEventListener('click', addOrderLine);
     form.addEventListener('submit', (event) => {
+        if (savingCard || pendingCardOrder) {
+            event.preventDefault();
+            if (!savingCard) void sendCardOrder();
+            return;
+        }
         const clientId = document.getElementById('id_cliente_real').value;
         const hasItems = detailBody.querySelector('[data-order-line="true"]') !== null;
         if (!hasItems) {
@@ -181,10 +237,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!clientId) {
             event.preventDefault();
             Swal.fire('Pedido incompleto', 'Selecciona un cliente valido.', 'error');
+            return;
         }
+        if (cardFields.disabled) return;
+        event.preventDefault();
+        if (!CardPayment.validate(cardFields, Number(deposit.value)).reportValidity()) return;
+
+        pendingCardOrder = new FormData(form);
+        lockedFields = [...form.elements].filter((field) => field !== saveButton && field.willValidate !== undefined
+            && !field.disabled && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(field.tagName));
+        lockedFields.forEach((field) => { field.disabled = true; });
+        void sendCardOrder();
     });
 
     branchSelect.addEventListener('change', filterProducts);
     productSelect.addEventListener('change', () => customizer.render(productSelect.value, productSelect.selectedOptions[0]?.dataset.type || ''));
     filterProducts();
+    window.gestionarPago();
 });

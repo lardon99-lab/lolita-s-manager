@@ -90,9 +90,17 @@ function gestionarPedido(id, estadoActual, saldo, transiciones) {
     });
 }
 
+const pendingOrderPayments = new Map();
+const orderPaymentDrafts = new Map();
+
 async function confirmarCambioEstado(id, nuevoEstado, saldo) {
+    if (nuevoEstado === 'Entregado' && pendingOrderPayments.has(id)) {
+        await procesarCambioEstado(id, pendingOrderPayments.get(id), true);
+        return;
+    }
     let liquidar = false;
     let metodoPago = 'Efectivo';
+    let receipt = null;
 
     if (nuevoEstado === 'Entregado' && saldo > 0) {
         const payment = await Swal.fire({
@@ -107,12 +115,17 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
                 Otro: 'Otro',
             },
             showCancelButton: true,
-            confirmButtonText: 'Registrar pago y entregar',
+            confirmButtonText: 'Continuar',
             cancelButtonText: 'Cancelar',
         });
         if (!payment.isConfirmed) return;
         liquidar = true;
         metodoPago = payment.value;
+        if (metodoPago === 'Tarjeta') {
+            receipt = await CardPayment.confirm(saldo, `L. ${saldo.toFixed(2)}`, orderPaymentDrafts.get(id));
+            if (!receipt) return;
+            orderPaymentDrafts.set(id, receipt);
+        }
     } else {
         const confirmation = await Swal.fire({
             title: 'Confirmar cambio',
@@ -125,28 +138,33 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
         if (!confirmation.isConfirmed) return;
     }
 
-    procesarCambioEstado(id, nuevoEstado, liquidar, metodoPago);
-}
-
-function procesarCambioEstado(id, estado, liquidarSaldo = false, metodoPago = 'Efectivo') {
-    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const body = new URLSearchParams({
         id: String(id),
-        nuevo_estado: estado,
-        liquidar: String(liquidarSaldo),
+        nuevo_estado: nuevoEstado,
+        liquidar: String(liquidar),
         metodo_pago: metodoPago,
+        ...receipt,
     });
+    await procesarCambioEstado(id, body, receipt !== null);
+}
 
-    fetch('api.php?resource=pedidos&action=actualizar_estado_ajax', {
+async function procesarCambioEstado(id, body, cardPayment) {
+    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+    const url = 'api.php?resource=pedidos&action=actualizar_estado_ajax';
+    const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
         body,
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.status !== 'success') throw new Error(data.message || 'No fue posible actualizar el pedido.');
-            return Swal.fire({ icon: 'success', title: 'Estado actualizado', text: data.message });
-        })
-        .then(() => location.reload())
-        .catch((error) => Swal.fire('Error', error.message || 'Fallo en la comunicación con el servidor.', 'error'));
+    };
+    try {
+        if (cardPayment) pendingOrderPayments.set(id, body);
+        const data = cardPayment ? await CardPayment.send(url, options) : await (await fetch(url, options)).json();
+        if (!data) return;
+        pendingOrderPayments.delete(id);
+        if (data.status !== 'success') throw new Error(data.message || 'No fue posible actualizar el pedido.');
+        await Swal.fire({ icon: 'success', title: 'Estado actualizado', text: data.message });
+        location.reload();
+    } catch (error) {
+        Swal.fire('Error', error.message || 'Fallo en la comunicación con el servidor.', 'error');
+    }
 }
