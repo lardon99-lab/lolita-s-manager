@@ -12,6 +12,7 @@ use App\Services\AuditService;
 use App\Services\InventoryStockService;
 use App\Services\PaymentRecorder;
 use App\Services\ProductOptionPricingService;
+use App\Services\SaleReceiptService;
 use App\Services\SupplyStockService;
 
 final class VentaController
@@ -21,6 +22,17 @@ final class VentaController
     public function __construct()
     {
         $this->db = (new Database())->getConnection();
+    }
+
+    public function ticket(): void
+    {
+        if (!Auth::hasPermission('reports.view') && !Auth::hasPermission('sales.create')) {
+            Response::json(['status' => 'error', 'message' => 'No tienes permiso para consultar tickets.'], 403);
+        }
+        $saleId = Validator::positiveInt($_GET['id'] ?? null, 'venta');
+        $receipt = (new SaleReceiptService($this->db))->find($saleId);
+        if ($receipt === null) Response::json(['status' => 'error', 'message' => 'Ticket no disponible.'], 404);
+        Response::json(['status' => 'success', 'ticket' => $receipt]);
     }
 
     public function procesarVenta(): void
@@ -57,7 +69,7 @@ final class VentaController
             $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'venta', $normalized) : null;
             if (isset($receipt['id_venta'])) {
                 $this->db->commit();
-                Response::json(['status' => 'success', 'message' => 'La venta ya estaba registrada.', 'id_venta' => $receipt['id_venta']]);
+                Response::json(['status' => 'success', 'message' => 'La venta ya estaba registrada.', 'id_venta' => $receipt['id_venta'], 'nueva_venta' => false]);
             }
             $stockService = new InventoryStockService($this->db);
             $supplyStockService = new SupplyStockService($this->db);
@@ -133,7 +145,7 @@ final class VentaController
                 'productos' => count($items),
             ]);
             $this->db->commit();
-            Response::json(['status' => 'success', 'message' => 'Venta registrada con exito.', 'id_venta' => $saleId]);
+            Response::json(['status' => 'success', 'message' => 'Venta registrada con exito.', 'id_venta' => $saleId, 'nueva_venta' => true]);
         } catch (JsonException|InvalidArgumentException $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             Response::json(['status' => 'error', 'message' => $e->getMessage()], 422);
@@ -147,6 +159,10 @@ final class VentaController
 
 if (isset($_GET['action'])) {
     Auth::requireLogin();
+    if ($_GET['action'] === 'ticket') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
+        (new VentaController())->ticket();
+    }
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
     Csrf::validateRequest();
     if ($_GET['action'] !== 'procesarVenta') Response::json(['status' => 'error', 'message' => 'Accion no encontrada.'], 404);

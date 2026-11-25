@@ -35,7 +35,11 @@ if (PHP_SAPI !== 'cli') {
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+    $printConnection = basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'index.php'
+        && in_array($_GET['view'] ?? '', ['ventas-nueva', 'ventas-historial', 'pedidos-lista'], true)
+        ? ' wss://localhost:8181 wss://localhost:8282 wss://localhost:8383 wss://localhost:8484'
+        : '';
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' data:; connect-src 'self'{$printConnection}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 }
 
 set_exception_handler(static function (Throwable $error): void {

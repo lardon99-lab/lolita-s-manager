@@ -93,6 +93,27 @@ function gestionarPedido(id, estadoActual, saldo, transiciones) {
 const pendingOrderPayments = new Map();
 const orderPaymentDrafts = new Map();
 
+document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-order-ticket]');
+    if (!button || button.disabled) return;
+
+    const status = button.closest('.modal-footer').querySelector('[data-order-ticket-status]');
+    button.disabled = true;
+    status.hidden = false;
+    status.className = 'small mb-0 w-100 text-muted';
+    status.textContent = 'Enviando el ticket a la impresora…';
+    try {
+        await PosPrinter.printOrder(button.dataset.orderTicket);
+        status.classList.replace('text-muted', 'text-success');
+        status.textContent = 'Ticket enviado a la impresora.';
+    } catch (error) {
+        status.classList.replace('text-muted', 'text-danger');
+        status.textContent = error.message || 'No se pudo enviar el ticket.';
+    } finally {
+        button.disabled = false;
+    }
+});
+
 async function confirmarCambioEstado(id, nuevoEstado, saldo) {
     if (nuevoEstado === 'Entregado' && pendingOrderPayments.has(id)) {
         await procesarCambioEstado(id, pendingOrderPayments.get(id), true);

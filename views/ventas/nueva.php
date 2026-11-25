@@ -34,7 +34,11 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
                     <p class="page-subtitle mb-0">Selecciona productos, revisa el carrito y finaliza el cobro.</p>
                 </div>
             </div>
-            <span class="sales-page__mode"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Venta directa</span>
+            <?php if ($id_sucursal_user): ?>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#posDevicesModal">
+                <i class="fa-solid fa-print me-2" aria-hidden="true"></i>Impresora y gaveta
+            </button>
+            <?php endif; ?>
         </div>
     </header>
 
@@ -201,6 +205,7 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
 
 <link rel="stylesheet" href="css/views/ventas-nueva.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/ventas-nueva.css') ?>">
 
+<?php if ($id_sucursal_user) include __DIR__ . '/partials/pos-devices.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
 <template id="cardPaymentFields"><?php include __DIR__ . '/partials/card-payment-fields.php'; ?></template>
 <script id="sales-product-configurations" type="application/json"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>

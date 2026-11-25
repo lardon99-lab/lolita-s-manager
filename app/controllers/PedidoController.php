@@ -79,10 +79,67 @@ final class PedidoController
              JOIN pedidos o ON o.id_pedido = d.id_pedido
              JOIN productos p ON p.id_producto = d.id_producto
              LEFT JOIN pedido_detalle_diseno dd ON dd.id_detalle = d.id_detalle
-             WHERE d.id_pedido = :id{$scope}"
+             WHERE d.id_pedido = :id{$scope}
+             ORDER BY d.id_detalle"
         );
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function ticket(): void
+    {
+        Auth::requirePermission('orders.view');
+        $id = Validator::positiveInt($_GET['id'] ?? null, 'pedido');
+        $params = [':id' => $id];
+        $scope = $this->branchScope('p.id_sucursal', Auth::allowedBranches('orders.view'), $params, 'ticket');
+        $stmt = $this->db->prepare(
+            "SELECT p.id_sucursal, s.nombre_sucursal, c.nombre_completo, p.fecha_entrega,
+                    p.estado, p.total_pedido, p.monto_abonado, p.saldo_pendiente, p.observaciones_generales
+             FROM pedidos p
+             JOIN clientes c ON c.id_cliente = p.id_cliente
+             JOIN sucursales s ON s.id_sucursal = p.id_sucursal
+             WHERE p.id_pedido = :id{$scope}"
+        );
+        $stmt->execute($params);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$order) Response::json(['status' => 'error', 'message' => 'Ticket de pedido no disponible.'], 404);
+
+        $products = [];
+        foreach ($this->obtenerDetalles($id) as $detail) {
+            $specifications = [];
+            if (!empty($detail['opciones_personalizacion'])) $specifications[] = $detail['opciones_personalizacion'];
+            foreach ([
+                'color_descripcion' => 'Color',
+                'frase' => 'Frase',
+                'instrucciones' => 'Diseño',
+                'detalles_personalizacion' => 'Nota',
+            ] as $field => $label) {
+                $value = trim((string) ($detail[$field] ?? ''));
+                if ($value !== '') $specifications[] = $label . ': ' . $value;
+            }
+            if (!empty($detail['archivo_nombre_interno'])) $specifications[] = 'Diseño según referencia adjunta';
+            $products[] = [
+                'nombre' => $detail['nombre_producto'],
+                'cantidad' => (int) $detail['cantidad'],
+                'precio' => (string) $detail['precio_unitario'],
+                'subtotal' => (string) $detail['subtotal'],
+                'especificaciones' => $specifications,
+            ];
+        }
+
+        Response::json(['status' => 'success', 'ticket' => [
+            'id' => $id,
+            'sucursal_id' => (int) $order['id_sucursal'],
+            'sucursal' => $order['nombre_sucursal'],
+            'cliente' => $order['nombre_completo'],
+            'entrega' => date('d/m/Y h:i a', strtotime($order['fecha_entrega'])),
+            'estado' => $order['estado'],
+            'total' => (string) ($order['total_pedido'] ?? '0'),
+            'abonado' => (string) ($order['monto_abonado'] ?? '0'),
+            'saldo' => (string) ($order['saldo_pendiente'] ?? '0'),
+            'observaciones' => $order['observaciones_generales'],
+            'productos' => $products,
+        ]]);
     }
 
     public function verDiseno(): void
@@ -256,6 +313,9 @@ if (isset($_GET['action'])) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
         Csrf::validateRequest();
     }
+    if ($action === 'ticket' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+        Response::json(['status' => 'error', 'message' => 'Metodo no permitido.'], 405);
+    }
 
     $controller = new PedidoController();
     match ($action) {
@@ -263,6 +323,7 @@ if (isset($_GET['action'])) {
         'actualizar_estado_ajax' => $controller->actualizarEstadoAjax(),
         'reporte_pendientes' => $controller->generarReportePendientes(),
         'ver_diseno' => $controller->verDiseno(),
+        'ticket' => $controller->ticket(),
         'guardarMerma' => $controller->guardarMerma(),
         'exportarPdf' => $controller->descargarReportePDF($_GET),
         default => Response::json(['status' => 'error', 'message' => 'Accion no encontrada.'], 404),

@@ -207,6 +207,11 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
                                 <span class="fw-bold text-dark font-monospace fs-5">
                                     L. <?= number_format($v['total_pedido'], 2) ?>
                                 </span>
+                                <?php if ($v['tipo'] === 'Venta Directa'): ?>
+                                <button class="btn btn-sm btn-outline-secondary mt-1 d-block ms-md-auto" type="button" data-sale-reprint="<?= (int) $v['id_pedido'] ?>">
+                                    <i class="fa-solid fa-print me-1" aria-hidden="true"></i>Reimprimir ticket
+                                </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

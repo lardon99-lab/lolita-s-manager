@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pendingCheckout = null;
             cart = [];
             renderCart();
-            await Swal.fire({ title: 'Venta registrada', text: data.message, icon: 'success', timer: 1500, showConfirmButton: false });
+            await PosDevices.finishSale(data, body.id_sucursal);
             location.reload();
         } catch (error) {
             Swal.fire('Error', error.message || 'Fallo de conexión.', 'error');

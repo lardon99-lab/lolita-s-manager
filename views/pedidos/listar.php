@@ -295,9 +295,11 @@
             </div>
             
             <div class="modal-footer border-0 bg-light rounded-bottom-4 px-4 py-3 border-top">
+                <p class="small mb-0 w-100" data-order-ticket-status role="status" hidden></p>
                 <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar</button>
-                <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 shadow-sm fw-bold transition-hover d-flex align-items-center">
-                    <i class="fa-solid fa-print me-2"></i>Imprimir Ticket
+                <button type="button" class="btn btn-dark rounded-pill px-4 shadow-sm fw-bold transition-hover d-flex align-items-center"
+                        data-order-ticket="<?= (int) $ped['id_pedido'] ?>">
+                    <i class="fa-solid fa-print me-2" aria-hidden="true"></i>Imprimir ticket
                 </button>
             </div>
         </div>
