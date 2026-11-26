@@ -164,11 +164,13 @@
                                 <input type="hidden" name="total_final" id="input-total" value="0">
                             </div>
                         </div>
-                        <fieldset class="app-panel p-3 mt-3" id="orderCardPayment" disabled hidden>
-                            <legend class="float-none w-auto px-1 fs-6 fw-bold mb-2">Comprobante de tarjeta</legend>
-                            <p class="small fw-bold mb-2" id="orderCardPaymentAmount"></p>
-                            <?php include __DIR__ . '/../ventas/partials/card-payment-fields.php'; ?>
-                        </fieldset>
+                        <?php foreach (['Tarjeta', 'Transferencia'] as $receiptMethod): ?>
+                            <fieldset class="app-panel p-3 mt-3" data-order-receipt="<?= e($receiptMethod) ?>" disabled hidden>
+                                <legend class="float-none w-auto px-1 fs-6 fw-bold mb-2">Comprobante de <?= strtolower($receiptMethod) ?></legend>
+                                <p class="small fw-bold mb-2" data-receipt-total></p>
+                                <?php include __DIR__ . '/../ventas/partials/payment-receipt-fields.php'; ?>
+                            </fieldset>
+                        <?php endforeach; ?>
                     </div>
 
                     <button type="submit" id="btnGuardarPedido" class="btn btn-success btn-lg rounded-pill fw-bold mt-4 shadow w-100 py-3 transition-hover fs-5">

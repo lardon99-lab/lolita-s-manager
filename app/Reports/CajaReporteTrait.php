@@ -16,10 +16,10 @@ trait CajaReporteTrait
         );
     }
 
-    public function obtenerComprobantesTarjeta(array $filtros, int $page): array
+    public function obtenerComprobantesElectronicos(array $filtros, int $page): array
     {
         Auth::requirePermission('reports.view');
-        return (new \App\Reports\CashIncomeReport($this->db))->cardPayments(
+        return (new \App\Reports\CashIncomeReport($this->db))->paymentReceipts(
             $filtros,
             Auth::allowedBranches('reports.view'),
             $page

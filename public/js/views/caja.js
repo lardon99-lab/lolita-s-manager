@@ -1,11 +1,11 @@
 (() => {
-    const form = document.querySelector('[data-cash-count]');
+    const form = document.querySelector('[data-cash-expected]');
     if (!form) return;
 
     const counted = form.elements.namedItem('contado');
-    const envelopes = [...form.querySelectorAll('[data-cash-envelope]')];
-    const summary = form.querySelector('[data-cash-distribution]');
-    const fund = Number(form.dataset.cashCount);
+    const note = form.elements.namedItem('nota');
+    const summary = form.querySelector('[data-cash-difference]');
+    const expected = Number(form.dataset.cashExpected);
 
     function cents(value) {
         const pattern = counted.inputMode === 'decimal' ? /^(\d{1,10})(?:[.,](\d{1,2}))?$/ : /^(\d{1,10})$/;
@@ -14,21 +14,18 @@
     }
 
     function updateSummary() {
-        const available = cents(counted.value);
-        const amounts = envelopes.map((field) => cents(field.value));
-        if (available === null || amounts.includes(null)) {
-            summary.textContent = 'Ingresa el efectivo contado y los importes de los sobres para ver cuánto queda por repartir.';
+        const amount = cents(counted.value);
+        if (amount === null) {
+            summary.textContent = '';
+            note.required = false;
             return;
         }
-        if (available < fund) {
-            summary.textContent = 'El efectivo contado queda por debajo del fondo fijo.';
-            return;
-        }
-        const remaining = available - fund - amounts.reduce((sum, amount) => sum + amount, 0);
-        const money = 'L. ' + window.AppMoney(Math.abs(remaining) / 100);
-        if (remaining > 0) summary.textContent = 'Falta asignar ' + money + ' a los sobres.';
-        else if (remaining < 0) summary.textContent = 'Los sobres superan el efectivo disponible por ' + money + '.';
-        else summary.textContent = 'Los sobres coinciden con el efectivo disponible para retirar.';
+        const difference = amount - expected;
+        const money = 'L. ' + window.AppMoney(Math.abs(difference) / 100);
+        note.required = difference !== 0;
+        if (difference > 0) summary.textContent = 'Sobrante de ' + money + '.';
+        else if (difference < 0) summary.textContent = 'Faltante de ' + money + '.';
+        else summary.textContent = 'El efectivo contado coincide con el esperado.';
     }
 
     form.addEventListener('input', updateSummary);

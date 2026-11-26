@@ -1,10 +1,17 @@
 <?php
-$ingresosPorMetodo = $report['metodos'];
-$totalIngresos = array_sum($ingresosPorMetodo);
-$totalGastos = $report['gastos_centavos'] / 100;
-$totalCajaReal = $ingresosPorMetodo['Efectivo'] - $totalGastos;
+use App\Support\View;
+
 $corte = $report['corte'] ?? null;
-$money = static fn (int $cents): string => 'L. ' . \App\Support\View::money($cents / 100);
+$categories = array_filter($report['categorias'], static fn (array $row): bool => $row['cobrado'] !== 0);
+$summary = $session
+    ? ['Efectivo cobrado' => $report['efectivo_centavos'] / 100]
+    : ['Total cobrado' => array_sum($report['metodos'])] + $report['metodos'];
+$summary['Salidas de caja'] = $report['gastos_centavos'] / 100;
+$summary['Efectivo neto'] = $report['esperado'] / 100;
+if ($corte) {
+    $summary['Efectivo contado'] = $corte['contado'] / 100;
+    $summary['Diferencia'] = $corte['diferencia'] / 100;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -64,57 +71,35 @@ $money = static fn (int $cents): string => 'L. ' . \App\Support\View::money($cen
             Jornada del <strong><?= date('d/m/Y', strtotime($report['fecha'])) ?></strong>
             <?php if (!empty($report['sucursal'])): ?> · <?= e($report['sucursal']) ?><?php endif; ?>
             · Datos al <strong><?= date('d/m/Y h:i A', strtotime($report['capturado_en'])) ?></strong>
-            <?php if ($session): ?><br><?= $corte === null ? 'En conteo' : 'Cerrada por ' . e($session['nombre_cierre']) . ' · ' . e($session['fecha_cierre']) ?><?php endif; ?>
+            <?php if ($session): ?>
+                <br>Apertura a las <?= date('g:i a', strtotime($session['fecha_apertura'])) ?>
+                · <?= $corte === null ? 'En conteo' : 'Cerrada por ' . e($session['nombre_cierre']) . ' · ' . date('g:i a', strtotime($session['fecha_cierre'])) ?>
+            <?php endif; ?>
         </div>
     </div>
 
     <table class="summary">
         <tr>
-            <td><span class="summary-label">Cobrado</span><span class="summary-value">L. <?= \App\Support\View::money($totalIngresos) ?></span></td>
-            <?php foreach ($ingresosPorMetodo as $metodo => $monto): ?>
-            <td><span class="summary-label"><?= e($metodo) ?></span><span class="summary-value">L. <?= \App\Support\View::money($monto) ?></span></td>
+            <?php foreach ($summary as $label => $amount): ?>
+                <td><span class="summary-label"><?= e($label) ?></span>
+                    <span class="summary-value<?= $label === 'Efectivo neto' ? ' net' : '' ?>">L. <?= View::money($amount) ?></span>
+                </td>
             <?php endforeach; ?>
-            <td><span class="summary-label">Salidas de caja</span><span class="summary-value">L. <?= \App\Support\View::money($totalGastos) ?></span></td>
-            <td><span class="summary-label">Efectivo neto</span><span class="summary-value net">L. <?= \App\Support\View::money($totalCajaReal) ?></span></td>
         </tr>
     </table>
 
-    <?php if ($session): ?>
-    <table class="summary">
-        <tr>
-            <td><span class="summary-label">Fondo fijo</span><span class="summary-value"><?= $money($report['fondo']) ?></span></td>
-            <td><span class="summary-label">Efectivo esperado</span><span class="summary-value"><?= $money($report['esperado']) ?></span></td>
-            <?php if ($corte): ?>
-            <td><span class="summary-label">Efectivo contado</span><span class="summary-value"><?= $money($corte['contado']) ?></span></td>
-            <td><span class="summary-label">Retiro en sobres</span><span class="summary-value"><?= $money($corte['retiro']) ?></span></td>
-            <td><span class="summary-label">Diferencia de conteo</span><span class="summary-value"><?= $money($corte['diferencia']) ?></span></td>
-            <?php endif; ?>
-        </tr>
-    </table>
     <?php if (!empty($corte['nota'])): ?>
     <p class="detail"><strong>Observación del corte</strong> <?= e($corte['nota']) ?></p>
     <?php endif; ?>
-    <?php if ($corte): ?>
-    <p class="detail">
-        <?php if ($session['fecha_recepcion']): ?>
-            <strong>Recibido</strong> L. <?= \App\Support\View::money($session['monto_recibido']) ?> por <?= e($session['nombre_recepcion']) ?>
-            · <?= e($session['fecha_recepcion']) ?> <?= e($session['nota_recepcion'] ?? '') ?>
-        <?php else: ?>Recepción pendiente de confirmar.<?php endif; ?>
-    </p>
-    <?php endif; ?>
-    <?php endif; ?>
 
-    <table class="card <?= $corte ? 'sales-summary' : '' ?>">
-        <colgroup><?php if ($corte): ?><col width="60%"><col width="18%"><col width="22%"><?php else: ?><col width="75%"><col width="25%"><?php endif; ?></colgroup>
-        <thead><tr><th>Categoría</th><th class="text-right">Cobrado en efectivo</th>
-            <?php if ($corte): ?><th class="text-right">Importe del sobre</th><?php endif; ?>
-        </tr></thead>
+    <table class="card">
+        <colgroup><col width="75%"><col width="25%"></colgroup>
+        <thead><tr><th>Categoría</th><th class="text-right"><?= $session ? 'Efectivo de esta apertura' : 'Efectivo del día' ?></th></tr></thead>
         <tbody>
-            <?php if (!$report['categorias']): ?><tr><td colspan="2" class="text-muted">Sin cobros en efectivo.</td></tr><?php endif; ?>
-            <?php foreach ($report['categorias'] as $category): ?>
+            <?php if (!$categories): ?><tr><td colspan="2" class="text-muted">Sin cobros en efectivo.</td></tr><?php endif; ?>
+            <?php foreach ($categories as $category): ?>
             <tr>
-                <td><?= e($category['nombre']) ?></td><td class="text-right"><?= $money($category['cobrado']) ?></td>
-                <?php if ($corte): ?><td class="text-right"><?= $money($category['entregado']) ?></td><?php endif; ?>
+                <td><?= e($category['nombre']) ?></td><td class="text-right">L. <?= View::money($category['cobrado'] / 100) ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -122,7 +107,7 @@ $money = static fn (int $cents): string => 'L. ' . \App\Support\View::money($cen
 
     <table class="card sales-summary">
         <colgroup><col width="60%"><col width="18%"><col width="22%"></colgroup>
-        <thead><tr><th>Resumen de ventas</th><th class="text-right">Unidades</th><th class="text-right">Total</th></tr></thead>
+        <thead><tr><th><?= $session ? 'Ventas del día hasta el conteo' : 'Resumen de ventas del día' ?></th><th class="text-right">Unidades</th><th class="text-right">Total</th></tr></thead>
         <tbody>
             <?php if (empty($report['ventas'])): ?><tr><td colspan="3" class="text-muted">Sin ventas registradas.</td></tr>
             <?php else: $categoryName = null; foreach ($report['ventas'] as $venta): ?>
@@ -136,7 +121,7 @@ $money = static fn (int $cents): string => 'L. ' . \App\Support\View::money($cen
 
     <table class="card">
         <colgroup><col width="75%"><col width="25%"></colgroup>
-        <thead><tr><th>Gastos operativos / salidas de caja</th><th class="text-right">Monto</th></tr></thead>
+        <thead><tr><th><?= $session ? 'Gastos de esta apertura' : 'Gastos operativos del día' ?></th><th class="text-right">Monto</th></tr></thead>
         <tbody>
             <?php if (empty($report['gastos'])): ?><tr><td colspan="2" class="text-muted">Sin salidas de caja registradas.</td></tr>
             <?php else: foreach ($report['gastos'] as $gasto): ?>
@@ -147,7 +132,7 @@ $money = static fn (int $cents): string => 'L. ' . \App\Support\View::money($cen
 
     <table class="card">
         <colgroup><col width="75%"><col width="25%"></colgroup>
-        <thead><tr><th>Mermas de producto</th><th class="text-right">Cantidad</th></tr></thead>
+        <thead><tr><th><?= $session ? 'Mermas del día hasta el conteo' : 'Mermas de producto del día' ?></th><th class="text-right">Cantidad</th></tr></thead>
         <tbody>
             <?php if (empty($report['mermas'])): ?><tr><td colspan="2" class="text-muted">Sin mermas de producto registradas.</td></tr>
             <?php else: foreach ($report['mermas'] as $merma): ?>

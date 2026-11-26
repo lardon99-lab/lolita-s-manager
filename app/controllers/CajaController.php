@@ -44,6 +44,7 @@ final class CajaController
         $flash = $_SESSION['cash_flash'] ?? null;
         unset($_SESSION['cash_flash']);
         $now = CashDrawerSession::now();
+        $today = $now->format('Y-m-d');
         return [
             'branches' => $branches,
             'branch' => $branch,
@@ -53,21 +54,18 @@ final class CajaController
             'flash' => $flash,
             'canClose' => $branch && Auth::canAccessBranch($branchId, 'cash.close'),
             'canOpen' => $branch && $branch['estado'] === 'Activa' && $requested === null
-                && (!$latest || ($latest['estado'] === 'Cerrada' && $latest['fecha_operativa'] < $now->format('Y-m-d'))),
-            'canCount' => $session && ($session['fecha_operativa'] < $now->format('Y-m-d')
-                || $now->format('H:i') >= CashDrawerSession::CLOSING_TIME),
-            'canReceive' => $branch && $session && $session['estado'] === 'Cerrada'
-                && $session['recibido_por'] === null && (int) $session['cerrado_por'] !== (int) $_SESSION['id_usuario']
-                && Auth::canAccessBranch($branchId, 'cash.receive'),
+                && (!$latest || $latest['estado'] === 'Cerrada'),
+            'today' => $today,
+            'canCount' => $session && CashDrawerSession::closingIsAvailable($session['fecha_operativa'], $now),
         ];
     }
 
     public function change(): void
     {
         Csrf::validateRequest();
-        $action = Validator::enum($_POST['operacion'] ?? '', ['abrir', 'contar', 'cancelar', 'cerrar', 'recibir'], 'operación');
+        $action = Validator::enum($_POST['operacion'] ?? '', ['abrir', 'contar', 'cancelar', 'cerrar'], 'operación');
         $branch = Validator::positiveInt($_POST['sucursal'] ?? null, 'sucursal');
-        Auth::requirePermission($action === 'recibir' ? 'cash.receive' : 'cash.close', $branch);
+        Auth::requirePermission('cash.close', $branch);
         $id = $action === 'abrir' ? null : Validator::positiveInt($_POST['id_caja'] ?? null, 'jornada de caja');
         try {
             $message = $this->closing->change($action, $branch, (int) $_SESSION['id_usuario'], $_POST);
@@ -75,13 +73,11 @@ final class CajaController
         } catch (InvalidArgumentException $error) {
             $_SESSION['cash_flash'] = [
                 'type' => 'danger', 'message' => $error->getMessage(), 'id' => $id,
-                'input' => array_intersect_key($_POST, array_flip(['contado', 'recibido', 'nota', 'sobres'])),
+                'input' => array_intersect_key($_POST, ['contado' => true, 'nota' => true]),
             ];
         }
 
-        $location = 'index.php?view=caja&sucursal=' . $branch;
-        if ($action === 'recibir') $location .= '&id_caja=' . $id;
-        header('Location: ' . $location, true, 303);
+        header('Location: index.php?view=caja&sucursal=' . $branch, true, 303);
         exit;
     }
 

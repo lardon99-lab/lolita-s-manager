@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customizationModal = modalElement && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(modalElement) : null;
     let cart = [];
     let pendingProduct = null;
-    let cardDraft = {};
+    const receiptDrafts = new Map();
     let pendingCheckout = null;
 
     function lockCheckoutInputs(locked) {
@@ -251,10 +251,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!body) {
                 const paymentMethod = document.querySelector('input[name="metodo_pago"]:checked')?.value || 'Efectivo';
                 const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-                if (paymentMethod === 'Tarjeta') {
-                    const receipt = await CardPayment.confirm(total, totalLabel.textContent, cardDraft);
+                if (PaymentReceipt.required(paymentMethod)) {
+                    const receipt = await PaymentReceipt.confirm(paymentMethod, total, totalLabel.textContent, receiptDrafts.get(paymentMethod));
                     if (!receipt) return;
-                    cardDraft = receipt;
+                    receiptDrafts.set(paymentMethod, receipt);
                 } else {
                     const confirmation = await Swal.fire({ title: 'Confirmar venta', text: `Total a cobrar: ${totalLabel.textContent}`, icon: 'question', showCancelButton: true, confirmButtonText: 'Cobrar', cancelButtonText: 'Revisar' });
                     if (!confirmation.isConfirmed) return;
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     id_sucursal: document.getElementById('id_sucursal').value,
                     metodo_pago: paymentMethod,
                     productos: cart.map(({ id, cantidad, opciones }) => ({ id, cantidad, opciones })),
-                    ...(paymentMethod === 'Tarjeta' ? cardDraft : {}),
+                    ...receiptDrafts.get(paymentMethod),
                 };
             }
             checkoutButton.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Procesando...';
@@ -275,9 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             lockCheckoutInputs(true);
             let data;
-            if (body.metodo_pago === 'Tarjeta') {
+            if (PaymentReceipt.required(body.metodo_pago)) {
                 pendingCheckout = body;
-                data = await CardPayment.send(url, options);
+                data = await PaymentReceipt.send(url, options);
                 if (!data) return;
                 pendingCheckout = null;
             } else {

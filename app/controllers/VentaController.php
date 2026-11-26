@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../core/Database.php';
 
 use App\Http\Response;
-use App\Http\Input\CardPaymentInput;
+use App\Http\Input\PaymentReceiptInput;
 use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
@@ -45,7 +45,7 @@ final class VentaController
             $branchId = Validator::positiveInt($input['id_sucursal'] ?? ($_SESSION['id_sucursal'] ?? null), 'sucursal');
             Auth::requirePermission('sales.create', $branchId);
             $paymentMethod = Validator::enum($input['metodo_pago'] ?? '', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
-            $card = $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($input) : null;
+            $payment = PaymentReceiptInput::from($paymentMethod, $input);
             $userId = (int) $_SESSION['id_usuario'];
             $cart = $input['productos'] ?? null;
             if (!is_array($cart) || $cart === [] || count($cart) > 100) {
@@ -70,7 +70,7 @@ final class VentaController
                 ? (new CashDrawerSession($this->db))->forCashMovement($branchId)
                 : null;
             $payments = new PaymentRecorder($this->db);
-            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'venta', $normalized) : null;
+            $receipt = $payment ? $payments->claim($payment, $branchId, $userId, 'venta', $normalized) : null;
             if (isset($receipt['id_venta'])) {
                 $this->db->commit();
                 Response::json(['status' => 'success', 'message' => 'La venta ya estaba registrada.', 'id_venta' => $receipt['id_venta'], 'nueva_venta' => false]);
@@ -115,7 +115,7 @@ final class VentaController
                 }
             }
             if ($total <= 0 || $total > 99999999.99) throw new InvalidArgumentException('El total de la venta no es valido.');
-            $card?->assertAmount($total);
+            $payment?->assertAmount($total);
 
             $productAllocations = [];
             foreach ($productQuantities as $productId => $quantity) {
@@ -127,7 +127,7 @@ final class VentaController
             $sale = $this->db->prepare('INSERT INTO ventas_directas (id_usuario, id_sucursal, total, metodo_pago, id_caja) VALUES (?, ?, ?, ?, ?)');
             $sale->execute([$userId, $branchId, $total, $paymentMethod, $cashId]);
             $saleId = (int) $this->db->lastInsertId();
-            if ($receipt !== null) $payments->linkSale($receipt['id_comprobante'], $saleId);
+            if ($receipt !== null) $payments->linkSale($paymentMethod, $receipt['id_comprobante'], $saleId);
 
             $insertItem = $this->db->prepare('INSERT INTO venta_items (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)');
             $insertOption = $this->db->prepare(

@@ -8,7 +8,7 @@ use PDO;
 final class CashIncomeReport
 {
     public const METHODS = ['Efectivo', 'Tarjeta', 'Transferencia', 'Otro'];
-    public const CARD_PAGE_SIZE = 25;
+    private const RECEIPT_PAGE_SIZE = 25;
 
     public function __construct(private PDO $db)
     {
@@ -44,32 +44,34 @@ final class CashIncomeReport
         ];
     }
 
-    public function cardPayments(array $filters, ?array $allowedBranches, int $page): array
+    public function paymentReceipts(array $filters, ?array $allowedBranches, int $page): array
     {
         [$sources, $params] = $this->incomeSources($filters, $allowedBranches);
         $statement = $this->db->prepare(
-            "SELECT i.origen, i.id_operacion, i.monto, i.fecha, s.nombre_sucursal,
+            "SELECT i.origen, i.id_operacion, i.monto, i.fecha, i.metodo_pago, s.nombre_sucursal,
                     COALESCE(NULLIF(u.nombre_real, ''), u.nombre_usuario) AS operador,
                     COALESCE(cv.terminal, cp.terminal) AS terminal,
                     COALESCE(cv.fecha_operacion, cp.fecha_operacion) AS fecha_comprobante,
-                    COALESCE(cv.referencia, cp.referencia) AS referencia
+                    COALESCE(cv.referencia, cp.referencia, tv.referencia, tp.referencia) AS referencia
              FROM ($sources) i
              JOIN sucursales s ON s.id_sucursal = i.id_sucursal
              JOIN usuarios u ON u.id_usuario = i.id_usuario
              LEFT JOIN comprobantes_tarjeta cv ON cv.id_venta = i.id_venta
              LEFT JOIN comprobantes_tarjeta cp ON cp.id_pago = i.id_pago
-             WHERE i.metodo_pago = 'Tarjeta'
+             LEFT JOIN comprobantes_transferencia tv ON tv.id_venta = i.id_venta
+             LEFT JOIN comprobantes_transferencia tp ON tp.id_pago = i.id_pago
+             WHERE i.metodo_pago IN ('Tarjeta', 'Transferencia')
              ORDER BY i.fecha DESC, i.origen, i.id_operacion DESC, i.id_pago DESC
              LIMIT :limit OFFSET :offset"
         );
         foreach ($params as $key => $value) $statement->bindValue($key, $value);
-        $statement->bindValue(':limit', self::CARD_PAGE_SIZE + 1, PDO::PARAM_INT);
-        $statement->bindValue(':offset', (max(1, $page) - 1) * self::CARD_PAGE_SIZE, PDO::PARAM_INT);
+        $statement->bindValue(':limit', self::RECEIPT_PAGE_SIZE + 1, PDO::PARAM_INT);
+        $statement->bindValue(':offset', (max(1, $page) - 1) * self::RECEIPT_PAGE_SIZE, PDO::PARAM_INT);
         $statement->execute();
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
         return [
-            'rows' => array_slice($rows, 0, self::CARD_PAGE_SIZE),
-            'has_next' => count($rows) > self::CARD_PAGE_SIZE,
+            'rows' => array_slice($rows, 0, self::RECEIPT_PAGE_SIZE),
+            'has_next' => count($rows) > self::RECEIPT_PAGE_SIZE,
         ];
     }
 

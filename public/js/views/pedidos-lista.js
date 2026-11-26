@@ -142,10 +142,11 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
         if (!payment.isConfirmed) return;
         liquidar = true;
         metodoPago = payment.value;
-        if (metodoPago === 'Tarjeta') {
-            receipt = await CardPayment.confirm(saldo, `L. ${window.AppMoney(saldo)}`, orderPaymentDrafts.get(id));
+        if (PaymentReceipt.required(metodoPago)) {
+            const draftKey = id + ':' + metodoPago;
+            receipt = await PaymentReceipt.confirm(metodoPago, saldo, `L. ${window.AppMoney(saldo)}`, orderPaymentDrafts.get(draftKey));
             if (!receipt) return;
-            orderPaymentDrafts.set(id, receipt);
+            orderPaymentDrafts.set(draftKey, receipt);
         }
     } else {
         const confirmation = await Swal.fire({
@@ -169,7 +170,7 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
     await procesarCambioEstado(id, body, receipt !== null);
 }
 
-async function procesarCambioEstado(id, body, cardPayment) {
+async function procesarCambioEstado(id, body, electronicPayment) {
     Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     const url = 'api.php?resource=pedidos&action=actualizar_estado_ajax';
     const options = {
@@ -178,11 +179,12 @@ async function procesarCambioEstado(id, body, cardPayment) {
         body,
     };
     try {
-        if (cardPayment) pendingOrderPayments.set(id, body);
-        const data = cardPayment ? await CardPayment.send(url, options) : await (await fetch(url, options)).json();
+        if (electronicPayment) pendingOrderPayments.set(id, body);
+        const data = electronicPayment ? await PaymentReceipt.send(url, options) : await (await fetch(url, options)).json();
         if (!data) return;
         pendingOrderPayments.delete(id);
         if (data.status !== 'success') throw new Error(data.message || 'No fue posible actualizar el pedido.');
+        await PosDevices.openOrderDrawer(data.sucursal_gaveta);
         await Swal.fire({ icon: 'success', title: 'Estado actualizado', text: data.message });
         location.reload();
     } catch (error) {

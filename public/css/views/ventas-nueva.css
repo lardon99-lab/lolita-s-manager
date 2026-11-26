@@ -346,7 +346,7 @@
 
 .sales-payment__options {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
     gap: 0.5rem;
 }
 
@@ -367,6 +367,11 @@
 
 .sales-payment__options label:hover {
     border-color: #ff9ab2;
+}
+
+.sales-payment__options .btn-check:focus-visible + label {
+    outline: 2px solid #ff9ab2;
+    outline-offset: 2px;
 }
 
 .sales-payment__options .btn-check:checked + label {

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Http\Input\CardPaymentInput;
+use App\Http\Input\PaymentReceiptInput;
 use App\Http\Response;
 use App\Http\Validator;
 use App\Security\Auth;
@@ -33,16 +33,16 @@ final class PedidoService
             $paymentType = Validator::enum($input['tipo_pago'] ?? '', ['Pendiente', 'Abonado', 'Pagado'], 'tipo de pago');
             $paymentMethod = $paymentType === 'Pendiente' ? 'Efectivo'
                 : Validator::enum($input['metodo_pago'] ?? 'Efectivo', ['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'], 'metodo de pago');
-            $card = $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($input) : null;
+            $payment = PaymentReceiptInput::from($paymentMethod, $input);
             $deliveryDate = Validator::dateTimeLocal($input['fecha_entrega'] ?? null, 'fecha de entrega');
             $notes = Validator::text($input['observaciones'] ?? '', 'observaciones', 1000, false);
             $payload = [$clientId, $deliveryDate, $notes, $paymentType, $submittedLines, $legacyProducts];
             if ($paymentType === 'Abonado') $payload[] = $input['monto_abono'] ?? null;
-            if ($card !== null) $payload[] = $this->designFingerprints($files);
+            if ($payment !== null) $payload[] = $this->designFingerprints($files);
 
             $this->db->beginTransaction();
             $payments = new PaymentRecorder($this->db);
-            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'pedido.nuevo', $payload) : null;
+            $receipt = $payment ? $payments->claim($payment, $branchId, $userId, 'pedido.nuevo', $payload) : null;
             if (isset($receipt['id_pedido'])) {
                 $this->db->commit();
                 $this->created($receipt['id_pedido'], $json, true);
@@ -67,7 +67,7 @@ final class PedidoService
             if ($paymentType === 'Abonado' && $paid >= $total) {
                 throw new InvalidArgumentException('Para liquidar el total selecciona la opcion Pagado.');
             }
-            $card?->assertAmount($paid);
+            $payment?->assertAmount($paid);
             $balance = round($total - $paid, 2);
             $paymentStatus = $balance <= 0 ? 'Pagado' : ($paid > 0 ? 'Abonado' : 'Pendiente');
             $cashId = $paid > 0 && $paymentMethod === 'Efectivo'
@@ -113,11 +113,11 @@ final class PedidoService
                 }
             }
             if ($paid > 0) {
-                $payments->recordOrderPayment($orderId, $userId, $paid, $paymentMethod, $card, $receipt['id_comprobante'] ?? null, $cashId);
+                $payments->recordOrderPayment($orderId, $userId, $paid, $paymentMethod, $payment, $receipt['id_comprobante'] ?? null, $cashId);
             }
             (new AuditService($this->db))->record('create', 'pedido', $orderId, $branchId, ['total' => $total, 'paid' => $paid]);
             $this->db->commit();
-            $this->created($orderId, $json);
+            $this->created($orderId, $json, false, $cashId !== null ? $branchId : null);
         } catch (Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             foreach ($storedDesignFiles as $filename) $designStorage->remove($filename);
@@ -130,7 +130,7 @@ final class PedidoService
         }
     }
 
-    private function created(int $orderId, bool $json, bool $replayed = false): void
+    private function created(int $orderId, bool $json, bool $replayed = false, ?int $drawerBranch = null): void
     {
         $url = 'index.php?view=pedidos-lista&msg=pedido_ok';
         if ($json) {
@@ -138,8 +138,13 @@ final class PedidoService
                 'status' => 'success',
                 'message' => $replayed ? 'El pedido ya estaba registrado.' : 'Pedido registrado correctamente.',
                 'id_pedido' => $orderId,
+                'sucursal_gaveta' => $drawerBranch,
                 'redirect' => $url,
             ]);
+        }
+        if ($drawerBranch !== null) {
+            $_SESSION['pedido_gaveta'] = ['pedido' => $orderId, 'sucursal' => $drawerBranch];
+            $url .= '&pedido=' . $orderId;
         }
         Response::redirect($url);
     }

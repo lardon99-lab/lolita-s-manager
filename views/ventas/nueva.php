@@ -162,6 +162,9 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
 
                                 <input type="radio" class="btn-check" name="metodo_pago" id="pago_tarjeta" value="Tarjeta">
                                 <label for="pago_tarjeta"><i class="fa-solid fa-credit-card" aria-hidden="true"></i>Tarjeta</label>
+
+                                <input type="radio" class="btn-check" name="metodo_pago" id="pago_transferencia" value="Transferencia">
+                                <label for="pago_transferencia"><i class="fa-solid fa-building-columns" aria-hidden="true"></i>Transferencia</label>
                             </div>
                         </fieldset>
 
@@ -207,6 +210,6 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
 
 <?php if ($id_sucursal_user) include __DIR__ . '/partials/pos-devices.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<template id="cardPaymentFields"><?php include __DIR__ . '/partials/card-payment-fields.php'; ?></template>
+<?php include __DIR__ . '/partials/payment-receipt-templates.php'; ?>
 <script id="sales-product-configurations" type="application/json"><?= json_encode($configuraciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></script>
 <script src="js/views/ventas-nueva.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/ventas-nueva.js') ?>"></script>

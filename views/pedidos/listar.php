@@ -1,7 +1,10 @@
 <?php
+$drawer = $_SESSION['pedido_gaveta'] ?? null;
+$drawerBranch = $drawer !== null && ($_GET['pedido'] ?? '') === (string) $drawer['pedido'] ? $drawer['sucursal'] : null;
+if ($drawerBranch !== null) unset($_SESSION['pedido_gaveta']);
 ?>
 
-<div class="container-fluid app-page p-2 p-md-4">
+<div class="container-fluid app-page p-2 p-md-4"<?= $drawerBranch !== null ? ' data-paid-order-branch="' . (int) $drawerBranch . '"' : '' ?>>
     <header class="app-page-header">
         <div class="app-page-header__main">
             <span class="app-page-header__icon" aria-hidden="true"><i class="fa-solid fa-box-open"></i></span>
@@ -310,5 +313,5 @@
 <link rel="stylesheet" href="css/views/pedidos-lista.css?v=<?= filemtime(__DIR__ . '/../../public/css/views/pedidos-lista.css') ?>">
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25"></script>
-<template id="cardPaymentFields"><?php include __DIR__ . '/../ventas/partials/card-payment-fields.php'; ?></template>
+<?php include __DIR__ . '/../ventas/partials/payment-receipt-templates.php'; ?>
 <script src="js/views/pedidos-lista.js?v=<?= filemtime(__DIR__ . '/../../public/js/views/pedidos-lista.js') ?>"></script>

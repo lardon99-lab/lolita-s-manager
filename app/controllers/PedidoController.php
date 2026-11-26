@@ -15,7 +15,7 @@ use App\Security\OrderStatusPolicy;
 use App\Services\AuditService;
 use App\Services\CashDrawerSession;
 use App\Services\PedidoService;
-use App\Http\Input\CardPaymentInput;
+use App\Http\Input\PaymentReceiptInput;
 use App\Services\PaymentRecorder;
 use App\Services\ProductCustomizationService;
 use App\Services\ProductDesignService;
@@ -209,7 +209,7 @@ final class PedidoController
         if ($settle && $newState !== OrderStatusPolicy::DELIVERED) {
             throw new InvalidArgumentException('Solo puedes liquidar el saldo al entregar el pedido.');
         }
-        $card = $settle && $paymentMethod === 'Tarjeta' ? CardPaymentInput::from($_POST) : null;
+        $payment = $settle ? PaymentReceiptInput::from($paymentMethod, $_POST) : null;
 
         try {
             $this->db->beginTransaction();
@@ -218,7 +218,7 @@ final class PedidoController
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$order) throw new InvalidArgumentException('El pedido no existe.');
             $currentState = (string) $order['estado'];
-            $replaying = $card !== null && $currentState === OrderStatusPolicy::DELIVERED;
+            $replaying = $payment !== null && $currentState === OrderStatusPolicy::DELIVERED;
             $transitionFrom = $replaying ? OrderStatusPolicy::FINISHED : $currentState;
             $requiredPermission = OrderStatusPolicy::requiredPermission($transitionFrom, $newState);
             $role = (int) ($_SESSION['id_rol'] ?? 0);
@@ -229,7 +229,7 @@ final class PedidoController
             Auth::requirePermission($requiredPermission, $branchId);
             $userId = (int) $_SESSION['id_usuario'];
             $payments = new PaymentRecorder($this->db);
-            $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'pedido.entrega.' . $id, [$id]) : null;
+            $receipt = $payment ? $payments->claim($payment, $branchId, $userId, 'pedido.entrega.' . $id, [$id]) : null;
             if ($replaying) {
                 if (!isset($receipt['id_pago']) || $receipt['id_pedido'] !== $id) {
                     throw new InvalidArgumentException('El pedido ya fue entregado. Revisa el historial antes de intentar cobrar de nuevo.');
@@ -244,12 +244,13 @@ final class PedidoController
             }
             if ($settle && $balance <= 0) throw new InvalidArgumentException('El pedido no tiene saldo pendiente.');
 
+            $cashId = null;
             if ($settle) {
-                $card?->assertAmount($balance);
+                $payment?->assertAmount($balance);
                 $cashId = $paymentMethod === 'Efectivo'
                     ? (new CashDrawerSession($this->db))->forCashMovement($branchId)
                     : null;
-                $payments->recordOrderPayment($id, $userId, $balance, $paymentMethod, $card, $receipt['id_comprobante'] ?? null, $cashId);
+                $payments->recordOrderPayment($id, $userId, $balance, $paymentMethod, $payment, $receipt['id_comprobante'] ?? null, $cashId);
             }
 
             $updates = ['estado = :estado'];
@@ -272,7 +273,11 @@ final class PedidoController
                 'monto_liquidado' => $settle ? $balance : 0,
             ]);
             $this->db->commit();
-            Response::json(['status' => 'success', 'message' => 'Estado actualizado correctamente.']);
+            Response::json([
+                'status' => 'success',
+                'message' => 'Estado actualizado correctamente.',
+                'sucursal_gaveta' => $cashId !== null ? $branchId : null,
+            ]);
         } catch (InvalidArgumentException $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             Response::json(['status' => 'error', 'message' => $e->getMessage()], 422);

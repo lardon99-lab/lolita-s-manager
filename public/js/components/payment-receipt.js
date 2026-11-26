@@ -1,6 +1,10 @@
 (() => {
     'use strict';
 
+    function required(method) {
+        return method === 'Tarjeta' || method === 'Transferencia';
+    }
+
     function cents(value, allowCents) {
         const amount = value.trim().replace(',', '.');
         const pattern = allowCents ? /^[0-9]{1,8}(\.[0-9]{1,2})?$/ : /^[0-9]{1,8}$/;
@@ -8,7 +12,7 @@
     }
 
     function setAmountMode(fields, expected) {
-        const amount = fields.querySelector('[name="monto_tarjeta"]');
+        const amount = fields.querySelector('[data-receipt-amount]');
         const allowCents = Math.round(expected * 100) % 100 !== 0;
         amount.inputMode = allowCents ? 'decimal' : 'numeric';
         amount.pattern = allowCents ? '[0-9]{1,8}([.,][0-9]{1,2})?' : '[0-9]{1,8}';
@@ -22,14 +26,14 @@
         const approved = cents(amount.value, amount.inputMode === 'decimal');
         amount.setCustomValidity(approved > 0 && approved === Math.round(expected * 100)
             ? ''
-            : 'El importe aprobado debe coincidir con el monto a registrar.');
+            : 'El importe del comprobante debe coincidir con el monto a registrar.');
         return amount;
     }
 
-    async function confirm(expected, amountLabel, draft = {}) {
+    async function confirm(method, expected, amountLabel, draft = {}) {
         const fields = document.createElement('div');
         fields.className = 'text-start';
-        fields.append(document.getElementById('cardPaymentFields').content.cloneNode(true));
+        fields.append(document.getElementById('receipt-' + method).content.cloneNode(true));
         setAmountMode(fields, expected);
         const inputs = [...fields.querySelectorAll('input')];
         inputs.forEach((input) => {
@@ -42,13 +46,13 @@
         fields.addEventListener('input', (event) => event.target.setCustomValidity(''));
 
         const result = await Swal.fire({
-            title: 'Registrar pago con tarjeta',
+            title: 'Registrar pago con ' + method.toLowerCase(),
             html: fields,
             showCancelButton: true,
-            confirmButtonText: 'Registrar pago aprobado',
+            confirmButtonText: 'Registrar pago',
             cancelButtonText: 'Volver',
             focusConfirm: false,
-            didOpen: () => fields.querySelector('[name="terminal_tarjeta"]').focus(),
+            didOpen: () => fields.querySelector('input:not([type="hidden"])').focus(),
             preConfirm: () => {
                 validate(fields, expected);
                 if (inputs.some((input) => !input.reportValidity())) return false;
@@ -83,5 +87,5 @@
         }
     }
 
-    window.CardPayment = { confirm, send, validate };
+    window.PaymentReceipt = { required, confirm, send, validate };
 })();

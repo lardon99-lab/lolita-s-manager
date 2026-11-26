@@ -225,6 +225,13 @@
         await sendTicket(config.printer, orderTicketText(ticket, config.columns), 'Lolitas - Pedido ' + ticket.id);
     }
 
+    async function openDrawer(branch) {
+        const config = settings(branch);
+        if (config?.drawer === true) {
+            await send(config.printer, drawerPulse, 'Lolitas - Cobro en efectivo de pedido');
+        }
+    }
+
     function testPrint(printer, width) {
         const columns = ticketColumns(width);
         const sample = [
@@ -243,5 +250,5 @@
         return send(printer, drawerPulse, 'Lolitas - Prueba de gaveta');
     }
 
-    window.PosPrinter = { settings, saveSettings, printers, printSale, printOrder, testPrint, testDrawer };
+    window.PosPrinter = { settings, saveSettings, printers, printSale, printOrder, openDrawer, testPrint, testDrawer };
 })();

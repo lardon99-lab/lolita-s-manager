@@ -42,6 +42,15 @@
         }
     }
 
+    async function openOrderDrawer(branch) {
+        if (!branch) return;
+        try {
+            await printer.openDrawer(branch);
+        } catch (error) {
+            await Swal.fire({ title: 'El cobro ya está registrado', text: 'No se confirmó la apertura de la gaveta. ' + error.message, icon: 'warning' });
+        }
+    }
+
     function setup(modal) {
         const branch = modal.dataset.branch;
         const form = modal.querySelector('form');
@@ -171,6 +180,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        const paidOrder = document.querySelector('[data-paid-order-branch]');
+        if (paidOrder) void openOrderDrawer(paidOrder.dataset.paidOrderBranch);
         const modal = document.getElementById('posDevicesModal');
         if (modal) setup(modal);
         document.querySelectorAll('[data-sale-reprint]').forEach((button) => {
@@ -185,5 +196,5 @@
         });
     });
 
-    window.PosDevices = { finishSale };
+    window.PosDevices = { finishSale, openOrderDrawer };
 })();

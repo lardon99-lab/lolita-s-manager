@@ -37,7 +37,7 @@
                     <button class="btn btn-outline-secondary mb-2" type="button" data-pos-action="drawer" disabled>Probar apertura</button>
                     <label class="form-check mb-0">
                         <input class="form-check-input" type="checkbox" name="drawer" disabled>
-                        <span class="form-check-label">La prueba abrió la gaveta. Activar la apertura en ventas en efectivo.</span>
+                        <span class="form-check-label">La prueba abrió la gaveta. Activar la apertura en cobros en efectivo.</span>
                     </label>
                 </div>
                 <?php endif; ?>

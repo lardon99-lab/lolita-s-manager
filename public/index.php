@@ -190,11 +190,11 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
     <?php if (in_array($view, ['ventas-nueva', 'ventas-historial', 'pedidos-lista'], true)): ?>
     <script src="js/components/pos-printer.js?v=<?= filemtime(__DIR__ . '/js/components/pos-printer.js') ?>"></script>
-    <?php endif; ?>
-    <?php if (in_array($view, ['ventas-nueva', 'ventas-historial'], true)): ?>
     <script src="js/components/pos-devices.js?v=<?= filemtime(__DIR__ . '/js/components/pos-devices.js') ?>"></script>
     <?php endif; ?>
-    <script src="js/components/card-payment.js?v=<?= filemtime(__DIR__ . '/js/components/card-payment.js') ?>"></script>
+    <?php if (in_array($view, ['ventas-nueva', 'pedidos-nuevo', 'pedidos-lista'], true)): ?>
+    <script src="js/components/payment-receipt.js?v=<?= filemtime(__DIR__ . '/js/components/payment-receipt.js') ?>"></script>
+    <?php endif; ?>
     <script src="js/components/form-validation.js?v=<?= filemtime(__DIR__ . '/js/components/form-validation.js') ?>"></script>
     <?php if ($view === 'caja'): ?>
     <script src="js/views/caja.js?v=<?= filemtime(__DIR__ . '/js/views/caja.js') ?>"></script>

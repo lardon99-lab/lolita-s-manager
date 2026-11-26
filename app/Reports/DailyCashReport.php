@@ -12,8 +12,12 @@ final class DailyCashReport
     public function data(?array $branches, string $date, ?int $session = null): array
     {
         $cash = (new CashCategoryReport($this->db))->totals($branches, $date, $session);
-        $income = (new CashIncomeReport($this->db))->summarize(['desde' => $date, 'hasta' => $date], $branches);
-        $income['by_method']['Efectivo'] = array_sum(array_column($cash, 'cobrado')) / 100;
+        $cashCents = array_sum(array_column($cash, 'cobrado'));
+        $methods = [];
+        if ($session === null) {
+            $methods = (new CashIncomeReport($this->db))->summarize(['desde' => $date, 'hasta' => $date], $branches)['by_method'];
+            $methods['Efectivo'] = $cashCents / 100;
+        }
         [$expenseScope, $expenseParams] = $this->scope('m.id_sucursal', $branches);
         $expenses = $this->rows(
             "SELECT COALESCE(NULLIF(m.descripcion, ''), m.motivo) AS nombre, m.monto AS valor
@@ -56,13 +60,20 @@ final class DailyCashReport
              GROUP BY p.id_producto, p.nombre_producto, c.nombre_categoria ORDER BY categoria, nombre",
             [...$orderParams, $date, ...$saleParams, $date]
         );
+        $expenseCents = array_sum(array_map(static fn (array $row): int => CashCategoryReport::cents($row['valor']), $expenses));
+        $branchName = count($branches ?? []) === 1
+            ? ($this->rows('SELECT nombre_sucursal FROM sucursales WHERE id_sucursal = ?', $branches)[0]['nombre_sucursal'] ?? null)
+            : null;
 
         return [
             'fecha' => $date,
-            'metodos' => $income['by_method'],
+            'sucursal' => $branchName,
+            'metodos' => $methods,
             'categorias' => $cash,
+            'efectivo_centavos' => $cashCents,
             'gastos' => $expenses,
-            'gastos_centavos' => array_sum(array_map(static fn (array $row): int => CashCategoryReport::cents($row['valor']), $expenses)),
+            'gastos_centavos' => $expenseCents,
+            'esperado' => $cashCents - $expenseCents,
             'mermas' => $waste,
             'inventario' => $inventory,
             'ventas' => $sales,

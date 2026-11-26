@@ -10,14 +10,27 @@ use PDO;
 
 final class CashDrawerSession
 {
-    public const FUND_CENTS = 100000;
-    public const CLOSING_TIME = '17:50';
+    public const CLOSING_TIME = '18:30';
+    public const OPERATING_FUND_CENTS = 200000;
 
     public function __construct(private PDO $db) {}
 
     public static function now(): DateTimeImmutable
     {
         return new DateTimeImmutable('now', new DateTimeZone('America/Tegucigalpa'));
+    }
+
+    public static function closingIsAvailable(string $businessDate, DateTimeImmutable $now): bool
+    {
+        $today = $now->format('Y-m-d');
+        return $businessDate < $today
+            || ($businessDate === $today && $now->format('H:i') >= self::CLOSING_TIME);
+    }
+
+    public static function closingTimeLabel(): string
+    {
+        $time = self::now()->modify(self::CLOSING_TIME)->format('g:i a');
+        return str_replace([' am', ' pm'], [' a. m.', ' p. m.'], $time);
     }
 
     public function lockBranch(int $branch): string
@@ -32,7 +45,7 @@ final class CashDrawerSession
     public function latest(int $branch, bool $lock = false): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM jornadas_caja WHERE id_sucursal = ? ORDER BY fecha_operativa DESC LIMIT 1'
+            'SELECT * FROM jornadas_caja WHERE id_sucursal = ? ORDER BY fecha_operativa DESC, id_caja DESC LIMIT 1'
             . ($lock ? ' FOR UPDATE' : '')
         );
         $stmt->execute([$branch]);
@@ -45,11 +58,14 @@ final class CashDrawerSession
             throw new InvalidArgumentException('La sucursal está inactiva.');
         }
         $session = $this->latest($branch, true);
-        if (($session['estado'] ?? null) === 'En conteo') {
-            throw new InvalidArgumentException('La caja está en conteo. Cancela el conteo en Caja antes de registrar efectivo.');
+        if ($session === null || $session['fecha_operativa'] !== self::now()->format('Y-m-d')) {
+            throw new InvalidArgumentException('Abre la caja de hoy antes de registrar efectivo. Si hay un corte anterior pendiente, finalízalo primero.');
         }
-        if (($session['estado'] ?? null) !== 'Abierta' || $session['fecha_operativa'] !== self::now()->format('Y-m-d')) {
-            throw new InvalidArgumentException('Abre la jornada de hoy en Caja antes de registrar efectivo. Si hay un corte anterior pendiente, finalízalo primero.');
+        if ($session['estado'] === 'En conteo') {
+            throw new InvalidArgumentException('La caja está en conteo. Usa Volver a vender en Caja para registrar efectivo.');
+        }
+        if ($session['estado'] === 'Cerrada') {
+            throw new InvalidArgumentException('Usa Reabrir caja para registrar más cobros o gastos hoy.');
         }
         return (int) $session['id_caja'];
     }

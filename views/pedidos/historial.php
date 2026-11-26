@@ -36,10 +36,10 @@ $totalIngresos = $resumenIngresos['total'];
 $ingresosPorMetodo = $resumenIngresos['by_method'];
 $totalGastos = array_sum(array_column($mermas, 'monto'));
 $totalCajaReal = round($ingresosPorMetodo['Efectivo'] - $totalGastos, 2);
-$cardPage = max(1, (int) filter_var($_GET['pagina_tarjeta'] ?? 1, FILTER_VALIDATE_INT, [
+$receiptPage = max(1, (int) filter_var($_GET['pagina_comprobantes'] ?? $_GET['pagina_tarjeta'] ?? 1, FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1, 'max_range' => 100000],
 ]));
-$cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
+$paymentReceipts = $pedidosCtrl->obtenerComprobantesElectronicos($filtros, $receiptPage);
 ?>
 
 <div class="container-fluid app-page p-2 p-md-4">
@@ -226,7 +226,7 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
             </table>
         </div>
     </div>
-    <?php include __DIR__ . '/partials/card-payment-history.php'; ?>
+    <?php include __DIR__ . '/partials/payment-receipt-history.php'; ?>
 </div>
 
 <?php if (\App\Security\Auth::hasPermission('cash.adjust')): ?>

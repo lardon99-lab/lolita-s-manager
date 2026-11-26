@@ -16,14 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const lineBuilder = document.querySelector('.order-line-builder');
     const paymentMethod = document.getElementById('metodo_pago');
     const deposit = document.getElementById('monto_abono');
-    const cardFields = document.getElementById('orderCardPayment');
-    const cardAmountLabel = document.getElementById('orderCardPaymentAmount');
+    const receiptFields = [...form.querySelectorAll('[data-order-receipt]')];
     const saveButton = document.getElementById('btnGuardarPedido');
     const saveLabel = saveButton.innerHTML;
     let rowIndex = 0;
-    let pendingCardOrder = null;
+    let pendingOrder = null;
     let lockedFields = [];
-    let savingCard = false;
+    let savingOrder = false;
 
     const money = window.AppMoney;
 
@@ -184,16 +183,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'Abonado' && (!deposit.value || Number(deposit.value) >= total)) {
             deposit.value = total >= 2 ? String(Math.floor(total / 2)) : '';
         }
-        updateCardPayment();
+        updatePaymentReceipts();
     };
 
-    function updateCardPayment() {
-        const type = document.getElementById('tipo_pago').value;
-        const enabled = type !== 'Pendiente' && paymentMethod.value === 'Tarjeta';
-        cardFields.hidden = !enabled;
-        cardFields.disabled = !enabled;
-        cardFields.elements.monto_tarjeta.setCustomValidity('');
-        if (enabled) cardAmountLabel.textContent = `Monto a registrar: L. ${money(paymentTotal())}`;
+    function updatePaymentReceipts() {
+        const collecting = document.getElementById('tipo_pago').value !== 'Pendiente';
+        receiptFields.forEach((fields) => {
+            const enabled = collecting && fields.dataset.orderReceipt === paymentMethod.value;
+            fields.hidden = !enabled;
+            fields.disabled = !enabled;
+            fields.querySelector('[data-receipt-amount]').setCustomValidity('');
+            if (enabled) fields.querySelector('[data-receipt-total]').textContent = `Monto a registrar: L. ${money(paymentTotal())}`;
+        });
     }
 
     function paymentTotal() {
@@ -202,19 +203,19 @@ document.addEventListener('DOMContentLoaded', () => {
             : Number(deposit.value);
     }
 
-    async function sendCardOrder() {
-        savingCard = true;
+    async function sendElectronicOrder() {
+        savingOrder = true;
         saveButton.disabled = true;
         saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Guardando pedido...';
         try {
-            const data = await CardPayment.send(form.action, {
+            const data = await PaymentReceipt.send(form.action, {
                 method: 'POST',
                 headers: { Accept: 'application/json' },
-                body: pendingCardOrder,
+                body: pendingOrder,
             });
             if (!data) return;
             if (data.status !== 'success') {
-                pendingCardOrder = null;
+                pendingOrder = null;
                 lockedFields.forEach((field) => { field.disabled = false; });
                 lockedFields = [];
                 await Swal.fire('Pedido incompleto', data.message || 'No fue posible guardar el pedido.', 'error');
@@ -222,23 +223,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             location.assign(data.redirect);
         } finally {
-            savingCard = false;
+            savingOrder = false;
             saveButton.disabled = false;
-            saveButton.innerHTML = pendingCardOrder
+            saveButton.innerHTML = pendingOrder
                 ? '<i class="fa-solid fa-rotate-right me-2" aria-hidden="true"></i>Reintentar registro'
                 : saveLabel;
         }
     }
 
-    paymentMethod.addEventListener('change', updateCardPayment);
-    deposit.addEventListener('input', updateCardPayment);
-    cardFields.elements.monto_tarjeta.addEventListener('input', (event) => event.target.setCustomValidity(''));
+    paymentMethod.addEventListener('change', updatePaymentReceipts);
+    deposit.addEventListener('input', updatePaymentReceipts);
+    receiptFields.forEach((fields) => {
+        fields.querySelector('[data-receipt-amount]').addEventListener('input', (event) => event.target.setCustomValidity(''));
+    });
 
     document.getElementById('add-order-line').addEventListener('click', addOrderLine);
     form.addEventListener('submit', (event) => {
-        if (savingCard || pendingCardOrder) {
+        if (savingOrder || pendingOrder) {
             event.preventDefault();
-            if (!savingCard) void sendCardOrder();
+            if (!savingOrder) void sendElectronicOrder();
             return;
         }
         const clientId = document.getElementById('id_cliente_real').value;
@@ -255,15 +258,16 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire('Pedido incompleto', 'Selecciona un cliente valido.', 'error');
             return;
         }
-        if (cardFields.disabled) return;
+        const activeReceipt = receiptFields.find((fields) => !fields.disabled);
+        if (!activeReceipt) return;
         event.preventDefault();
-        if (!CardPayment.validate(cardFields, paymentTotal()).reportValidity()) return;
+        if (!PaymentReceipt.validate(activeReceipt, paymentTotal()).reportValidity()) return;
 
-        pendingCardOrder = new FormData(form);
+        pendingOrder = new FormData(form);
         lockedFields = [...form.elements].filter((field) => field !== saveButton && field.willValidate !== undefined
             && !field.disabled && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(field.tagName));
         lockedFields.forEach((field) => { field.disabled = true; });
-        void sendCardOrder();
+        void sendElectronicOrder();
     });
 
     branchSelect.addEventListener('change', filterProducts);
