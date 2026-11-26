@@ -93,7 +93,7 @@ trait CajaReporteTrait
                                 CONCAT(' [', dop.opciones, ']'), ''),
                                 IF(det.detalles_personalizacion IS NOT NULL AND det.detalles_personalizacion <> '', 
                                 CONCAT(' [', det.detalles_personalizacion, ']'), '')
-                            ) SEPARATOR '<br>') as productos
+                            ) ORDER BY det.id_detalle SEPARATOR '\n') as productos
                         FROM pedidos p
                         INNER JOIN clientes c ON p.id_cliente = c.id_cliente
                         INNER JOIN sucursales s ON p.id_sucursal = s.id_sucursal
@@ -119,7 +119,7 @@ trait CajaReporteTrait
                             GROUP_CONCAT(CONCAT('• ', pr.nombre_producto, ' (', vi.cantidad, ')',
                                 IF(vio.opciones IS NOT NULL AND vio.opciones <> '',
                                 CONCAT(' [', vio.opciones, ']'), '')
-                            ) SEPARATOR '<br>') as productos
+                            ) ORDER BY vi.id_item SEPARATOR '\n') as productos
                         FROM ventas_directas v
                         INNER JOIN sucursales s ON v.id_sucursal = s.id_sucursal
                         INNER JOIN venta_items vi ON v.id_venta = vi.id_venta
@@ -166,7 +166,7 @@ trait CajaReporteTrait
         Auth::requirePermission('cash.adjust');
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             try {
-                $monto = \App\Http\Validator::positiveMoney($_POST['monto_merma'] ?? null, 'monto', 1000000);
+                $monto = \App\Http\Validator::intRange($_POST['monto_merma'] ?? null, 'monto', 1, 1000000);
                 $motivo = \App\Http\Validator::enum(
                     $_POST['motivo_merma'] ?? '',
                     ['Pago a Proveedores', 'Gastos de Insumos', 'Pagos a Terceros'],
@@ -185,14 +185,23 @@ trait CajaReporteTrait
                     die("Error: No se detectó a qué sucursal pertenece esta merma. Si eres administrador, asegúrate de seleccionar una sucursal en el formulario.");
                 }
 
-                $query = "INSERT INTO mermas_caja (monto, motivo, descripcion, id_sucursal, id_usuario) VALUES (?, ?, ?, ?, ?)";
+                $this->db->beginTransaction();
+                $cashId = (new \App\Services\CashDrawerSession($this->db))->forCashMovement($id_sucursal);
+                $query = "INSERT INTO mermas_caja (monto, motivo, descripcion, id_sucursal, id_usuario, id_caja) VALUES (?, ?, ?, ?, ?, ?)";
                 $stmt = $this->db->prepare($query);
-                $stmt->execute([$monto, $motivo, $descripcion, $id_sucursal, $id_usuario]);
+                $stmt->execute([$monto, $motivo, $descripcion, $id_sucursal, $id_usuario, $cashId]);
+                $this->db->commit();
 
                 // Redirigimos de vuelta
                 header("Location: index.php?view=ventas-historial&msg=merma_ok", true, 303);
                 exit();
+            } catch (InvalidArgumentException $e) {
+                if ($this->db->inTransaction()) $this->db->rollBack();
+                $_SESSION['cash_expense_error'] = $e->getMessage();
+                header("Location: index.php?view=ventas-historial", true, 303);
+                exit();
             } catch (Exception $e) {
+                if ($this->db->inTransaction()) $this->db->rollBack();
                 \App\Support\Logger::error($e);
                 die("No fue posible registrar la merma.");
             }

@@ -74,6 +74,13 @@ final class ProductCustomizationService
         $startedTransaction = !$this->db->inTransaction();
         if ($startedTransaction) $this->db->beginTransaction();
         try {
+            if (array_key_exists('recargo_diseno', $input)) {
+                $designService = new ProductDesignService($this->db);
+                $design = $designService->configuration($productId);
+                if (!$design['permite_diseno']) throw new InvalidArgumentException('El producto no tiene diseño personalizado habilitado.');
+                $design['recargo_diseno'] = $input['recargo_diseno'];
+                $designService->save($productId, $design);
+            }
             $this->db->prepare('DELETE FROM producto_personalizacion_opciones WHERE id_producto = ?')->execute([$productId]);
             $this->db->prepare('DELETE FROM producto_personalizacion_grupos WHERE id_producto = ?')->execute([$productId]);
 
@@ -141,12 +148,10 @@ final class ProductCustomizationService
             $optionTotal += count($options);
             if ($optionTotal > 50) throw new InvalidArgumentException('La configuracion excede el limite de opciones.');
 
-            $maximum = filter_var($group['maximo'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => count($options)]]);
-            if ($maximum === false) throw new InvalidArgumentException("El maximo de selecciones de {$name} no es valido.");
+            $maximum = Validator::intRange($group['maximo'] ?? 1, "máximo de selecciones de {$name}", 1, count($options));
             $minimum = !empty($group['obligatorio']) ? 1 : 0;
-            $included = filter_var($group['selecciones_incluidas'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => $maximum]]);
-            if ($included === false) throw new InvalidArgumentException("Las selecciones incluidas de {$name} no son validas.");
-            $extraSurcharge = Validator::money($group['recargo_seleccion_extra'] ?? 0, 'recargo por seleccion adicional', 1000000);
+            $included = Validator::intRange($group['selecciones_incluidas'] ?? 0, "selecciones incluidas de {$name}", 0, $maximum);
+            $extraSurcharge = Validator::intRange($group['recargo_seleccion_extra'] ?? 0, 'recargo por selección adicional', 0, 1000000);
             $optionNames = [];
             $validatedOptions = [];
             $defaultCount = 0;
@@ -160,7 +165,7 @@ final class ProductCustomizationService
                 if ($isDefault) $defaultCount++;
                 $validatedOptions[] = [
                     'nombre' => $optionName,
-                    'recargo' => Validator::money($option['recargo'] ?? 0, 'recargo', 1000000),
+                    'recargo' => Validator::intRange($option['recargo'] ?? 0, 'recargo', 0, 1000000),
                     'predeterminada' => $isDefault,
                 ];
             }

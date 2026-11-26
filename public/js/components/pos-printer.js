@@ -102,7 +102,7 @@
     }
 
     function money(value) {
-        return 'L. ' + Number(value).toFixed(2);
+        return 'L. ' + window.AppMoney(value, false);
     }
 
     function amountLine(label, value, columns) {

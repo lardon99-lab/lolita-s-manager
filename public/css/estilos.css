@@ -5,6 +5,11 @@
     --text-color: #40353d;
     --muted-color: #8f7b86;
     --border-color: #f6e2ea;
+    --button-accent: #a93658;
+    --button-accent-hover: #8e2848;
+    --button-accent-active: #77213d;
+    --button-tint: #fff0f5;
+    --button-tint-active: #f9dfe9;
 }
 
 * {
@@ -93,6 +98,56 @@ body {
 .nav-link,
 .badge {
     border-radius: 0.5rem !important;
+}
+
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--button-accent);
+    --bs-btn-border-color: var(--button-accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--button-accent-hover);
+    --bs-btn-hover-border-color: var(--button-accent-hover);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--button-accent-active);
+    --bs-btn-active-border-color: var(--button-accent-active);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--button-accent);
+    --bs-btn-disabled-border-color: var(--button-accent);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--button-accent);
+    --bs-btn-border-color: var(--button-accent);
+    --bs-btn-hover-color: var(--button-accent-hover);
+    --bs-btn-hover-bg: var(--button-tint);
+    --bs-btn-hover-border-color: var(--button-accent-hover);
+    --bs-btn-active-color: var(--button-accent-active);
+    --bs-btn-active-bg: var(--button-tint-active);
+    --bs-btn-active-border-color: var(--button-accent-active);
+    --bs-btn-disabled-color: var(--button-accent);
+    --bs-btn-disabled-border-color: var(--button-accent);
+}
+
+:is(.btn-primary, .btn-outline-primary) {
+    --bs-btn-focus-box-shadow: none;
+}
+
+.btn-close {
+    --bs-btn-close-focus-shadow: none;
+}
+
+:is(.btn-primary, .btn-outline-primary, .btn-close, button.nav-link):focus-visible {
+    outline: 2px solid var(--button-accent);
+    outline-offset: 2px;
+}
+
+button.nav-link:focus-visible {
+    box-shadow: none;
+}
+
+.btn-light.text-primary,
+.btn-white > .text-primary {
+    color: var(--button-accent) !important;
 }
 
 .form-control,

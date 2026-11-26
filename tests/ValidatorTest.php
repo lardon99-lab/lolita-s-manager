@@ -12,11 +12,11 @@ final class ValidatorTest extends TestCase
         Validator::positiveInt(0, 'cantidad');
     }
 
-    public function testMoneyRoundsAndRejectsNegativeValues(): void
+    public function testIntegerRangeRejectsFractionalAmounts(): void
     {
-        self::assertSame(12.35, Validator::money('12.345', 'monto'));
+        self::assertSame(365, Validator::intRange('365', 'precio', 1, 1000000));
         $this->expectException(InvalidArgumentException::class);
-        Validator::money('-0.01', 'monto');
+        Validator::intRange('365.50', 'precio', 1, 1000000);
     }
 
     public function testDateRequiresExactIsoFormat(): void
@@ -67,10 +67,11 @@ final class ValidatorTest extends TestCase
         Validator::dateRange('2026-09-24', '2026-09-23');
     }
 
-    public function testPositiveMoneyRejectsZero(): void
+    public function testCatalogAmountAcceptsAWholeStoredDecimal(): void
     {
+        self::assertSame(365.0, Validator::catalogAmount('365.00', 'el precio del producto'));
         $this->expectException(InvalidArgumentException::class);
-        Validator::positiveMoney('0', 'monto');
+        Validator::catalogAmount('365.50', 'el precio del producto');
     }
 
     public function testSingleLineTextNormalizesRepeatedWhitespace(): void

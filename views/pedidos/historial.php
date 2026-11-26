@@ -59,15 +59,19 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
                         <i class="fa-solid fa-minus-circle me-1"></i> Registrar Gasto
                     </button><?php endif; ?>
                 </div>
-                    <strong class="history-balance__value">L. <?= number_format($totalCajaReal, 2) ?></strong>
-                    <small class="text-muted mt-1 d-block">Total cobrado en el periodo: L. <?= number_format($totalIngresos, 2) ?></small>
+                    <strong class="history-balance__value">L. <?= \App\Support\View::money($totalCajaReal) ?></strong>
+                    <small class="text-muted mt-1 d-block">Total cobrado en el periodo: L. <?= \App\Support\View::money($totalIngresos) ?></small>
                     <?php if($totalGastos > 0): ?>
-                        <small class="text-danger mt-1 d-block"><i class="fa-solid fa-arrow-trend-down me-1"></i> - L. <?= number_format($totalGastos, 2) ?> en gastos</small>
+                        <small class="text-danger mt-1 d-block"><i class="fa-solid fa-arrow-trend-down me-1"></i> - L. <?= \App\Support\View::money($totalGastos) ?> en gastos</small>
                     <?php endif; ?>
                 </div>
             </div>
     </header>
 
+    <?php if (isset($_SESSION['cash_expense_error'])): ?>
+        <div class="alert alert-danger" role="alert"><?= e($_SESSION['cash_expense_error']) ?> <a class="alert-link" href="index.php?view=caja">Ir a Caja</a></div>
+        <?php unset($_SESSION['cash_expense_error']); ?>
+    <?php endif; ?>
     <div class="app-toolbar">
             <form method="GET" action="index.php" class="row g-3 align-items-end">
                 <input type="hidden" name="view" value="ventas-historial">
@@ -122,10 +126,7 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
                         
                         <div class="d-flex gap-2">
                             <?php 
-                            $paramsPdf = $filtros;
-                            $paramsPdf['desde'] = $filtros['desde'] ?? $hoy; 
-                            $paramsPdf['hasta'] = $filtros['hasta'] ?? $hoy; 
-                            $urlPdf = "exportar_pdf.php?" . http_build_query($paramsPdf); 
+                            $urlPdf = "exportar_pdf.php?" . http_build_query(['sucursal' => $filtros['sucursal']]);
                             ?>
                             <button type="button" id="btnExportarPdf" class="btn btn-dark rounded-3 shadow-sm px-3 py-2 flex-fill d-flex align-items-center justify-content-center" data-base-url="<?= e($urlPdf) ?>" data-current-branch="<?= e($filtros['sucursal'] ?? '') ?>" data-branches="<?= e(json_encode($listaSucursales, JSON_UNESCAPED_UNICODE)) ?>" title="Exportar Control Diario">
                                 <i class="fa-solid fa-file-pdf text-danger"></i>
@@ -146,7 +147,7 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
         <div class="col-6 col-lg-3">
             <div class="app-panel h-100 p-3">
                 <div class="small text-muted fw-semibold"><?= e($metodo) ?></div>
-                <strong class="text-dark text-break">L. <?= number_format($monto, 2) ?></strong>
+                <strong class="text-dark text-break">L. <?= \App\Support\View::money($monto) ?></strong>
             </div>
         </div>
         <?php endforeach; ?>
@@ -198,14 +199,12 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
                             </td>
 
                             <td data-label="Productos">
-                                <div class="small text-muted text-truncate" style="max-width: 250px;" title="<?= e($v['productos']) ?>">
-                                    <?= e($v['productos']) ?>
-                                </div>
+                                <div class="history-products small text-muted"><?= e($v['productos']) ?></div>
                             </td>
                             
                             <td class="text-end pe-4" data-label="Monto final">
                                 <span class="fw-bold text-dark font-monospace fs-5">
-                                    L. <?= number_format($v['total_pedido'], 2) ?>
+                                    L. <?= \App\Support\View::money($v['total_pedido']) ?>
                                 </span>
                                 <?php if ($v['tipo'] === 'Venta Directa'): ?>
                                 <button class="btn btn-sm btn-outline-secondary mt-1 d-block ms-md-auto" type="button" data-sale-reprint="<?= (int) $v['id_pedido'] ?>">
@@ -246,7 +245,7 @@ $cardPayments = $pedidosCtrl->obtenerComprobantesTarjeta($filtros, $cardPage);
                         <label class="fw-bold small text-uppercase text-muted mb-1">Monto (L.)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0">L.</span>
-                            <input type="number" step="0.01" min="0.01" name="monto_merma" class="form-control bg-light border-start-0" required placeholder="0.00">
+                            <input type="number" step="1" min="1" max="1000000" inputmode="numeric" name="monto_merma" class="form-control bg-light border-start-0" required placeholder="0">
                         </div>
                     </div>
 

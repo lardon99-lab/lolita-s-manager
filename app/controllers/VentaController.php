@@ -9,6 +9,7 @@ use App\Http\Validator;
 use App\Security\Auth;
 use App\Security\Csrf;
 use App\Services\AuditService;
+use App\Services\CashDrawerSession;
 use App\Services\InventoryStockService;
 use App\Services\PaymentRecorder;
 use App\Services\ProductOptionPricingService;
@@ -65,6 +66,9 @@ final class VentaController
             }
 
             $this->db->beginTransaction();
+            $cashId = $paymentMethod === 'Efectivo'
+                ? (new CashDrawerSession($this->db))->forCashMovement($branchId)
+                : null;
             $payments = new PaymentRecorder($this->db);
             $receipt = $card ? $payments->claimCard($card, $branchId, $userId, 'venta', $normalized) : null;
             if (isset($receipt['id_venta'])) {
@@ -92,7 +96,8 @@ final class VentaController
                 $product = $productQuery->fetch(PDO::FETCH_ASSOC);
                 if (!$product) throw new InvalidArgumentException('Uno de los productos no esta disponible para venta directa.');
                 $configuration = $optionPricing->price($productId, $line['options']);
-                $price = round((float) $product['precio_base'] + $configuration['surcharge'], 2);
+                $price = Validator::catalogAmount($product['precio_base'], 'el precio de ' . $product['nombre_producto'])
+                    + $configuration['surcharge'];
                 $subtotal = round($price * $quantity, 2);
                 $total = round($total + $subtotal, 2);
                 $items[] = [
@@ -119,8 +124,8 @@ final class VentaController
             }
             $supplyAllocations = $supplyStockService->lockForSale($supplyProductQuantities, $branchId);
 
-            $sale = $this->db->prepare('INSERT INTO ventas_directas (id_usuario, id_sucursal, total, metodo_pago) VALUES (?, ?, ?, ?)');
-            $sale->execute([$userId, $branchId, $total, $paymentMethod]);
+            $sale = $this->db->prepare('INSERT INTO ventas_directas (id_usuario, id_sucursal, total, metodo_pago, id_caja) VALUES (?, ?, ?, ?, ?)');
+            $sale->execute([$userId, $branchId, $total, $paymentMethod, $cashId]);
             $saleId = (int) $this->db->lastInsertId();
             if ($receipt !== null) $payments->linkSale($receipt['id_comprobante'], $saleId);
 

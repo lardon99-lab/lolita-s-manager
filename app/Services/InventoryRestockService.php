@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Validator;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PDO;
@@ -153,11 +154,8 @@ final class InventoryRestockService
     {
         $grouped = [];
         foreach ($items as $item) {
-            $productId = filter_var($item['product_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            $quantity = filter_var($item['quantity'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => self::MAX_LINE_QUANTITY]]);
-            if ($productId === false || $quantity === false) {
-                throw new InvalidArgumentException('Cada producto debe tener una cantidad valida.');
-            }
+            $productId = Validator::positiveInt($item['product_id'] ?? null, 'producto');
+            $quantity = Validator::intRange($item['quantity'] ?? null, 'cantidad recibida', 1, self::MAX_LINE_QUANTITY);
             $expiry = trim((string) ($item['expiry'] ?? '')) ?: null;
             $groupKey = $productId . '|' . ($expiry ?? '');
             if (!isset($grouped[$groupKey])) {

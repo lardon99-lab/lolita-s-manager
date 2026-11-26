@@ -88,14 +88,14 @@
                                             data-type="<?= e($p['tipo_producto'] ?? 'panaderia') ?>"
                                             data-nombre="<?= e($p['nombre_producto'] ?? '') ?>"
                                             data-categoria="<?= e($p['nombre_categoria'] ?? '') ?>">
-                                        <?= htmlspecialchars($p['nombre_producto']) ?> (L. <?= number_format($p['precio_base'], 2) ?>)
+                                        <?= htmlspecialchars($p['nombre_producto']) ?> (L. <?= \App\Support\View::money($p['precio_base']) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-5 col-md-2">
                             <label class="form-label small fw-bold text-muted mb-1" for="cant-producto">Cant.</label>
-                            <input type="number" id="cant-producto" class="form-control border-0 shadow-sm py-2 text-center fw-bold text-primary" value="1" min="1">
+                            <input type="number" id="cant-producto" class="form-control border-0 shadow-sm py-2 text-center fw-bold text-primary" value="1" min="1" max="1000" step="1" inputmode="numeric">
                         </div>
                         <div class="col-7 col-md-3 order-line-builder__action">
                             <button type="button" id="add-order-line" class="btn btn-dark w-100 rounded-3 shadow-sm py-2 fw-bold transition-hover">
@@ -107,7 +107,7 @@
                     <div id="panel-opciones-producto" class="bg-white p-3 rounded-4 border border-primary border-opacity-25 shadow-sm mb-4 d-none">
                         <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
                             <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-sliders me-2"></i>Personalizacion</h6>
-                            <span class="badge text-bg-light" id="customization-surcharge">+ L. 0.00</span>
+                            <span class="badge text-bg-light" id="customization-surcharge">+ L. 0</span>
                         </div>
                         <div class="order-customization-groups" id="order-customization-groups"></div>
                     </div>
@@ -144,7 +144,7 @@
                                         <label class="small fw-bold text-muted mb-1">Monto del Abono</label>
                                         <div class="input-group shadow-sm rounded-3 overflow-hidden">
                                             <span class="input-group-text bg-white border-0 text-muted fw-bold">L.</span>
-                                            <input type="number" name="monto_abono" id="monto_abono" class="form-control border-0 py-2 text-success fw-bold" step="0.01" value="0">
+                                            <input type="number" name="monto_abono" id="monto_abono" class="form-control border-0 py-2 text-success fw-bold" min="1" step="1" inputmode="numeric" disabled>
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-4" id="contenedor-metodo-pago" style="display: none;">
@@ -160,7 +160,7 @@
                             </div>
                             <div class="col-md-5 text-md-end mt-4 mt-md-0 border-start-md">
                                 <span class="text-muted small fw-bold text-uppercase tracking-wide d-block mb-1">Total a Pagar</span>
-                                <h2 class="fw-black text-primary mb-0 display-6">L. <span id="total-pedido">0.00</span></h2>
+                                <h2 class="fw-black text-primary mb-0 display-6">L. <span id="total-pedido">0</span></h2>
                                 <input type="hidden" name="total_final" id="input-total" value="0">
                             </div>
                         </div>

@@ -27,7 +27,7 @@ $inventoryCards = [
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-lg-4"><div class="app-stat-card"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Pedidos pendientes</p><p class="app-stat-card__value"><?= (int) $metricas['pendientes'] ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-clock"></i></span></div></div></div>
         <div class="col-12 col-sm-6 col-lg-4"><div class="app-stat-card app-stat-card--warning"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Entregas para hoy</p><p class="app-stat-card__value"><?= (int) $metricas['para_hoy'] ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-calendar-day"></i></span></div></div></div>
-        <div class="col-12 col-lg-4"><div class="app-stat-card app-stat-card--success"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Ventas completadas</p><p class="app-stat-card__value">L. <?= number_format((float) $metricas['ventas'], 2) ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-money-bill-trend-up"></i></span></div></div></div>
+        <div class="col-12 col-lg-4"><div class="app-stat-card app-stat-card--success"><div class="app-stat-card__body"><div><p class="app-stat-card__label">Ventas completadas</p><p class="app-stat-card__value">L. <?= \App\Support\View::money($metricas['ventas']) ?></p></div><span class="app-stat-card__icon"><i class="fa-solid fa-money-bill-trend-up"></i></span></div></div></div>
     </div>
 
     <?php if ($productos_caducados !== []): ?>

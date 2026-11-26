@@ -81,7 +81,7 @@ $branchFilterVisible = count($reporte_sucursales) > 1;
         </article>
         <article class="card app-panel product-sales-stat">
             <span class="product-sales-stat__icon product-sales-stat__icon--green" aria-hidden="true"><i class="fa-solid fa-money-bill-wave"></i></span>
-            <div><span>Importe de ventas</span><strong>L. <?= number_format((float) $reporte_resumen['ventas'], 2) ?></strong></div>
+            <div><span>Importe de ventas</span><strong>L. <?= \App\Support\View::money($reporte_resumen['ventas']) ?></strong></div>
         </article>
         <article class="card app-panel product-sales-stat">
             <span class="product-sales-stat__icon product-sales-stat__icon--yellow" aria-hidden="true"><i class="fa-solid fa-receipt"></i></span>
@@ -117,7 +117,7 @@ $branchFilterVisible = count($reporte_sucursales) > 1;
                         <td data-label="Producto"><strong><?= e($row['nombre_producto']) ?></strong></td>
                         <td data-label="Unidades" class="text-end fw-bold"><?= number_format((int) $row['unidades']) ?></td>
                         <td data-label="Transacciones" class="text-end"><?= number_format((int) $row['transacciones']) ?></td>
-                        <td data-label="Importe vendido" class="text-end product-sales-amount">L. <?= number_format((float) $row['total_ventas'], 2) ?></td>
+                        <td data-label="Importe vendido" class="text-end product-sales-amount">L. <?= \App\Support\View::money($row['total_ventas']) ?></td>
                     </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
@@ -135,7 +135,7 @@ $branchFilterVisible = count($reporte_sucursales) > 1;
                         <td data-label="Sucursal"><strong><?= e($row['nombre_sucursal']) ?></strong></td>
                         <td data-label="Unidades" class="text-end fw-bold"><?= number_format((int) $row['unidades']) ?></td>
                         <td data-label="Transacciones" class="text-end"><?= number_format((int) $row['transacciones']) ?></td>
-                        <td data-label="Importe vendido" class="text-end product-sales-amount">L. <?= number_format((float) $row['total_ventas'], 2) ?></td>
+                        <td data-label="Importe vendido" class="text-end product-sales-amount">L. <?= \App\Support\View::money($row['total_ventas']) ?></td>
                     </tr>
                     <?php endforeach; endif; ?>
                 </tbody>

@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const category = document.getElementById('productCategory');
         category.value = product.id_categoria;
         window.AppSelect?.sync(category);
-        document.getElementById('productPrice').value = product.precio_base;
+        document.getElementById('productPrice').value = String(Number(product.precio_base));
         document.getElementById('productLife').value = product.dias_vida_util;
         document.getElementById('productDescription').value = product.descripcion || '';
         productModal.show();
@@ -173,29 +173,45 @@ function initializeCustomizationEditor() {
     if (!modalElement || !form || !groupsContainer) return;
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     const editor = ProductCustomizationEditor.create(groupsContainer);
+    const productId = document.getElementById('customizationProductId');
+    const designPrice = form.elements.recargo_diseno;
+    const designField = document.getElementById('customizationDesignPriceField');
+    const addGroup = document.getElementById('addCustomizationGroup');
+    const submit = form.querySelector('[type="submit"]');
 
     document.querySelectorAll('.js-customize-product').forEach((button) => button.addEventListener('click', async () => {
-        document.getElementById('customizationProductId').value = button.dataset.id;
+        productId.value = button.dataset.id;
         document.getElementById('customizationProductName').textContent = button.dataset.name || '';
+        designPrice.disabled = true;
+        designField.hidden = true;
+        submit.disabled = true;
+        addGroup.disabled = true;
         editor.setLoading();
         modal.show();
         try {
             const response = await fetch(`api.php?resource=catalogo&action=configuracion_producto&id_producto=${encodeURIComponent(button.dataset.id)}`, { headers: { Accept: 'application/json' } });
             const data = await response.json();
             if (!response.ok || data.status !== 'success') throw new Error(data.message || 'No fue posible cargar las opciones.');
+            if (productId.value !== button.dataset.id) return;
             editor.setGroups(data.configuracion || []);
+            designField.hidden = !data.diseno?.permite_diseno;
+            designPrice.disabled = designField.hidden;
+            if (!designPrice.disabled) designPrice.value = String(Number(data.diseno.recargo_diseno));
+            submit.disabled = false;
+            addGroup.disabled = false;
         } catch (error) {
+            if (productId.value !== button.dataset.id) return;
             editor.setGroups();
             Swal.fire('Error', error.message || 'No fue posible cargar las opciones.', 'error');
             modal.hide();
         }
     }));
 
-    document.getElementById('addCustomizationGroup').addEventListener('click', () => editor.addGroup());
+    addGroup.addEventListener('click', () => editor.addGroup());
     form.addEventListener('submit', (event) => {
         event.preventDefault();
-        const body = new FormData();
-        body.set('id_producto', document.getElementById('customizationProductId').value);
+        if (submit.disabled) return;
+        const body = new FormData(form);
         body.set('configuracion', JSON.stringify(editor.getGroups()));
         submitCatalog('guardar_personalizacion', body);
     });

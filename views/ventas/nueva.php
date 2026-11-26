@@ -113,7 +113,7 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
                         </div>
                         <div>
                             <span class="sales-field-label">Precio unitario</span>
-                            <output id="label-precio" class="sales-unit-price">L. 0.00</output>
+                            <output id="label-precio" class="sales-unit-price">L. 0</output>
                         </div>
                         <button type="button" id="btnAgregarCarrito" class="btn btn-primary sales-add-button">
                             <i class="fa-solid fa-plus" aria-hidden="true"></i>
@@ -167,7 +167,7 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
 
                         <div class="sales-total">
                             <span>Total a pagar</span>
-                            <output id="total-venta">L. 0.00</output>
+                            <output id="total-venta">L. 0</output>
                         </div>
 
                         <button type="button" id="btnCobrar" class="btn btn-success sales-checkout__button" disabled>
@@ -195,7 +195,7 @@ $configuraciones = (new \App\Services\ProductCustomizationService($db))
                 <div id="salesCustomizationGroups" class="sales-customization__groups"></div>
             </div>
             <footer class="modal-footer">
-                <div class="sales-customization__price"><span>Precio unitario</span><strong id="salesCustomizationPrice">L. 0.00</strong></div>
+                <div class="sales-customization__price"><span>Precio unitario</span><strong id="salesCustomizationPrice">L. 0</strong></div>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="salesCustomizationAdd"><i class="fa-solid fa-plus" aria-hidden="true"></i>Añadir al carrito</button>
             </footer>

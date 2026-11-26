@@ -60,7 +60,7 @@ $catalogTabCount = 1 + (int) $canManageCategories + (int) $canManageSupplies;
                         <tr data-search-item>
                             <td><div class="fw-semibold"><?= e($producto['nombre_producto']) ?></div><?php if ((int) $producto['grupos_personalizacion'] > 0): ?><div class="small text-success mt-1"><i class="fa-solid fa-sliders me-1"></i><?= (int) $producto['grupos_personalizacion'] ?> grupos</div><?php endif; ?></td>
                             <td><span class="catalog-product-category"><?= e($producto['nombre_categoria']) ?></span></td>
-                            <td class="catalog-product-price">L. <?= number_format((float) $producto['precio_base'], 2) ?></td>
+                            <td class="catalog-product-price">L. <?= \App\Support\View::money($producto['precio_base']) ?></td>
                             <td><?= e($producto['sucursales'] ?: 'Sin inventario') ?></td>
                             <td><span class="badge catalog-product-state <?= $producto['estado'] === 'Activo' ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= e($producto['estado']) ?></span></td>
                             <td class="text-end text-nowrap">
@@ -85,7 +85,7 @@ $catalogTabCount = 1 + (int) $canManageCategories + (int) $canManageSupplies;
                         </div>
                         <dl class="catalog-mobile-item__details">
                             <div><dt>Categoria</dt><dd><?= e($producto['nombre_categoria']) ?></dd></div>
-                            <div><dt>Precio</dt><dd>L. <?= number_format((float) $producto['precio_base'], 2) ?></dd></div>
+                            <div><dt>Precio</dt><dd>L. <?= \App\Support\View::money($producto['precio_base']) ?></dd></div>
                             <div><dt>Sucursales</dt><dd><?= e($producto['sucursales'] ?: 'Sin inventario') ?></dd></div>
                             <div><dt>Opciones</dt><dd><?= (int) $producto['grupos_personalizacion'] ?> grupos configurados</dd></div>
                         </dl>
@@ -207,6 +207,10 @@ $catalogTabCount = 1 + (int) $canManageCategories + (int) $canManageSupplies;
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id_producto" id="customizationProductId">
+                    <div class="mb-3" id="customizationDesignPriceField" hidden>
+                        <label class="form-label" for="customizationDesignPrice">Recargo de diseño (L.)</label>
+                        <input class="form-control" id="customizationDesignPrice" name="recargo_diseno" type="number" min="0" max="1000000" step="1" inputmode="numeric" required disabled>
+                    </div>
                     <div id="customizationGroups" class="customization-groups"></div>
                     <button class="btn btn-outline-primary w-100 mt-3" id="addCustomizationGroup" type="button"><i class="fa-solid fa-plus me-2"></i>Agregar grupo</button>
                 </div>
@@ -226,7 +230,7 @@ $catalogTabCount = 1 + (int) $canManageCategories + (int) $canManageSupplies;
             <input type="hidden" name="id_producto" id="productId">
             <div class="mb-3"><label class="form-label" for="productName">Nombre</label><input class="form-control" name="nombre_producto" id="productName" maxlength="100" required></div>
             <div class="mb-3"><label class="form-label" for="productCategory">Categoria</label><select class="form-select" name="id_categoria" id="productCategory" required><?php foreach ($categorias as $categoria): if ($categoria['estado'] !== 'Activo') continue; ?><option value="<?= (int) $categoria['id_categoria'] ?>"><?= e($categoria['nombre_categoria']) ?></option><?php endforeach; ?></select></div>
-            <div class="row g-3 mb-3"><div class="col-12 col-sm-6"><label class="form-label" for="productPrice">Precio</label><input class="form-control" name="precio_base" id="productPrice" type="number" min="0" max="1000000" step="0.01" required></div><div class="col-12 col-sm-6"><label class="form-label" for="productLife">Vida util (dias)</label><input class="form-control" name="dias_vida_util" id="productLife" type="number" min="0" max="3650" required></div></div>
+            <div class="row g-3 mb-3"><div class="col-12 col-sm-6"><label class="form-label" for="productPrice">Precio</label><input class="form-control" name="precio_base" id="productPrice" type="number" min="0" max="1000000" step="1" inputmode="numeric" required></div><div class="col-12 col-sm-6"><label class="form-label" for="productLife">Vida util (dias)</label><input class="form-control" name="dias_vida_util" id="productLife" type="number" min="0" max="3650" step="1" inputmode="numeric" required></div></div>
             <div><label class="form-label" for="productDescription">Descripcion</label><textarea class="form-control" name="descripcion" id="productDescription" maxlength="2000" rows="4"></textarea></div>
         </div>
         <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar</button></div>

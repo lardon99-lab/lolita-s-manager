@@ -108,6 +108,8 @@
             input.min = '1';
             input.max = '100000';
             input.step = '1';
+            input.inputMode = 'numeric';
+            input.required = true;
             input.value = String(item.quantity);
             input.dataset.restockQuantity = '';
             input.setAttribute('aria-label', `Cantidad de ${item.name}`);
@@ -233,7 +235,9 @@
             const item = line && state.get(line.dataset.key);
             if (!item) return;
             if (event.target.matches('[data-restock-quantity]')) {
-                item.quantity = Math.max(1, Math.min(100000, Number(event.target.value) || 1));
+                const quantity = event.target.valueAsNumber;
+                if (!event.target.validity.valid || !Number.isInteger(quantity)) return;
+                item.quantity = quantity;
                 const result = line.querySelector('.inventory-restock__result strong');
                 if (result) result.textContent = `${Number(item.stock) + item.quantity} unidades`;
                 unitCount.textContent = String([...state.values()].reduce((total, entry) => total + Number(entry.quantity), 0));

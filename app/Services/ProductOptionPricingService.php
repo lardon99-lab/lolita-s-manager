@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Validator;
 use InvalidArgumentException;
 use PDO;
 
@@ -25,7 +26,7 @@ final class ProductOptionPricingService
                 'min' => (int) $group['minimo_selecciones'],
                 'max' => (int) $group['maximo_selecciones'],
                 'included' => (int) $group['selecciones_incluidas'],
-                'extra' => round((float) $group['recargo_seleccion_extra'], 2),
+                'extra' => $group['recargo_seleccion_extra'],
                 'count' => 0,
             ];
         }
@@ -65,9 +66,9 @@ final class ProductOptionPricingService
                 throw new InvalidArgumentException('La opcion seleccionada no tiene un grupo valido.');
             }
             $groups[$groupId]['count']++;
-            $optionSurcharge = round((float) $option['recargo'], 2);
+            $optionSurcharge = Validator::catalogAmount($option['recargo'], 'el recargo de ' . $option['opcion_nombre']);
             if ($groups[$groupId]['count'] > $groups[$groupId]['included']) {
-                $optionSurcharge = round($optionSurcharge + $groups[$groupId]['extra'], 2);
+                $optionSurcharge += Validator::catalogAmount($groups[$groupId]['extra'], 'el recargo por selección adicional');
             }
             $surcharge = round($surcharge + $optionSurcharge, 2);
             $priced[] = [

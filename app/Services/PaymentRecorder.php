@@ -61,12 +61,13 @@ final class PaymentRecorder
         float $amount,
         string $method,
         ?CardPaymentInput $card,
-        ?int $receiptId
+        ?int $receiptId,
+        ?int $cashId
     ): void {
         $statement = $this->db->prepare(
-            'INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago, referencia) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO pagos_pedido (id_pedido, id_usuario, monto, metodo_pago, referencia, id_caja) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $statement->execute([$orderId, $userId, $amount, $method, $card?->reference]);
+        $statement->execute([$orderId, $userId, $amount, $method, $card?->reference, $cashId]);
         if ($receiptId !== null) {
             $paymentId = (int) $this->db->lastInsertId();
             $this->db->prepare('UPDATE comprobantes_tarjeta SET id_pago = ? WHERE id_comprobante = ?')

@@ -15,7 +15,7 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 }
 
 $view = isset($_GET['view']) ? $_GET['view'] : 'dashboard';
-$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'reporte-productos', 'ventas-nueva', 'usuarios', 'clientes', 'sucursales', 'catalogo'];
+$allowedViews = ['dashboard', 'inventario', 'pedidos-nuevo', 'pedidos-lista', 'ventas-historial', 'caja', 'reporte-productos', 'ventas-nueva', 'usuarios', 'clientes', 'sucursales', 'catalogo'];
 if (!in_array($view, $allowedViews, true)) {
     http_response_code(404);
     echo 'Vista no encontrada.';
@@ -26,6 +26,7 @@ $viewPermissions = [
     'pedidos-nuevo' => 'orders.create',
     'pedidos-lista' => 'orders.view',
     'ventas-historial' => 'reports.view',
+    'caja' => 'reports.view',
     'reporte-productos' => 'reports.product_sales',
     'ventas-nueva' => 'sales.create',
     'usuarios' => 'users.manage',
@@ -117,6 +118,16 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
                         include __DIR__ . '/../views/pedidos/historial.php';
                         break;
 
+                    case 'caja':
+                        require_once __DIR__ . '/../app/controllers/CajaController.php';
+                        try {
+                            $cashPage = (new CajaController((new Database())->getConnection()))->page($_GET);
+                            include __DIR__ . '/../views/ventas/caja.php';
+                        } catch (InvalidArgumentException $error) {
+                            echo '<div class="alert alert-danger m-3">' . e($error->getMessage()) . '</div>';
+                        }
+                        break;
+
                     case 'reporte-productos':
                         $today = date('Y-m-d');
                         $reportFilters = \App\Http\Input\ProductSalesFilters::from($_GET, $today);
@@ -176,7 +187,7 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
     <?php if (in_array($view, ['ventas-nueva', 'ventas-historial', 'pedidos-lista'], true)): ?>
     <script src="js/components/pos-printer.js?v=<?= filemtime(__DIR__ . '/js/components/pos-printer.js') ?>"></script>
     <?php endif; ?>
@@ -185,6 +196,9 @@ if (isset($viewPermissions[$view]) && !Auth::hasPermission($viewPermissions[$vie
     <?php endif; ?>
     <script src="js/components/card-payment.js?v=<?= filemtime(__DIR__ . '/js/components/card-payment.js') ?>"></script>
     <script src="js/components/form-validation.js?v=<?= filemtime(__DIR__ . '/js/components/form-validation.js') ?>"></script>
+    <?php if ($view === 'caja'): ?>
+    <script src="js/views/caja.js?v=<?= filemtime(__DIR__ . '/js/views/caja.js') ?>"></script>
+    <?php endif; ?>
     <script src="js/components/table-search.js?v=<?= filemtime(__DIR__ . '/js/components/table-search.js') ?>"></script>
     <script src="js/components/date-picker.js?v=<?= filemtime(__DIR__ . '/js/components/date-picker.js') ?>"></script>
     <script src="js/components/multi-select.js?v=<?= filemtime(__DIR__ . '/js/components/multi-select.js') ?>"></script>

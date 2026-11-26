@@ -50,9 +50,8 @@ final class CatalogService
         $name = Validator::singleLineText($input['nombre_producto'] ?? '', 'producto', 100);
         (new ProductNameGuard($this->db))->assertAvailable($name, $id);
         $description = Validator::text($input['descripcion'] ?? '', 'descripcion', 2000, false);
-        $price = Validator::money($input['precio_base'] ?? null, 'precio', 1000000);
-        $shelfLife = filter_var($input['dias_vida_util'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 3650]]);
-        if ($shelfLife === false) throw new InvalidArgumentException('La vida util no es valida.');
+        $price = Validator::intRange($input['precio_base'] ?? null, 'precio', 0, 1000000);
+        $shelfLife = Validator::intRange($input['dias_vida_util'] ?? null, 'vida útil', 0, 3650);
         $category = $this->db->prepare("SELECT 1 FROM categorias WHERE id_categoria = ? AND estado = 'Activo'");
         $category->execute([$categoryId]);
         if (!$category->fetchColumn()) throw new InvalidArgumentException('La categoria no existe o esta inactiva.');

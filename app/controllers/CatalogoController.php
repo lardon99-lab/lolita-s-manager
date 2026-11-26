@@ -9,6 +9,7 @@ use App\Security\Csrf;
 use App\Services\AuditService;
 use App\Services\CatalogService;
 use App\Services\ProductCustomizationService;
+use App\Services\ProductDesignService;
 use App\Services\SupplyCatalogService;
 
 final class CatalogoController
@@ -74,7 +75,8 @@ final class CatalogoController
     {
         $id = \App\Http\Validator::positiveInt($_GET['id_producto'] ?? null, 'producto');
         $configuration = (new ProductCustomizationService($this->db))->configuration($id);
-        Response::json(['status' => 'success', 'configuracion' => $configuration]);
+        $design = (new ProductDesignService($this->db))->configuration($id);
+        Response::json(['status' => 'success', 'configuracion' => $configuration, 'diseno' => $design]);
     }
 }
 

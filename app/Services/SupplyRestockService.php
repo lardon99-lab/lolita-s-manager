@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Validator;
 use InvalidArgumentException;
 use PDO;
 use Throwable;
@@ -22,9 +23,8 @@ final class SupplyRestockService
         if (mb_strlen($notes) > 500) throw new InvalidArgumentException('La observacion es demasiado extensa.');
         $normalized = [];
         foreach ($items as $item) {
-            $id = filter_var($item['supply_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            $quantity = filter_var($item['quantity'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => self::MAX_QUANTITY]]);
-            if ($id === false || $quantity === false) throw new InvalidArgumentException('Cada insumo debe tener una cantidad valida.');
+            $id = Validator::positiveInt($item['supply_id'] ?? null, 'insumo');
+            $quantity = Validator::intRange($item['quantity'] ?? null, 'cantidad recibida', 1, self::MAX_QUANTITY);
             $normalized[$id] = ($normalized[$id] ?? 0) + $quantity;
             if ($normalized[$id] > self::MAX_QUANTITY) throw new InvalidArgumentException('La cantidad de un insumo excede el limite.');
         }

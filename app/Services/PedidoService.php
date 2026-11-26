@@ -62,7 +62,7 @@ final class PedidoService
             $paid = $paymentType === 'Pagado'
                 ? $total
                 : ($paymentType === 'Abonado'
-                    ? Validator::positiveMoney($input['monto_abono'] ?? null, 'abono', $total)
+                    ? Validator::intRange($input['monto_abono'] ?? null, 'abono', 1, (int) $total)
                     : 0.0);
             if ($paymentType === 'Abonado' && $paid >= $total) {
                 throw new InvalidArgumentException('Para liquidar el total selecciona la opcion Pagado.');
@@ -70,6 +70,9 @@ final class PedidoService
             $card?->assertAmount($paid);
             $balance = round($total - $paid, 2);
             $paymentStatus = $balance <= 0 ? 'Pagado' : ($paid > 0 ? 'Abonado' : 'Pendiente');
+            $cashId = $paid > 0 && $paymentMethod === 'Efectivo'
+                ? (new CashDrawerSession($this->db))->forCashMovement($branchId)
+                : null;
 
             $order = $this->db->prepare("INSERT INTO pedidos (id_cliente, id_sucursal, id_usuario, fecha_entrega, total_pedido, monto_abonado, saldo_pendiente, estado_pago, observaciones_generales, estado) VALUES (:cliente, :sucursal, :usuario, :fecha, :total, :abono, :saldo, :pago, :observaciones, 'Pendiente')");
             $order->execute([':cliente' => $clientId, ':sucursal' => $branchId, ':usuario' => $userId, ':fecha' => $deliveryDate, ':total' => $total, ':abono' => $paid, ':saldo' => $balance, ':pago' => $paymentStatus, ':observaciones' => $notes]);
@@ -110,7 +113,7 @@ final class PedidoService
                 }
             }
             if ($paid > 0) {
-                $payments->recordOrderPayment($orderId, $userId, $paid, $paymentMethod, $card, $receipt['id_comprobante'] ?? null);
+                $payments->recordOrderPayment($orderId, $userId, $paid, $paymentMethod, $card, $receipt['id_comprobante'] ?? null, $cashId);
             }
             (new AuditService($this->db))->record('create', 'pedido', $orderId, $branchId, ['total' => $total, 'paid' => $paid]);
             $this->db->commit();

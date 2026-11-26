@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const money = (value) => window.AppMoney(value);
 
     function create(panel, container, configurations, designPolicies) {
         function render(productId, productType = '') {
@@ -165,8 +165,13 @@
                 file: container.querySelector('.js-design-file') || null,
                 surcharge: Number(container.querySelector('.js-design-enabled')?.dataset.surcharge || 0),
             };
-            const optionSurcharge = choices.reduce((sum, input) => sum + Number(input.dataset.surcharge || 0), 0);
-            return { valid: true, choices, design, surcharge: optionSurcharge + (designEnabled ? design.surcharge : 0) };
+            const surcharges = choices.map((input) => Number(input.dataset.surcharge || 0));
+            if (designEnabled) surcharges.push(design.surcharge);
+            if (!surcharges.every(Number.isInteger)) {
+                return { valid: false, message: 'Actualiza los recargos con centavos en el catálogo antes de añadir el producto.' };
+            }
+            const surcharge = surcharges.reduce((sum, amount) => sum + amount, 0);
+            return { valid: true, choices, design, surcharge };
         }
 
         render('');

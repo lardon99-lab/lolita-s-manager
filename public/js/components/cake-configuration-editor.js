@@ -57,18 +57,18 @@
             const defaultName = `cake-default-${section.dataset.code}`;
             option.innerHTML = `
                 <label class="cake-option-row__name"><span>Opcion</span><input class="form-control js-option-name" maxlength="80" required></label>
-                <label class="cake-option-row__price"><span>Recargo</span><span class="input-group"><span class="input-group-text">L.</span><input class="form-control js-option-price" type="number" min="0" max="1000000" step="0.01" value="0" required></span></label>
+                <label class="cake-option-row__price"><span>Recargo</span><span class="input-group"><span class="input-group-text">L.</span><input class="form-control js-option-price" type="number" min="0" max="1000000" step="1" inputmode="numeric" value="0" required></span></label>
                 <label class="cake-option-row__default"><input class="form-check-input js-option-default" name="${defaultName}" type="radio"><span>Predeterminada</span></label>
                 <button class="btn btn-outline-danger cake-option-row__remove" type="button" title="Eliminar opcion" aria-label="Eliminar opcion"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>`;
             option.querySelector('.js-option-name').value = data.nombre || '';
             const definition = GROUPS.find((group) => group.code === section.dataset.code);
             option.querySelector('.js-option-name').placeholder = definition?.placeholder || 'Nombre de la opcion';
-            option.querySelector('.js-option-price').value = Number(data.recargo || 0).toFixed(2);
+            option.querySelector('.js-option-price').value = String(Number(data.recargo || 0));
             option.querySelector('.js-option-default').checked = Boolean(Number(data.predeterminada || 0));
             option.querySelector('.cake-option-row__remove').addEventListener('click', () => {
                 if (list.children.length === 1) {
                     option.querySelector('.js-option-name').value = '';
-                    option.querySelector('.js-option-price').value = '0.00';
+                    option.querySelector('.js-option-price').value = '0';
                     option.querySelector('.js-option-default').checked = false;
                     option.querySelector('.js-option-name').focus();
                     return;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../app/bootstrap.php';
 
 $resources = [
+    'caja' => __DIR__ . '/../app/controllers/CajaController.php',
     'clientes' => __DIR__ . '/../app/controllers/ClienteController.php',
     'catalogo' => __DIR__ . '/../app/controllers/CatalogoController.php',
     'inventario' => __DIR__ . '/../app/controllers/InventarioController.php',

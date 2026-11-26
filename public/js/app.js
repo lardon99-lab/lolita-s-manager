@@ -2,6 +2,15 @@
     'use strict';
     const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
+    window.AppMoney = (value, useGrouping = true) => {
+        const amount = Math.round((Number(value) || 0) * 100) / 100;
+        return amount.toLocaleString('en-US', {
+            minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+            maximumFractionDigits: 2,
+            useGrouping,
+        });
+    };
+
     function configureDialogs() {
         if (!window.Swal || window.Swal.__lolitasConfigured) return;
 

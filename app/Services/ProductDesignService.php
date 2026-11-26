@@ -58,7 +58,7 @@ final class ProductDesignService
         $enabled = filter_var($input['permite_diseno'] ?? false, FILTER_VALIDATE_BOOL);
         $allowImage = $enabled && filter_var($input['permite_imagen'] ?? false, FILTER_VALIDATE_BOOL);
         $surcharge = $enabled
-            ? Validator::money($input['recargo_diseno'] ?? 0, 'recargo de diseno', 1000000)
+            ? Validator::intRange($input['recargo_diseno'] ?? 0, 'recargo de diseño', 0, 1000000)
             : 0.0;
 
         $stmt = $this->db->prepare(

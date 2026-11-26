@@ -16,6 +16,6 @@
     </label>
     <label class="col-12 col-sm-6">
         <span class="form-label small fw-semibold d-block">Importe aprobado (L.)</span>
-        <input class="form-control" type="text" name="monto_tarjeta" inputmode="decimal" maxlength="11" pattern="[0-9]{1,8}([.,][0-9]{1,2})?" placeholder="0.00" autocomplete="off" required>
+        <input class="form-control" type="text" name="monto_tarjeta" inputmode="numeric" maxlength="8" pattern="[0-9]{1,8}" placeholder="0" autocomplete="off" required>
     </label>
 </div>

@@ -13,9 +13,10 @@ final class BeverageCustomizationFactory
         $groups = [];
 
         if (!empty($input['bebida_permite_leche'])) {
-            $lactoseFreeSurcharge = Validator::money(
+            $lactoseFreeSurcharge = Validator::intRange(
                 $input['bebida_recargo_deslactosada'] ?? 15,
                 'recargo por leche deslactosada',
+                0,
                 1000000
             );
             $groups[] = [
@@ -33,9 +34,10 @@ final class BeverageCustomizationFactory
         }
 
         if (!empty($input['bebida_permite_saborizante'])) {
-            $flavorSurcharge = Validator::money(
+            $flavorSurcharge = Validator::intRange(
                 $input['bebida_recargo_saborizante'] ?? 10,
                 'recargo por saborizante',
+                0,
                 1000000
             );
             $flavorLines = preg_split('/\R+/', (string) ($input['bebida_saborizantes'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];

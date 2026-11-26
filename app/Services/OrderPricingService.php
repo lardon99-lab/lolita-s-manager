@@ -52,7 +52,7 @@ final class OrderPricingService
             $productQuery->execute([$branchId, $productId]);
             $product = $productQuery->fetch(PDO::FETCH_ASSOC);
             if (!$product) throw new InvalidArgumentException('Uno de los productos no esta disponible en la sucursal seleccionada.');
-            $basePrice = (float) $product['precio_base'];
+            $basePrice = Validator::catalogAmount($product['precio_base'], 'el precio del producto');
 
             $groupQuery->execute([$productId]);
             $groups = [];
@@ -73,7 +73,7 @@ final class OrderPricingService
                 $groupId = (int) $option['id_grupo'];
                 if (!isset($groups[$groupId])) throw new InvalidArgumentException('La opcion seleccionada no tiene un grupo valido.');
                 $groups[$groupId]['count']++;
-                $optionSurcharge = round((float) $option['recargo'], 2);
+                $optionSurcharge = Validator::catalogAmount($option['recargo'], 'el recargo de ' . $option['opcion_nombre']);
                 $surcharge = round($surcharge + $optionSurcharge, 2);
                 $pricedOptions[] = [
                     'id_opcion' => $optionId,
@@ -138,7 +138,7 @@ final class OrderPricingService
             'color' => $color,
             'phrase' => $phrase,
             'instructions' => Validator::text($raw['instrucciones'] ?? '', 'instrucciones del diseno', 1000, false),
-            'surcharge' => round((float) $policy['recargo_diseno'], 2),
+            'surcharge' => Validator::catalogAmount($policy['recargo_diseno'], 'el recargo de diseño'),
             'allow_image' => (bool) $policy['permite_imagen'],
         ];
     }

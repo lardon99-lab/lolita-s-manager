@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lockedFields = [];
     let savingCard = false;
 
-    const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const money = window.AppMoney;
 
     function filterProducts() {
         const branchId = branchSelect.value;
@@ -66,9 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire('Atencion', 'Selecciona una sucursal y un producto disponible.', 'warning');
             return false;
         }
-        const quantity = Number.parseInt(document.getElementById('cant-producto').value, 10);
+        const quantity = document.getElementById('cant-producto').valueAsNumber;
         if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) {
-            Swal.fire('Cantidad no valida', 'Ingresa una cantidad entre 1 y 1000.', 'warning');
+            Swal.fire('Cantidad no válida', 'Ingresa una cantidad entera entre 1 y 1000.', 'warning');
             return false;
         }
         const customization = customizer.snapshot();
@@ -82,6 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const basePrice = Number(selectedProduct.dataset.precio || 0);
+        if (!Number.isInteger(basePrice)) {
+            Swal.fire('Precio con centavos', 'Actualiza el precio del producto en el catálogo antes de añadirlo.', 'warning');
+            return false;
+        }
         const subtotal = (basePrice + customization.surcharge) * quantity;
         const index = rowIndex++;
         const row = detailBody.insertRow();
@@ -159,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateTotal() {
         const total = [...document.querySelectorAll('.subtotal-fila')].reduce((sum, cell) => sum + Number(cell.dataset.valor || 0), 0);
         document.getElementById('total-pedido').textContent = money(total);
-        document.getElementById('input-total').value = total.toFixed(2);
+        document.getElementById('input-total').value = String(total);
         window.gestionarPago();
     }
 
@@ -167,13 +171,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const type = document.getElementById('tipo_pago').value;
         const depositContainer = document.getElementById('contenedor-abono');
         const methodContainer = document.getElementById('contenedor-metodo-pago');
-        const deposit = document.getElementById('monto_abono');
         const total = Number(document.getElementById('input-total').value || 0);
         depositContainer.style.display = type === 'Abonado' ? 'block' : 'none';
         methodContainer.style.display = type === 'Pendiente' ? 'none' : 'block';
-        if (type === 'Pagado') deposit.value = total.toFixed(2);
-        if (type === 'Pendiente') deposit.value = '0';
-        if (type === 'Abonado' && (Number(deposit.value) <= 0 || Number(deposit.value) > total)) deposit.value = (total * .5).toFixed(2);
+        deposit.disabled = type !== 'Abonado';
+        deposit.required = type === 'Abonado';
+        deposit.max = String(Math.max(1, total - 1));
+        deposit.setCustomValidity(type === 'Abonado' && total < 2
+            ? 'El pedido debe sumar al menos L. 2 para registrar un abono.'
+            : '');
+        if (type === 'Pendiente') deposit.value = '';
+        if (type === 'Abonado' && (!deposit.value || Number(deposit.value) >= total)) {
+            deposit.value = total >= 2 ? String(Math.floor(total / 2)) : '';
+        }
         updateCardPayment();
     };
 
@@ -183,7 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
         cardFields.hidden = !enabled;
         cardFields.disabled = !enabled;
         cardFields.elements.monto_tarjeta.setCustomValidity('');
-        if (enabled) cardAmountLabel.textContent = `Monto a registrar: L. ${money(deposit.value)}`;
+        if (enabled) cardAmountLabel.textContent = `Monto a registrar: L. ${money(paymentTotal())}`;
+    }
+
+    function paymentTotal() {
+        return document.getElementById('tipo_pago').value === 'Pagado'
+            ? Number(document.getElementById('input-total').value)
+            : Number(deposit.value);
     }
 
     async function sendCardOrder() {
@@ -241,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (cardFields.disabled) return;
         event.preventDefault();
-        if (!CardPayment.validate(cardFields, Number(deposit.value)).reportValidity()) return;
+        if (!CardPayment.validate(cardFields, paymentTotal()).reportValidity()) return;
 
         pendingCardOrder = new FormData(form);
         lockedFields = [...form.elements].filter((field) => field !== saveButton && field.willValidate !== undefined

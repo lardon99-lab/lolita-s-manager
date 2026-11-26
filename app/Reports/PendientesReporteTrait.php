@@ -112,7 +112,7 @@ trait PendientesReporteTrait
                             <?php foreach($pedidos as $p): ?>
                             <tr>
                                 <td><strong><?= (int)$p['cantidad'] ?></strong></td>
-                                <td class="text-end">L. <?= number_format((float)$p['precio_unitario'], 2) ?></td>
+                                <td class="text-end">L. <?= \App\Support\View::money($p['precio_unitario']) ?></td>
                                 <td style="font-size: 8.5px;"><?php
                                     $design = array_filter([
                                         !empty($p['color_descripcion']) ? 'Color: ' . $p['color_descripcion'] : '',
@@ -140,8 +140,8 @@ trait PendientesReporteTrait
                             <tr>
                                 <td style="width: 50%;"><strong>TOTAL PEDIDOS:</strong> <?= $totalPedidos ?></td>
                                 <td class="text-end">
-                                    <strong>VENTA TOTAL: L. <?= number_format($totalGeneral, 2) ?></strong><br>
-                                    <strong class="saldo-rojo">POR COBRAR: L. <?= number_format($totalSaldos, 2) ?></strong>
+                                    <strong>VENTA TOTAL: L. <?= \App\Support\View::money($totalGeneral) ?></strong><br>
+                                    <strong class="saldo-rojo">POR COBRAR: L. <?= \App\Support\View::money($totalSaldos) ?></strong>
                                 </td>
                             </tr>
                         </table>

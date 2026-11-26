@@ -36,7 +36,7 @@ $cardPageUrl = static fn (int $page): string => 'index.php?' . http_build_query(
                                 <span class="small text-muted">Sin comprobante registrado</span>
                             <?php endif; ?>
                         </td>
-                        <td data-label="Importe" class="text-end fw-semibold">L. <?= number_format((float) $cardRow['monto'], 2) ?></td>
+                        <td data-label="Importe" class="text-end fw-semibold">L. <?= \App\Support\View::money($cardRow['monto']) ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

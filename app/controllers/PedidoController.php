@@ -13,6 +13,7 @@ use App\Security\Auth;
 use App\Security\Csrf;
 use App\Security\OrderStatusPolicy;
 use App\Services\AuditService;
+use App\Services\CashDrawerSession;
 use App\Services\PedidoService;
 use App\Http\Input\CardPaymentInput;
 use App\Services\PaymentRecorder;
@@ -72,7 +73,8 @@ final class PedidoController
                     dd.id_diseno, dd.color_descripcion, dd.frase, dd.instrucciones,
                     dd.recargo_unitario AS recargo_diseno, dd.archivo_nombre_interno,
                     (SELECT GROUP_CONCAT(CONCAT(pdo.grupo_nombre, ': ', pdo.opcion_nombre,
-                        CASE WHEN pdo.recargo_unitario > 0 THEN CONCAT(' (+ L. ', FORMAT(pdo.recargo_unitario, 2), ')') ELSE '' END)
+                        CASE WHEN pdo.recargo_unitario > 0 THEN CONCAT(' (+ L. ',
+                            FORMAT(pdo.recargo_unitario, IF(MOD(pdo.recargo_unitario, 1) = 0, 0, 2)), ')') ELSE '' END)
                         ORDER BY pdo.id_detalle_opcion SEPARATOR ' | ')
                      FROM pedido_detalle_opciones pdo WHERE pdo.id_detalle = d.id_detalle) AS opciones_personalizacion
              FROM pedido_detalles d
@@ -244,7 +246,10 @@ final class PedidoController
 
             if ($settle) {
                 $card?->assertAmount($balance);
-                $payments->recordOrderPayment($id, $userId, $balance, $paymentMethod, $card, $receipt['id_comprobante'] ?? null);
+                $cashId = $paymentMethod === 'Efectivo'
+                    ? (new CashDrawerSession($this->db))->forCashMovement($branchId)
+                    : null;
+                $payments->recordOrderPayment($id, $userId, $balance, $paymentMethod, $card, $receipt['id_comprobante'] ?? null, $cashId);
             }
 
             $updates = ['estado = :estado'];

@@ -95,7 +95,7 @@
                     const name = document.createElement('strong');
                     name.textContent = option.dataset.nombre || option.textContent;
                     const details = document.createElement('small');
-                    details.textContent = `${option.dataset.categoria || 'Sin categoria'} | L. ${Number(option.dataset.precio || 0).toFixed(2)}`;
+                    details.textContent = `${option.dataset.categoria || 'Sin categoria'} | L. ${window.AppMoney(option.dataset.precio)}`;
                     copy.append(name, details);
                     button.appendChild(copy);
                     button.addEventListener('pointerdown', (event) => event.preventDefault());

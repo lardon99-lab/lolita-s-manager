@@ -9,18 +9,26 @@ final class Validator
 {
     public static function positiveInt(mixed $value, string $field): int
     {
-        $result = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($result === false) throw new InvalidArgumentException("El campo {$field} no es valido.");
-        return $result;
+        return self::intRange($value, $field, 1, PHP_INT_MAX);
     }
 
     public static function intRange(mixed $value, string $field, int $min, int $max): int
     {
-        $result = filter_var($value, FILTER_VALIDATE_INT, [
-            'options' => ['min_range' => $min, 'max_range' => $max],
-        ]);
-        if ($result === false) throw new InvalidArgumentException("El campo {$field} no es valido.");
+        if (is_string($value) && ctype_digit($value)) $value = ltrim($value, '0') ?: '0';
+        $result = is_int($value) || is_string($value)
+            ? filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min, 'max_range' => $max]])
+            : false;
+        if ($result === false) throw new InvalidArgumentException("Ingresa un número entero válido para {$field}.");
         return $result;
+    }
+
+    public static function catalogAmount(int|float|string $value, string $field): float
+    {
+        $amount = (float) $value;
+        if (!is_numeric($value) || !is_finite($amount) || $amount < 0 || floor($amount) !== $amount) {
+            throw new InvalidArgumentException("Actualiza {$field} en el catálogo con un importe entero antes de continuar.");
+        }
+        return $amount;
     }
 
     public static function idList(mixed $value, string $field, bool $required = true): array
@@ -56,21 +64,6 @@ final class Validator
         $value = (string) $value;
         if (!in_array($value, $allowed, true)) throw new InvalidArgumentException("El campo {$field} no es valido.");
         return $value;
-    }
-
-    public static function money(mixed $value, string $field, float $max = 1000000): float
-    {
-        if (!is_numeric($value)) throw new InvalidArgumentException("El campo {$field} no es valido.");
-        $amount = round((float) $value, 2);
-        if ($amount < 0 || $amount > $max) throw new InvalidArgumentException("El campo {$field} no es valido.");
-        return $amount;
-    }
-
-    public static function positiveMoney(mixed $value, string $field, float $max = 1000000): float
-    {
-        $amount = self::money($value, $field, $max);
-        if ($amount <= 0) throw new InvalidArgumentException("El campo {$field} debe ser mayor a cero.");
-        return $amount;
     }
 
     public static function email(mixed $value, string $field = 'correo', int $maxLength = 100, bool $required = false): ?string

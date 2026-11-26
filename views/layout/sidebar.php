@@ -45,6 +45,9 @@
             </a>
             <?php endif; ?>
             <?php if (\App\Security\Auth::hasPermission('reports.view')): ?>
+            <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= ($_GET['view'] ?? '') === 'caja' ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=caja">
+                <i class="fa-solid fa-cash-register me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Caja</span>
+            </a>
             <a class="nav-link px-3 py-2 rounded-4 d-flex align-items-center transition-all <?= (isset($_GET['view']) && $_GET['view'] == 'ventas-historial') ? 'bg-primary text-white shadow-sm fw-bold' : 'text-secondary menu-hover'; ?>" href="index.php?view=ventas-historial">
                 <i class="fa-solid fa-file-invoice-dollar me-3 fs-5" style="width: 24px;"></i><span class="sidebar-label">Historial Ventas</span>
             </a>

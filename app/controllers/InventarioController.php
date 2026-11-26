@@ -360,10 +360,9 @@ class InventarioController {
             $fruits[mb_strtolower($name)] = ['nombre' => $name, 'recargo' => 0, 'predeterminada' => $fruits === []];
         }
         if ($fruits === [] || count($fruits) > 20) throw new InvalidArgumentException('Agrega entre 1 y 20 frutas.');
-        $maximum = filter_var($input['maximo_frutas'] ?? 3, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => count($fruits)]]);
-        if ($maximum === false) throw new InvalidArgumentException('El maximo de frutas no es valido.');
-        $fruitExtra = \App\Http\Validator::money($input['recargo_fruta_extra'] ?? 15, 'recargo por fruta adicional', 1000000);
-        $lactoseFree = \App\Http\Validator::money($input['recargo_deslactosada'] ?? 15, 'recargo por leche deslactosada', 1000000);
+        $maximum = \App\Http\Validator::intRange($input['maximo_frutas'] ?? 3, 'máximo de frutas', 1, count($fruits));
+        $fruitExtra = \App\Http\Validator::intRange($input['recargo_fruta_extra'] ?? 15, 'recargo por fruta adicional', 0, 1000000);
+        $lactoseFree = \App\Http\Validator::intRange($input['recargo_deslactosada'] ?? 15, 'recargo por leche deslactosada', 0, 1000000);
 
         return [
             [

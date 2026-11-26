@@ -104,10 +104,10 @@
                             </div>
                         </td>
                         <td data-label="Finanzas">
-                            <div class="small mb-2 text-muted">Total: <strong class="text-dark">L. <?= number_format($ped['total_pedido'], 2) ?></strong></div>
+                            <div class="small mb-2 text-muted">Total: <strong class="text-dark">L. <?= \App\Support\View::money($ped['total_pedido']) ?></strong></div>
                             <?php if($ped['saldo_pendiente'] > 0): ?>
                                 <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1">
-                                    Debe: L. <?= number_format($ped['saldo_pendiente'], 2) ?>
+                                    Debe: L. <?= \App\Support\View::money($ped['saldo_pendiente']) ?>
                                 </span>
                             <?php else: ?>
                                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
@@ -256,7 +256,7 @@
                                         <?= $det['cantidad'] ?>
                                     </span>
                                 </td>
-                                <td class="text-end pe-4 fw-bold text-dark">L. <?= number_format($det['subtotal'], 2) ?></td>
+                                <td class="text-end pe-4 fw-bold text-dark">L. <?= \App\Support\View::money($det['subtotal']) ?></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -279,15 +279,15 @@
                         <div class="bg-light p-3 rounded-4 border">
                             <div class="d-flex justify-content-between mb-2 small">
                                 <span class="text-muted fw-bold">Total del Pedido:</span>
-                                <span class="fw-bold text-dark">L. <?= number_format($ped['total_pedido'], 2) ?></span>
+                                <span class="fw-bold text-dark">L. <?= \App\Support\View::money($ped['total_pedido']) ?></span>
                             </div>
                             <div class="d-flex justify-content-between mb-3 small border-bottom pb-3">
                                 <span class="text-muted fw-bold">Monto Abonado:</span>
-                                <span class="fw-bold text-success">- L. <?= number_format($ped['monto_abonado'], 2) ?></span>
+                                <span class="fw-bold text-success">- L. <?= \App\Support\View::money($ped['monto_abonado']) ?></span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-danger fw-bold text-uppercase tracking-wide small">Saldo Pendiente:</span>
-                                <span class="fs-4 fw-black text-danger">L. <?= number_format($ped['saldo_pendiente'], 2) ?></span>
+                                <span class="fs-4 fw-black text-danger">L. <?= \App\Support\View::money($ped['saldo_pendiente']) ?></span>
                             </div>
                         </div>
                     </div>

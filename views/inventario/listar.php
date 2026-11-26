@@ -196,7 +196,7 @@
                                 <?php endif; ?>
                             </div>
                         </td>
-                        <td class="small fw-bold text-success py-3" data-label="Precio">L. <?= number_format($p['precio_base'], 2); ?></td>
+                        <td class="small fw-bold text-success py-3" data-label="Precio">L. <?= \App\Support\View::money($p['precio_base']); ?></td>
                         <td class="d-none d-md-table-cell py-3" data-label="Estado">
                             <?php if($p['stock_actual'] <= 0): ?>
                                 <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-bold">AGOTADO</span>
@@ -249,7 +249,7 @@
                                                 <label class="small fw-bold text-muted mb-1">Cantidad a descontar:</label>
                                                 <div class="input-group">
                                                     <span class="input-group-text bg-light border-0"><i class="fa-solid fa-minus text-danger"></i></span>
-                                                    <input type="number" name="cantidad_merma" class="form-control text-center bg-light border-0 fw-bold" max="<?= $p['stock_actual'] ?>" min="1" required>
+                                                    <input type="number" name="cantidad_merma" class="form-control text-center bg-light border-0 fw-bold" max="<?= $p['stock_actual'] ?>" min="1" step="1" inputmode="numeric" required>
                                                 </div>
                                                 <small class="text-muted" style="font-size: 0.7rem;">Stock actual: <?= $p['stock_actual'] ?></small>
                                             </div>
@@ -473,12 +473,12 @@
                                 <label class="small text-muted fw-bold mb-1 ms-1">Precio (L.)</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-0 rounded-start-3 text-muted">L.</span>
-                                    <input type="number" step="0.01" min="0.01" max="1000000" name="precio_base" class="form-control border-0 bg-light rounded-end-3" required>
+                                    <input type="number" step="1" inputmode="numeric" min="1" max="1000000" name="precio_base" class="form-control border-0 bg-light rounded-end-3" required>
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Stock inicial</label>
-                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0" min="0" max="100000" step="1" data-product-stock-input>
+                                <input type="number" name="stock_inicial" class="form-control border-0 bg-light rounded-3" value="0" min="0" max="100000" step="1" inputmode="numeric" data-product-stock-input>
                             </div>
                         </div>
 
@@ -486,7 +486,7 @@
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Vida útil</label>
                                 <div class="input-group">
-                                    <input type="number" min="0" max="3650" step="1" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0" data-product-stock-input>
+                                    <input type="number" min="0" max="3650" step="1" inputmode="numeric" class="form-control border-0 bg-light rounded-start-3" name="dias_vida_util" placeholder="0" data-product-stock-input>
                                     <span class="input-group-text border-0 bg-light rounded-end-3 text-muted">días</span>
                                 </div>
                             </div>
@@ -506,7 +506,7 @@
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label class="small text-muted fw-bold mb-1 ms-1">Cantidad de tortas</label>
-                                <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1" max="100" step="1">
+                                <input type="number" name="cantidad_tortas" class="form-control border-0 bg-light rounded-3" value="1" min="1" max="100" step="1" inputmode="numeric">
                             </div>
                         </div>
                         <div class="mt-4 mb-3">
@@ -524,7 +524,7 @@
                             <div id="cakeDesignPolicyFields" class="row g-3 d-none">
                                 <div class="col-12 col-sm-6">
                                     <label class="small text-muted fw-bold mb-1" for="cakeDesignSurcharge">Recargo por diseno</label>
-                                    <div class="input-group"><span class="input-group-text">L.</span><input id="cakeDesignSurcharge" name="recargo_diseno" class="form-control" type="number" min="0" max="1000000" step="0.01" value="0.00"></div>
+                                    <div class="input-group"><span class="input-group-text">L.</span><input id="cakeDesignSurcharge" name="recargo_diseno" class="form-control" type="number" min="0" max="1000000" step="1" inputmode="numeric" value="0"></div>
                                 </div>
                                 <div class="col-12 col-sm-6 d-flex align-items-end">
                                     <div class="form-check form-switch cake-image-switch">
@@ -584,7 +584,7 @@
                                         <label class="small text-muted fw-bold mb-1" for="beverageMilkSurcharge">Recargo por deslactosada</label>
                                         <div class="input-group">
                                             <span class="input-group-text">L.</span>
-                                            <input id="beverageMilkSurcharge" name="bebida_recargo_deslactosada" type="number" class="form-control" min="0" max="1000000" step="0.01" value="15.00" required disabled>
+                                            <input id="beverageMilkSurcharge" name="bebida_recargo_deslactosada" type="number" class="form-control" min="0" max="1000000" step="1" inputmode="numeric" value="15" required disabled>
                                         </div>
                                     </div>
                                 </div>
@@ -608,7 +608,7 @@
                                         <label class="small text-muted fw-bold mb-1" for="beverageFlavoringSurcharge">Recargo por saborizante</label>
                                         <div class="input-group">
                                             <span class="input-group-text">L.</span>
-                                            <input id="beverageFlavoringSurcharge" name="bebida_recargo_saborizante" type="number" class="form-control" min="0" max="1000000" step="0.01" value="10.00" required disabled>
+                                            <input id="beverageFlavoringSurcharge" name="bebida_recargo_saborizante" type="number" class="form-control" min="0" max="1000000" step="1" inputmode="numeric" value="10" required disabled>
                                         </div>
                                     </div>
                                 </div>
@@ -640,15 +640,15 @@
                             </div>
                             <div class="col-12 col-sm-4">
                                 <label class="small text-muted fw-bold mb-1" for="shakeMaxFruits">Máximo de frutas</label>
-                                <input id="shakeMaxFruits" name="maximo_frutas" type="number" class="form-control" min="1" max="10" value="3" required disabled>
+                                <input id="shakeMaxFruits" name="maximo_frutas" type="number" class="form-control" min="1" max="10" step="1" inputmode="numeric" value="3" required disabled>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <label class="small text-muted fw-bold mb-1" for="shakeFruitSurcharge">Fruta adicional</label>
-                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeFruitSurcharge" name="recargo_fruta_extra" type="number" class="form-control" min="0" step="0.01" value="15.00" required disabled></div>
+                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeFruitSurcharge" name="recargo_fruta_extra" type="number" class="form-control" min="0" max="1000000" step="1" inputmode="numeric" value="15" required disabled></div>
                             </div>
                             <div class="col-12 col-sm-4">
                                 <label class="small text-muted fw-bold mb-1" for="shakeMilkSurcharge">Leche deslactosada</label>
-                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeMilkSurcharge" name="recargo_deslactosada" type="number" class="form-control" min="0" step="0.01" value="15.00" required disabled></div>
+                                <div class="input-group"><span class="input-group-text">L.</span><input id="shakeMilkSurcharge" name="recargo_deslactosada" type="number" class="form-control" min="0" max="1000000" step="1" inputmode="numeric" value="15" required disabled></div>
                             </div>
                         </div>
                     </div>
@@ -693,7 +693,7 @@
                     <?php foreach ($insumos as $insumo): ?>
                     <label class="supply-restock-row" data-supply-restock-row="<?= (int) $insumo['id_insumo'] ?>">
                         <span><strong data-supply-visible-name><?= e($insumo['nombre']) ?></strong><small>Actual: <?= (float) $insumo['stock_actual'] ?></small></span>
-                        <input type="number" class="form-control" min="0" max="100000" step="1" value="0" data-supply-id="<?= (int) $insumo['id_insumo'] ?>" aria-label="Cantidad de <?= e($insumo['nombre']) ?>">
+                        <input type="number" class="form-control" min="0" max="100000" step="1" inputmode="numeric" value="0" data-supply-id="<?= (int) $insumo['id_insumo'] ?>" aria-label="Cantidad de <?= e($insumo['nombre']) ?>">
                     </label>
                     <?php endforeach; ?>
                 </div>

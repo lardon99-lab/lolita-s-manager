@@ -54,7 +54,7 @@ function gestionarPedido(id, estadoActual, saldo, transiciones) {
         label.textContent = style.label;
         const description = document.createElement('small');
         description.textContent = state === 'Entregado' && balance > 0
-            ? `Registra L. ${balance.toFixed(2)} y finaliza el pedido.`
+            ? `Registra L. ${window.AppMoney(balance)} y finaliza el pedido.`
             : style.description;
         copy.append(label, description);
 
@@ -69,7 +69,7 @@ function gestionarPedido(id, estadoActual, saldo, transiciones) {
         createSummaryItem('Estado actual', estadoActual),
         createSummaryItem(
             'Saldo pendiente',
-            `L. ${balance.toFixed(2)}`,
+            `L. ${window.AppMoney(balance)}`,
             balance > 0 ? 'dialog-summary__value--pending' : 'dialog-summary__value--paid'
         )
     );
@@ -126,7 +126,7 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
     if (nuevoEstado === 'Entregado' && saldo > 0) {
         const payment = await Swal.fire({
             title: 'Liquidar saldo pendiente',
-            text: `Confirma la recepción de L. ${saldo.toFixed(2)} y selecciona el método de pago.`,
+            text: `Confirma la recepción de L. ${window.AppMoney(saldo)} y selecciona el método de pago.`,
             icon: 'warning',
             input: 'select',
             inputOptions: {
@@ -143,7 +143,7 @@ async function confirmarCambioEstado(id, nuevoEstado, saldo) {
         liquidar = true;
         metodoPago = payment.value;
         if (metodoPago === 'Tarjeta') {
-            receipt = await CardPayment.confirm(saldo, `L. ${saldo.toFixed(2)}`, orderPaymentDrafts.get(id));
+            receipt = await CardPayment.confirm(saldo, `L. ${window.AppMoney(saldo)}`, orderPaymentDrafts.get(id));
             if (!receipt) return;
             orderPaymentDrafts.set(id, receipt);
         }

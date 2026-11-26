@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const options = Array.from(productSelect.options);
     const configurations = JSON.parse(document.getElementById('sales-product-configurations')?.textContent || '{}');
     const customizationModal = modalElement && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(modalElement) : null;
-    const money = new Intl.NumberFormat('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let cart = [];
     let pendingProduct = null;
     let cardDraft = {};
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const selectedOption = () => productSelect.options[productSelect.selectedIndex];
     const productName = (option) => option.textContent.split('—')[0].trim();
-    const formatMoney = (value) => `L. ${money.format(Number(value) || 0)}`;
+    const formatMoney = (value) => `L. ${window.AppMoney(value)}`;
     const escapeHtml = (value) => {
         const element = document.createElement('span');
         element.textContent = String(value ?? '');
@@ -41,8 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function selectedQuantity() {
-        const quantity = Number.parseInt(quantityInput.value, 10);
-        return Number.isInteger(quantity) && quantity > 0 ? quantity : 0;
+        const quantity = quantityInput.valueAsNumber;
+        return Number.isInteger(quantity) && quantity >= 1 && quantity <= 1000 && quantityInput.checkValidity() ? quantity : 0;
     }
 
     function unitsInCart(stockKey) {
@@ -52,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSelectedProduct() {
         const option = selectedOption();
         if (!option?.value) {
-            priceLabel.textContent = 'L. 0.00';
+            priceLabel.textContent = 'L. 0';
             return;
         }
         priceLabel.textContent = formatMoney(option.dataset.precio);
-        quantityInput.max = String(Math.max(0, Number.parseInt(option.dataset.stock, 10) || 0));
+        quantityInput.max = String(Math.max(0, Math.min(1000, Number(option.dataset.stock) || 0)));
     }
 
     searchInput?.addEventListener('input', () => {
@@ -80,17 +79,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function calculateCustomization(groups, selectedIds) {
         let surcharge = 0;
+        const surcharges = [];
         const labels = [];
         groups.forEach((group) => {
             const selected = group.opciones.filter((option) => selectedIds.includes(String(option.id_opcion)));
             selected.forEach((option) => {
-                surcharge += Number(option.recargo) || 0;
+                const amount = Number(option.recargo);
+                surcharges.push(amount);
+                surcharge += amount;
                 labels.push(`${group.nombre}: ${option.nombre}`);
             });
             const included = Number.parseInt(group.selecciones_incluidas, 10) || 0;
-            surcharge += Math.max(0, selected.length - included) * (Number(group.recargo_seleccion_extra) || 0);
+            if (selected.length > included) {
+                const extra = Number(group.recargo_seleccion_extra || 0);
+                surcharges.push(extra);
+                surcharge += (selected.length - included) * extra;
+            }
         });
-        return { surcharge, labels };
+        return { surcharge, labels, whole: surcharges.every(Number.isInteger) };
     }
 
     const selectedCustomizationIds = () => Array.from(modalGroups.querySelectorAll('input:checked')).map((input) => input.value);
@@ -155,6 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function addCartLine(product, selectedIds = []) {
         if (!validateStock(product.stockKey, product.quantity, product.stock)) return;
         const customization = calculateCustomization(product.groups || [], selectedIds);
+        if (!customization.whole) {
+            Swal.fire('Recargo con centavos', 'Actualiza los recargos seleccionados en el catálogo antes de añadir el producto.', 'warning');
+            return;
+        }
         const price = product.basePrice + customization.surcharge;
         const signature = `${product.id}:${selectedIds.slice().sort().join(',')}`;
         const existing = cart.find((item) => item.signature === signature);
@@ -179,12 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const option = selectedOption();
         const quantity = selectedQuantity();
         if (!option?.value) return void Swal.fire('Atención', 'Selecciona un producto primero.', 'warning');
-        if (!quantity) return void Swal.fire('Atención', 'Ingresa una cantidad válida.', 'warning');
+        if (!quantity) return void Swal.fire('Atención', 'Ingresa una cantidad entera entre 1 y 1000 que no supere el stock disponible.', 'warning');
         const stock = Number.parseInt(option.dataset.stock, 10) || 0;
         const stockKey = option.dataset.stockKey || `producto:${option.value}`;
         if (!validateStock(stockKey, quantity, stock)) return;
         const groups = configurations[option.value] || [];
         const product = { id: option.value, name: productName(option), quantity, basePrice: Number(option.dataset.precio) || 0, stock, stockKey, groups };
+        if (!Number.isInteger(product.basePrice)) {
+            Swal.fire('Precio con centavos', 'Actualiza el precio del producto en el catálogo antes de añadirlo.', 'warning');
+            return;
+        }
         if (groups.length) renderCustomization(option, quantity, groups);
         else addCartLine(product);
     });

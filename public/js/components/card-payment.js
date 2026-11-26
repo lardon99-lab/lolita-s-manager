@@ -1,14 +1,25 @@
 (() => {
     'use strict';
 
-    function cents(value) {
+    function cents(value, allowCents) {
         const amount = value.trim().replace(',', '.');
-        return /^[0-9]{1,8}(\.[0-9]{1,2})?$/.test(amount) ? Math.round(Number(amount) * 100) : null;
+        const pattern = allowCents ? /^[0-9]{1,8}(\.[0-9]{1,2})?$/ : /^[0-9]{1,8}$/;
+        return pattern.test(amount) ? Math.round(Number(amount) * 100) : null;
+    }
+
+    function setAmountMode(fields, expected) {
+        const amount = fields.querySelector('[name="monto_tarjeta"]');
+        const allowCents = Math.round(expected * 100) % 100 !== 0;
+        amount.inputMode = allowCents ? 'decimal' : 'numeric';
+        amount.pattern = allowCents ? '[0-9]{1,8}([.,][0-9]{1,2})?' : '[0-9]{1,8}';
+        amount.maxLength = allowCents ? 11 : 8;
+        amount.placeholder = allowCents ? '0.00' : '0';
+        return amount;
     }
 
     function validate(fields, expected) {
-        const amount = fields.querySelector('[name="monto_tarjeta"]');
-        const approved = cents(amount.value);
+        const amount = setAmountMode(fields, expected);
+        const approved = cents(amount.value, amount.inputMode === 'decimal');
         amount.setCustomValidity(approved > 0 && approved === Math.round(expected * 100)
             ? ''
             : 'El importe aprobado debe coincidir con el monto a registrar.');
@@ -19,6 +30,7 @@
         const fields = document.createElement('div');
         fields.className = 'text-start';
         fields.append(document.getElementById('cardPaymentFields').content.cloneNode(true));
+        setAmountMode(fields, expected);
         const inputs = [...fields.querySelectorAll('input')];
         inputs.forEach((input) => {
             if (draft[input.name] !== undefined) input.value = draft[input.name];
